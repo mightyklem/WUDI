@@ -199,18 +199,9 @@ The full split of features between plans is to be confirmed.
 
 ---
 
-## 6\. Technical Direction (Recommended)
+## 6\. Technical Direction
 
-These are recommendations for the development team to confirm.
-
-| Area | Recommendation | Why |
-| :---- | :---- | :---- |
-| Live video and audio | WebRTC with a self-hosted media server (SFU) | Scales to large classes and gives control over cost and data. |
-| Media server | LiveKit (open source) | Includes roles and permissions, audio-only mode, data messaging for chat and polls, join and leave events for attendance, and a built-in relay server for difficult networks. |
-| Website | Next.js | Pages are rendered on the server, so shared invite links show proper previews and load fast. |
-| Mobile apps | React Native (Expo) | Shares language and logic with the website, reducing cost. |
-| Shared logic | A single backend and shared rules for registration, attendance, certification, and payments | Keeps behavior consistent across website and apps. |
-| Payments | One main Nigerian provider (for example Paystack or Flutterwave), to be selected | Supports cards, bank transfer, and USSD, which cover how most people in Nigeria pay. |
+> Note: technical specifications and architectural structures are documented separately in `DOCS/Architecture Decisions- Wudi.md` (stack, ADRs 001–010, data model) and run locally via `docker-compose.yml` (Postgres + Redis + S3Mock; Cloudflare R2 in staging/production). This PRD defines product behavior only — see those files for implementation detail.
 
 Self-hosting the media server means the team is responsible for server capacity, monitoring, and bandwidth costs. The team should plan and load-test for the maximum class size.  
 ---

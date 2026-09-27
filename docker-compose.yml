@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wudi
+      POSTGRES_PASSWORD: wudi
+      POSTGRES_DB: wudi
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wudi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # S3-compatible storage for local dev (buckets auto-created on first PUT).
+  # MinIO images are currently blocked by registry 401s, so we use S3Mock.
+  # Cloud target remains R2/S3 per ADR-004; app must use path-style S3 locally.
+  s3mock:
+    image: adobe/s3mock:latest
+    ports:
+      - "9090:9090"
+      - "9191:9191"
+    volumes:
+      - s3mockdata:/s3mockroot
+    environment:
+      initialBuckets: "wudi-public, wudi-private"
+
+  # Optional: uncomment when starting Phase 3 classroom work.
+  # livekit:
+  #   image: livekit/livekit-server:latest
+  #   command: --dev --bind 0.0.0.0
+  #   environment:
+  #     LIVEKIT_KEYS: "devkey: devsecret"
+  #   ports:
+  #     - "7880:7880"
+  #     - "7881:7881"
+  #     - "7882:7882/udp"
+
+volumes:
+  pgdata:
+  redisdata:
+  s3mockdata:

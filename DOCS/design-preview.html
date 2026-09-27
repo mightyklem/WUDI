@@ -1,0 +1,73 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wudi Design System v0 Preview</title>
+<style>
+:root{--g900:#0B1F14;--g700:#0E7A3D;--g100:#DFF2E5;--amber:#FFB020;--coral:#E5484D;--ink:#121212;--mut:#5C5C5C;--paper:#F7F7F5;--card:#fff;--line:#E6E6E2}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
+.hero{background:var(--g900);color:#fff;border-radius:16px;padding:32px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.hero h1{margin:0;font-size:32px}.hero p{margin:8px 0 0;color:#CDE5D5}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 20px;font-weight:700;cursor:pointer;min-height:44px}
+.b-p{background:var(--g700);color:#fff}.b-a{background:var(--amber);color:#231A00}.b-g{background:#fff;border:1px solid var(--line)}.b-d{background:var(--coral);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-top:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700}
+.live{background:var(--coral);color:#fff}.seats{background:var(--g100);color:var(--g900)}.cert{background:#FFF3D6;border:1px solid #F0D48A}
+.muted{color:var(--mut)}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--g700);color:#fff;display:grid;place-items:center;font-weight:800}
+.cover{height:140px;border-radius:10px;background:linear-gradient(135deg,var(--g700),#12A150 60%,#7BD88F);display:grid;place-items:center;color:#fff;font-weight:800;font-size:20px}
+.bar{height:10px;background:#ECECE8;border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--g700)}
+.bar.warn>i{background:var(--amber)}.bar.bad>i{background:var(--coral)}
+.poll-opt{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}.poll-opt b{float:right}
+.controls{background:var(--g900);border-radius:12px;padding:12px;display:flex;gap:8px;flex-wrap:wrap}
+.controls span{background:#1E3A2A;color:#fff;border-radius:8px;padding:10px 14px;font-size:14px}
+.certbox{border:2px solid var(--g900);border-radius:12px;padding:24px;background:#fff;text-align:center}
+.seal{width:64px;height:64px;border-radius:50%;background:var(--g900);color:var(--amber);display:grid;place-items:center;margin:0 auto;font-weight:900}
+.badge{padding:6px 14px;border-radius:999px;font-weight:800}.ok{background:var(--g100);color:var(--g900)}.rev{background:#FDE4E4;color:#8F1D1D}
+.tokens{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.swatch{width:120px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}.swatch i{display:block;height:56px}.swatch small{display:block;padding:6px 8px}
+h2{margin:40px 0 8px;font-size:24px}small.note{color:var(--mut)}
+</style></head><body><div class="wrap">
+<div class="hero"><div><h1>Wudi 無敵 — Design System v0</h1><p>Trustworthy live trainings · Low-data first · Web + iOS + Android</p>
+<div class="row" style="margin-top:16px"><button class="btn b-a">Register</button><button class="btn b-p">Host training</button><button class="btn b-g">Explore feed</button></div></div>
+<div><span class="pill live">● LIVE</span> <span class="pill seats">32 seats left</span> <span class="pill cert">₦ CERTIFIED</span></div></div>
+
+<h2>Tokens</h2><small class="note">Green = trust, Amber = action, Coral = live/danger. Min touch 44px, 4pt grid.</small>
+<div class="tokens">
+<div class="swatch"><i style="background:#0B1F14"></i><small>#0B1F14 green-900</small></div>
+<div class="swatch"><i style="background:#0E7A3D"></i><small>#0E7A3D green-700</small></div>
+<div class="swatch"><i style="background:#DFF2E5"></i><small>#DFF2E5 green-100</small></div>
+<div class="swatch"><i style="background:#FFB020"></i><small>#FFB020 amber</small></div>
+<div class="swatch"><i style="background:#E5484D"></i><small>#E5484D coral</small></div>
+<div class="swatch"><i style="background:#F7F7F5"></i><small>#F7F7F5 paper</small></div>
+</div>
+
+<div class="grid">
+<div class="card"><div class="cover">INVITE COVER</div>
+<h3 style="margin:12px 0 4px">Intro to Solar Installation</h3>
+<div class="row"><div class="avatar">AK</div><div><b>Adaeze K.</b><br><span class="muted">Sat, Oct 4 · 10:00 WAT · Video</span></div></div>
+<div class="row" style="margin-top:12px"><span class="pill seats">18 / 50 seats left</span><span class="pill cert">Free attendance · Paid cert</span></div>
+<div class="row" style="margin-top:12px"><button class="btn b-a">Register</button><button class="btn b-g">Share</button></div></div>
+
+<div class="card"><span class="pill live">● LIVE now</span><h3>Live Classroom</h3>
+<p class="muted">Audio-only mode saves ~90% data. Chat + polls work on 2G.</p>
+<div class="controls"><span>🎙 Mic</span><span>📷 Cam</span><span>🖥 Share</span><span>✋ Raise</span><span>💬 Chat</span><span>📊 Poll</span><span style="background:var(--coral)">⏻ Leave</span></div>
+<p style="margin-top:12px"><label><input type="checkbox" checked> Low-data / audio-only</label></p></div>
+
+<div class="card"><h3>Poll — live results</h3><p>Which topic next?</p>
+<div class="poll-opt">Pricing <b>62%</b><div class="bar"><i style="width:62%"></i></div></div>
+<div class="poll-opt">Wiring <b>25%</b><div class="bar"><i style="width:25%"></i></div></div>
+<div class="poll-opt">Safety <b>13%</b><div class="bar"><i style="width:13%"></i></div></div></div>
+
+<div class="card"><h3>Attendance progress</h3><p><b>2 of 3 sessions · 67% — need 80%</b></p>
+<div class="bar warn"><i style="width:67%"></i></div><p class="muted">At risk — join next session to stay eligible. <a href="#">Request correction</a></p></div>
+
+<div class="card"><h3>Explore feed post</h3><div class="cover" style="height:100px">60s VIDEO</div>
+<div class="row" style="margin-top:10px"><div class="avatar">TO</div><div><b>Tunde O.</b> · <span class="muted">Oct 11 · Certified</span></div></div>
+<div class="row" style="margin-top:10px"><button class="btn b-g">♥ Like</button><button class="btn b-g">⧉ Save</button><button class="btn b-g">↗ Share</button><button class="btn b-a">Register</button></div></div>
+
+<div class="card certbox"><div class="seal">W</div><h3 style="margin:8px 0">Certificate of Completion</h3>
+<p class="muted">Adaeze K. · Intro to Solar Installation · Oct 2026</p><p><b>WUDI-2026-4F8K2Q</b></p>
+<div class="row" style="justify-content:center"><span class="badge ok">✓ VERIFIED</span><span class="badge rev">REVOKED example</span></div>
+<p class="muted" style="font-size:12px;margin-top:12px">Confirms attendance/completion. Not a government-accredited qualification.</p></div>
+</div>
+<p class="muted" style="margin-top:32px">Full spec in <b>DOCS/Design System- Wudi.md</b>. Next: Figma variables + Tailwind theme + Storybook stories per component.</p>
+</div></body></html>
