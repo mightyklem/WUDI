@@ -320,3 +320,34 @@ Although the launch is complete, build and test in stages:
 * Trainer teams and organizations, and bulk registration.  
 * Analytics dashboards for trainers.
 
+---
+
+## 14\. Implementation Plan (summary)
+
+Full plan with concrete outputs and exit gates: `DOCS/Implementation Plan- Wudi.md`. Build web-first, then port to mobile; no phase starts until its dependencies are met.
+
+| Phase | Scope | Key outputs | Exit gate |
+| :---- | :---- | :---- | :---- |
+| 0 — Decisions + Foundation | Close §12 blockers, scaffold repo + local stack | Locked money/approval/upload decisions; `apps/web`, `backend/`, `packages/shared`; data model v1; auth baseline | All 11 open questions owned; `docker compose up -d` healthy; login works |
+| 1 — Accounts | FR-1.1–1.4, 2.1 | Signup/login, trainer profile (photo/bio/logo/signature), follow | Any user → trainer → followed |
+| 2 — Training + Invites + Registration | FR-3, 4, 5.1, 5.4–5.6 | Create/edit/cancel training; SSR invite `/t/:slug/register` with previews; atomic seat-claim; confirm/reminder/change mails | Idea → invite → full → cancel-reopens-seat |
+| 3 — Live Classroom | FR-6 | LiveKit rooms per session, role tokens, chat/polls/raise-hand/share, mandatory low-data mode, no recording, moderator invite/accept | 50-user class stable; permission tests pass |
+| 4 — Attendance | FR-7 | Join/leave webhooks, present = ≥75% session, program % + progress view, at-risk alerts, moderator corrections | 3-session % correct incl. disconnect + correction |
+| 5 — Certificates | FR-8 | Eligibility (attendance% + paid), trainer approves only eligible, co-branded PDF + `WUDI-YYYY-XXXXXX`, public `/verify`, revoke | Attend → approve → verify → revoke → revoked |
+| 6 — Money | FR-5.2–5.3, 9 | Paystack NGN (cards/transfer/USSD), trainer approval gate, plans 50/200/500 + 5%/3%/1%, earnings page, held payouts, refunds | Purchase → correct split → payout → refund paths pass |
+| 7 — Feed + Notifications | FR-10, 11 | Promo posts (60s video/e-card/infographic), register/follow/save/like, filters; push/email/in-app + Termii SMS/WhatsApp | Post → discover → register from feed |
+| 8 — Admin + Safety | FR-12, §7 | Approval + review queues, one-click hide, audit log, metrics; ToS/privacy/NDPA docs; 24/7 rota | Report → hide <5 min in drill |
+| 9 — Mobile | §5 parity | Expo iOS/Android parity, deep links, <3s invite on 3G | Web E2E passes on both stores |
+| 10 — Launch | Load/security/analytics | 500-user + 500-seat tests, security review, §10 metrics, cut list (never safety/refunds/verification) | All gates green, rollback tested |
+
+---
+
+## 15\. Notes (locked working agreements)
+
+* Stack: Next.js (SSR invites/verify) + Expo + single backend (NestJS; Route Handlers allowed Phases 1–2) + `packages/shared` rules; Postgres 16 + Redis 7; LiveKit + TURN, recording off; Paystack primary (Flutterwave later). Details: `DOCS/Architecture Decisions- Wudi.md`.
+* Storage: S3Mock locally (buckets `wudi-public`/`wudi-private`, path-style) → Cloudflare R2 in staging/prod (zero egress, CDN on public, locked private, 5-min signed URLs). Same S3 keys; only endpoint changes.
+* Local run: `docker compose up -d postgres redis s3mock` (see `docker-compose.yml`, `.env.example`). Cloud later.
+* Money defaults (confirm in Phase 0): charge cert fee at registration; payout after last session + hold (e.g. 7 days); full refund on trainer cancel or participant cancel ≥24h before start.
+* Trust rules: attendance present = ≥75% of session; program min trainer-set 60–100% (default 80%); trainer cannot certify ineligible; certs immutable with consent-gated verify page; every admin/moderator override logged with reason.
+* Design: tokens + components in `DOCS/Design System- Wudi.md`, visual preview in `DOCS/design-preview.html`.
+
