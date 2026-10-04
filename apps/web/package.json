@@ -8,14 +8,16 @@
     "start": "next start"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "@learnovize/shared": "workspace:*",
     "@livekit/components-react": "^2.9.24",
     "@prisma/client": "^6.0.0",
-    "@learnovize/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.0",
     "livekit-client": "^2.22.3",
     "livekit-server-sdk": "^2.19.1",
     "next": "^15.0.0",
+    "pdf-lib": "^1.17.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

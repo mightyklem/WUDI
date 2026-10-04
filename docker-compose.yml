@@ -22,9 +22,12 @@ services:
     volumes:
       - redisdata:/data
 
-  # S3-compatible storage for local dev (buckets auto-created on first PUT).
-  # MinIO images are currently blocked by registry 401s, so we use S3Mock.
+  # S3-compatible storage for local dev (adobe/s3mock).
   # Cloud target remains R2/S3 per ADR-004; app must use path-style S3 locally.
+  # NOTE: s3mock does not auto-create buckets — create once per fresh volume:
+  #   aws --endpoint-url http://localhost:9090 s3 mb s3://learnovize-public
+  #   aws --endpoint-url http://localhost:9090 s3 mb s3://learnovize-private
+  # (any S3 client with test/test credentials works).
   s3mock:
     image: adobe/s3mock:latest
     ports:
@@ -32,8 +35,6 @@ services:
       - "9191:9191"
     volumes:
       - s3mockdata:/s3mockroot
-    environment:
-      initialBuckets: "learnovize-public, learnovize-private"
 
   # Live media (Phase 3): self-hosted LiveKit SFU in dev mode.
   # --dev enables built-in TURN; recording/egress are NOT configured (replays forbidden, FR-6.7).

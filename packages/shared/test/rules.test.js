@@ -39,6 +39,7 @@ describe('certificates (FR-8)', () => {
     assert.equal(isCertNumber('LEARNOVIZE-2026-4F8K2Q'), true);
     assert.equal(isCertNumber('LEARNOVIZE-26-ABC'), false);
     assert.equal(isCertNumber('learnovize-2026-4F8K2Q'), false);
+    assert.equal(isCertNumber('WUDI-2026-4F8K2Q'), false);
   });
 });
 
