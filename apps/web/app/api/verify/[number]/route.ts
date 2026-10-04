@@ -15,13 +15,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ number:
       user: { select: { email: true } },
     },
   });
-  if (!cert) return NextResponse.json({ status: 'not-found' });
+  if (!cert) {
+    await prisma.verifyVisit.create({ data: { number: number.toUpperCase(), status: 'not-found' } }).catch(() => {});
+    return NextResponse.json({ status: 'not-found' });
+  }
   if (cert.status === 'revoked') {
+    await prisma.verifyVisit.create({ data: { number: cert.number, status: 'revoked' } }).catch(() => {});
     return NextResponse.json({ status: 'revoked', number: cert.number });
   }
   const reg = await prisma.registration.findUnique({
     where: { trainingId_userId: { trainingId: cert.trainingId, userId: cert.userId } },
   });
+  await prisma.verifyVisit.create({ data: { number: cert.number, status: 'valid' } }).catch(() => {});
   const showName = reg?.certConsentPublic === true;
   return NextResponse.json({
     status: 'valid',

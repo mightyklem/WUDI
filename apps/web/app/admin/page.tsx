@@ -11,9 +11,16 @@ type Metrics = {
 };
 type Report = { id: string; targetType: string; targetId: string; reason: string; createdAt: string; autoFlags: string[]; score: number };
 type Audit = { id: string; action: string; target: string; reason: string | null; createdAt: string; actor: { email: string } };
+type Analytics = {
+  activeTrainers30d: number; trainings30d: number; regsPerTrainingAvg: number;
+  pctTrainingsFull: number; showUpPct: number; certsIssued: number; paidSharePct: number;
+  verifyVisits: { status: string; count: number }[]; returnRatePct: number;
+  revenueNgn: number; commissionNgn: number; sessionsEnded: number;
+};
 
 export default function AdminConsole() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [audit, setAudit] = useState<Audit[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
@@ -24,6 +31,7 @@ export default function AdminConsole() {
     fetch('/api/admin/metrics', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setMetrics(j));
     fetch('/api/admin/reports?status=open', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setReports(j.reports));
     fetch('/api/admin/audit?take=30', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setAudit(j.audit));
+    fetch('/api/admin/analytics', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setAnalytics(j));
   }
   useEffect(load, []);
   if (metrics === null) return <div className="wrap"><p className="muted">Staff only — log in as an admin.</p></div>;
@@ -60,8 +68,22 @@ export default function AdminConsole() {
         </p>
       </div>
 
-      <h2 className="sec">Review queue ({reports.length} open)</h2>
+      <h2 className="sec">Success metrics (§10)</h2>
       <div className="card">
+        {!analytics && <p className="muted">Loading analytics…</p>}
+        {analytics && (
+          <p style={{ margin: 0, fontSize: 15 }}>
+            {analytics.activeTrainers30d} active trainers · {analytics.trainings30d} trainings (30d) ·
+            {' '}{analytics.regsPerTrainingAvg} regs/training · {analytics.pctTrainingsFull}% full ·
+            {' '}show-up {analytics.showUpPct}% · {analytics.certsIssued} certs ({analytics.paidSharePct}% paid) ·
+            {' '}verify: {analytics.verifyVisits.map((v) => `${v.status} ${v.count}`).join(', ') || 'none'} ·
+            {' '}return {analytics.returnRatePct}% · revenue ₦{analytics.revenueNgn} ·
+            {' '}{analytics.sessionsEnded} sessions ended
+          </p>
+        )}
+      </div>
+
+      <h2 className="sec">Review queue ({reports.length} open)</h2>      <div className="card">
         {reports.length === 0 && <p className="muted">Queue empty. Auto-flags (scam keywords, 3+ reports/hour) float to the top.</p>}
         {reports.map((r) => (
           <div key={r.id} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>

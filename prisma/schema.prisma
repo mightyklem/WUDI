@@ -274,3 +274,13 @@ model PushToken {
 
   @@index([userId])
 }
+
+model VerifyVisit {
+  id        String   @id @default(cuid())
+  number    String
+  status    String // valid|revoked|not-found
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([number])
+}
