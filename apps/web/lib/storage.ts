@@ -24,6 +24,8 @@ export function publicBucket(): string {
 
 /** Public URL for an object in the public bucket (CDN origin in cloud). */
 export function publicUrl(key: string): string {
+  const cdn = env('PUBLIC_FILES_BASE', '').replace(/\/$/, '');
+  if (cdn) return `${cdn}/${key}`;
   const endpoint = env('S3_ENDPOINT', '').replace(/\/$/, '');
   const bucket = publicBucket();
   if (!endpoint) return `/${bucket}/${key}`;

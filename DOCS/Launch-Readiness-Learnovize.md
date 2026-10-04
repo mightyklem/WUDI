@@ -12,6 +12,15 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
 | Auth rate limit | 20/min/IP enforced (proven: blocked a 70-signup burst during testing). |
 | 500-user LiveKit classroom | **NOT run locally** — needs staging with TURN/TLS on 443. Gate: run 500 mixed video/audio-only room + bandwidth/cost dashboard before public launch (ADR-005). |
 
+## External services (post-Phase-10 integrations)
+
+- [x] **R2 storage (staging-verified 2026-10-04):** buckets `learnovize-public`/`learnovize-private` live;
+  write+read verified on public, signed-URL read verified on private, test objects cleaned up.
+  Remaining: enable public access on `learnovize-public` (r2.dev for staging) and set `PUBLIC_FILES_BASE`;
+  custom domain + true CDN for production.
+- [ ] Paystack live keys + recurring billing · [ ] Termii SMS/WhatsApp · [ ] Resend email ·
+  [ ] Expo push (EAS project) · [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
+
 ## Security checklist
 
 - [x] Passwords bcrypt-12; generic login errors (no enumeration); rotating refresh with reuse-detection chain revoke.
