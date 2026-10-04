@@ -1,7 +1,7 @@
-# Product Requirements Document: Wudi
+# Product Requirements Document: Learnovize
 
 Status: Draft v2  
-Product name: Wudi (from the Mandarin wúdí, 无敌: 无 "without" \+ 敌 "rival", meaning "without rival")  
+Product name: Learnovize  
 Product type: Social media training platform  
 Purpose of this document: Describe what the product must do and why, so a development team, designer, or partner can build and evaluate it.  
 ---
@@ -10,7 +10,7 @@ Purpose of this document: Describe what the product must do and why, so a develo
 
 ### 1.1 Vision
 
-Wudi is a platform where anyone with knowledge to share can host live online trainings, promote them through shareable invites and a social feed of short promo posts, and issue verifiable certificates to participants who complete them.
+Learnovize is a platform where anyone with knowledge to share can host live online trainings, promote them through shareable invites and a social feed of short promo posts, and issue verifiable certificates to participants who complete them.
 
 ### 1.2 Problem
 
@@ -63,7 +63,7 @@ The product launches complete, with the website and the iPhone and Android apps 
 
 * FR-2.1 Any trainer can create and host free trainings immediately.  
 * FR-2.2 A trainer must be approved by a Platform Admin before offering paid certification.  
-* FR-2.3 A trainer submits an approval request with proof of identity and proof of expertise (for example a professional profile, past work or trainings, credentials, or a short intro video). A Wudi reviewer approves or declines. The exact documents accepted are to be defined; see Open Questions.  
+* FR-2.3 A trainer submits an approval request with proof of identity and proof of expertise (for example a professional profile, past work or trainings, credentials, or a short intro video). A Learnovize reviewer approves or declines. The exact documents accepted are to be defined; see Open Questions.  
 * FR-2.4 Admins can approve, reject (with a reason), or revoke approval.  
 * FR-2.5 Identity documents submitted by trainers must be stored securely and used only for approval (see Section 7).
 
@@ -139,7 +139,7 @@ A trainer creates a training with:
 * FR-9.1 Payments are made in Nigerian naira through one main Nigerian payment provider supporting cards (Verve, Visa, Mastercard), bank transfer, and USSD. A second provider may be added later.  
 * FR-9.2 Plans and commission:
 
-| Plan | Price | Wudi commission on paid certifications | Maximum class size | Other benefits |
+| Plan | Price | Learnovize commission on paid certifications | Maximum class size | Other benefits |
 | :---- | :---- | :---- | :---- | :---- |
 | Free | Free | 5% | 50 | Core features |
 | Pro | $9 per month (USD reference; proposed ₦12,000, to be confirmed) | 3% | 200 | Custom certificate design |
@@ -147,8 +147,8 @@ A trainer creates a training with:
 
 The full split of features between plans is to be confirmed.
 
-* FR-9.3 Payment provider fees are shown separately from Wudi's commission. Trainers see a clear breakdown of each payment: amount paid, provider fee, Wudi commission, and amount due to the trainer.  
-* FR-9.4 Payouts: the trainer is paid after the last session ends, following a short waiting period in case of problems. The payout is the payments received minus Wudi's commission and payment fees. The length of the waiting period is to be decided.  
+* FR-9.3 Payment provider fees are shown separately from Learnovize's commission. Trainers see a clear breakdown of each payment: amount paid, provider fee, Learnovize commission, and amount due to the trainer.  
+* FR-9.4 Payouts: the trainer is paid after the last session ends, following a short waiting period in case of problems. The payout is the payments received minus Learnovize's commission and payment fees. The length of the waiting period is to be decided.  
 * FR-9.5 Refunds:  
   * A full refund if the trainer cancels or does not hold the training.  
   * A refund if the participant cancels at least 24 hours before the start.  
@@ -187,7 +187,7 @@ The full split of features between plans is to be confirmed.
 * FR-12.7 The team receives instant alerts when a post is flagged.  
 * FR-12.8 Admins have a hide button that removes a post from the feed immediately while it is investigated.  
 * FR-12.9 Every admin action is recorded in an audit log.  
-* FR-12.10 Reports are monitored round the clock, with the Wudi team working in shifts.
+* FR-12.10 Reports are monitored round the clock, with the Learnovize team working in shifts.
 
 ---
 
@@ -201,7 +201,7 @@ The full split of features between plans is to be confirmed.
 
 ## 6\. Technical Direction
 
-> Note: technical specifications and architectural structures are documented separately in `DOCS/Architecture Decisions- Wudi.md` (stack, ADRs 001–010, data model) and run locally via `docker-compose.yml` (Postgres + Redis + S3Mock; Cloudflare R2 in staging/production). This PRD defines product behavior only — see those files for implementation detail.
+> Note: technical specifications and architectural structures are documented separately in `DOCS/Architecture Decisions- Learnovize.md` (stack, ADRs 001–010, data model) and run locally via `docker-compose.yml` (Postgres + Redis + S3Mock; Cloudflare R2 in staging/production). This PRD defines product behavior only — see those files for implementation detail.
 
 Self-hosting the media server means the team is responsible for server capacity, monitoring, and bandwidth costs. The team should plan and load-test for the maximum class size.  
 ---
@@ -241,7 +241,7 @@ Self-hosting the media server means the team is responsible for server capacity,
 | Minimum attendance | Default 80%, trainer can choose 60% to 100% |
 | Present in a session | Stays at least 75% of the session; moderator can correct |
 | Refunds | If trainer cancels, or participant cancels at least 24 hours before start |
-| Trainer approval | Identity check plus proof of expertise, reviewed by Wudi |
+| Trainer approval | Identity check plus proof of expertise, reviewed by Learnovize |
 | Payouts | After the training ends, following a short waiting period |
 | Payments | One main Nigerian provider: cards, bank transfer, USSD |
 | What participants pay for | Only the certificate; attendance is always free |
@@ -296,7 +296,7 @@ Although the launch is complete, build and test in stages:
 
 ## 12\. Open Questions
 
-1. Branding: logo and visual identity, and confirming the name Wudi is available (website address, social media handles, and trademark).  
+1. Branding: logo and visual identity, and confirming the name Learnovize is available (website address, social media handles, and trademark).  
 2. Naira prices: confirm ₦12,000 for Pro and ₦52,000 for Business, and how often prices are reviewed.  
 3. Feature split: exactly which features belong to Free, Pro, and Business, beyond class size, commission, custom certificate design, multiple moderators, and analytics.  
 4. Payouts and refunds: the length of the waiting period before payouts, and who absorbs the payment provider's fee on a refund.  
@@ -324,7 +324,7 @@ Although the launch is complete, build and test in stages:
 
 ## 14\. Implementation Plan (summary)
 
-Full plan with concrete outputs and exit gates: `DOCS/Implementation Plan- Wudi.md`. Build web-first, then port to mobile; no phase starts until its dependencies are met.
+Full plan with concrete outputs and exit gates: `DOCS/Implementation Plan- Learnovize.md`. Build web-first, then port to mobile; no phase starts until its dependencies are met.
 
 | Phase | Scope | Key outputs | Exit gate |
 | :---- | :---- | :---- | :---- |
@@ -333,7 +333,7 @@ Full plan with concrete outputs and exit gates: `DOCS/Implementation Plan- Wudi.
 | 2 — Training + Invites + Registration | FR-3, 4, 5.1, 5.4–5.6 | Create/edit/cancel training; SSR invite `/t/:slug/register` with previews; atomic seat-claim; confirm/reminder/change mails | Idea → invite → full → cancel-reopens-seat |
 | 3 — Live Classroom | FR-6 | LiveKit rooms per session, role tokens, chat/polls/raise-hand/share, mandatory low-data mode, no recording, moderator invite/accept | 50-user class stable; permission tests pass |
 | 4 — Attendance | FR-7 | Join/leave webhooks, present = ≥75% session, program % + progress view, at-risk alerts, moderator corrections | 3-session % correct incl. disconnect + correction |
-| 5 — Certificates | FR-8 | Eligibility (attendance% + paid), trainer approves only eligible, co-branded PDF + `WUDI-YYYY-XXXXXX`, public `/verify`, revoke | Attend → approve → verify → revoke → revoked |
+| 5 — Certificates | FR-8 | Eligibility (attendance% + paid), trainer approves only eligible, co-branded PDF + `LEARNOVIZE-YYYY-XXXXXX`, public `/verify`, revoke | Attend → approve → verify → revoke → revoked |
 | 6 — Money | FR-5.2–5.3, 9 | Paystack NGN (cards/transfer/USSD), trainer approval gate, plans 50/200/500 + 5%/3%/1%, earnings page, held payouts, refunds | Purchase → correct split → payout → refund paths pass |
 | 7 — Feed + Notifications | FR-10, 11 | Promo posts (60s video/e-card/infographic), register/follow/save/like, filters; push/email/in-app + Termii SMS/WhatsApp | Post → discover → register from feed |
 | 8 — Admin + Safety | FR-12, §7 | Approval + review queues, one-click hide, audit log, metrics; ToS/privacy/NDPA docs; 24/7 rota | Report → hide <5 min in drill |
@@ -344,10 +344,10 @@ Full plan with concrete outputs and exit gates: `DOCS/Implementation Plan- Wudi.
 
 ## 15\. Notes (locked working agreements)
 
-* Stack: Next.js (SSR invites/verify) + Expo + single backend (NestJS; Route Handlers allowed Phases 1–2) + `packages/shared` rules; Postgres 16 + Redis 7; LiveKit + TURN, recording off; Paystack primary (Flutterwave later). Details: `DOCS/Architecture Decisions- Wudi.md`.
-* Storage: S3Mock locally (buckets `wudi-public`/`wudi-private`, path-style) → Cloudflare R2 in staging/prod (zero egress, CDN on public, locked private, 5-min signed URLs). Same S3 keys; only endpoint changes.
+* Stack: Next.js (SSR invites/verify) + Expo + single backend (NestJS; Route Handlers allowed Phases 1–2) + `packages/shared` rules; Postgres 16 + Redis 7; LiveKit + TURN, recording off; Paystack primary (Flutterwave later). Details: `DOCS/Architecture Decisions- Learnovize.md`.
+* Storage: S3Mock locally (buckets `learnovize-public`/`learnovize-private`, path-style) → Cloudflare R2 in staging/prod (zero egress, CDN on public, locked private, 5-min signed URLs). Same S3 keys; only endpoint changes.
 * Local run: `docker compose up -d postgres redis s3mock` (see `docker-compose.yml`, `.env.example`). Cloud later.
 * Money defaults (confirm in Phase 0): charge cert fee at registration; payout after last session + hold (e.g. 7 days); full refund on trainer cancel or participant cancel ≥24h before start.
 * Trust rules: attendance present = ≥75% of session; program min trainer-set 60–100% (default 80%); trainer cannot certify ineligible; certs immutable with consent-gated verify page; every admin/moderator override logged with reason.
-* Design: tokens + components in `DOCS/Design System- Wudi.md`, visual preview in `DOCS/design-preview.html`.
+* Design: tokens + components in `DOCS/Design System- Learnovize.md`, visual preview in `DOCS/design-preview.html`.
 

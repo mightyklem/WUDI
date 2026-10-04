@@ -67,7 +67,7 @@ export default function MyRegistrations() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Wudi 無敵</span>
+      <div className="topbar"><span className="logo">Learnovize</span>
         <nav><Link className="btn link" href="/">Home</Link></nav>
       </div>
       <h1>My seats.</h1>

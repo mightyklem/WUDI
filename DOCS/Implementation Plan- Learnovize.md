@@ -1,7 +1,7 @@
-# Implementation Plan: Wudi
+# Implementation Plan: Learnovize
 
-Source: `DOCS/Product Requirements Document- Wudi.md` (Draft v2)
-Architecture: `DOCS/Architecture Decisions- Wudi.md` (ADRs 001–010, recommended stack)
+Source: `DOCS/Product Requirements Document- Learnovize.md` (Draft v2)
+Architecture: `DOCS/Architecture Decisions- Learnovize.md` (ADRs 001–010, recommended stack)
 Goal: Build in ordered, demoable phases. Each phase has concrete outputs and an exit gate. No phase starts until its dependencies are met.
 
 Launch constraint: Web + iOS + Android together in Nigeria, NGN pricing. Build web-first, then port to mobile to reduce risk (PRD §3, §9).
@@ -70,7 +70,7 @@ FR: 8.1–8.7, 2.3–2.5 (approval plumbing for paid certs starts here, enforced
 
 Outputs:
 - Eligibility engine: `attendance% >= min% AND (paid if required)`. Trainer approval UI lists only eligible; API rejects ineligible certification attempts.
-- Certificate renderer: co-branded PDF + image (trainer name/logo/signature + Wudi seal + non-accredited disclaimer + unique number `WUDI-YYYY-XXXXXX`).
+- Certificate renderer: co-branded PDF + image (trainer name/logo/signature + Learnovize seal + non-accredited disclaimer + unique number `LEARNOVIZE-YYYY-XXXXXX`).
 - Public verification `/verify/:number`: valid / revoked / not-found + name, training, trainer, date (only with participant consent flag collected at registration).
 - Participant actions: view/download/share to LinkedIn/X/WhatsApp. Revoke by trainer/admin → verify page shows revoked.
 - Storage: certificates immutable + permanently resolvable (PRD §7).

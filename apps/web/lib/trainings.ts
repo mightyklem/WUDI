@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { clampMinPct, PLAN_CAPS } from '@wudi/shared';
+import { clampMinPct, PLAN_CAPS } from '@learnovize/shared';
 
 /** URL-safe slug: title-slug + 6 random chars, e.g. solar-101-4f8k2q */
 export function makeSlug(title: string): string {

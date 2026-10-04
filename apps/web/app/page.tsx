@@ -13,7 +13,7 @@ export default async function Home() {
   return (
     <div className="wrap">
       <div className="topbar">
-        <span className="logo">Wudi 無敵</span>
+        <span className="logo">Learnovize</span>
         <nav>
           <Link className="btn link" href="/trainers">Trainers</Link>
           <Link className="btn link" href="/me/registrations">My seats</Link>
@@ -23,7 +23,7 @@ export default async function Home() {
       </div>
       <h1>{greet}.</h1>
       <p className="sub">
-        {trainerCount} trainer{trainerCount === 1 ? '' : 's'} · {trainingCount} training{trainingCount === 1 ? '' : 's'} live on Wudi.
+        {trainerCount} trainer{trainerCount === 1 ? '' : 's'} · {trainingCount} training{trainingCount === 1 ? '' : 's'} live on Learnovize.
       </p>
       <div className="card" style={{ marginTop: 22 }}>
         <p className="eyebrow">Up next · live only, no replays</p>

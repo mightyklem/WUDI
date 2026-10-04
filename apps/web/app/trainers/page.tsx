@@ -26,7 +26,7 @@ export default function Trainers() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Wudi 無敵</span>
+      <div className="topbar"><span className="logo">Learnovize</span>
         <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/onboarding">Teach</Link></nav>
       </div>
       <h1>Trainers.</h1>

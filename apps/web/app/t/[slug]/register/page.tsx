@@ -19,10 +19,10 @@ async function bySlug(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const t = await bySlug(slug);
-  if (!t) return { title: 'Wudi — training not found' };
+  if (!t) return { title: 'Learnovize — training not found' };
   const first = t.sessions[0]?.startsAtUtc.toUTCString() ?? '';
   return {
-    title: `Wudi — ${t.title}`,
+    title: `Learnovize — ${t.title}`,
     description: `${t.trainer.displayName} · ${first} · ${t.cap - t.seatsTaken} seats left · Attendance free`,
     openGraph: {
       title: t.title,
@@ -40,7 +40,7 @@ export default async function InvitePage({ params }: { params: Promise<{ slug: s
   const full = left <= 0 || t.status !== 'live';
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Wudi 無敵</span></div>
+      <div className="topbar"><span className="logo">Learnovize</span></div>
       <div className="card" style={{ marginTop: 8 }}>
         <p className="eyebrow">You&apos;re invited · {t.trainer.displayName}</p>
         <p className="bigtitle">{t.title}</p>

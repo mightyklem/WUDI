@@ -1,10 +1,10 @@
-# Wudi (无敌 — "without rival")
+# Learnovize
 
 Live social-media training platform: host live trainings, promote them through shareable invites and a social feed, and issue verifiable certificates tied to real attendance.
 
 > Status: Draft v2 | Launch market: Nigeria first (prices in NGN) | Platforms: Web + iOS + Android
 
-Full spec: [`DOCS/Product Requirements Document- Wudi.md`](DOCS/Product%20Requirements%20Document-%20Wudi.md)
+Full spec: [`DOCS/Product Requirements Document- Learnovize.md`](DOCS/Product%20Requirements%20Document-%20Learnovize.md)
 
 ## Vision
 
@@ -19,16 +19,16 @@ social post → registration form → video-call link → attendance spreadsheet
 
 Participants have no easy place to discover trainings, and certificates are hard to trust.
 
-## What Wudi does
+## What Learnovize does
 
 1. **Create & promote trainings** — title, description, topic, dates (single/multi-day), class-size cap, video or audio-only, certification option (none / free / paid).
 2. **Shareable invites** — auto-generated invite with title, trainer, dates, cover image, and Register button. Link previews work on WhatsApp, X, Instagram, etc. Registration page shows seats left.
 3. **Free attendance, paid certification** — attendance is always free. Certification is an optional add-on. Only approved trainers can offer paid certification.
 4. **Live classroom** — WebRTC video/audio or audio-only, live chat, polls, raise-hand, screen share, mute/remove. Low-data mode for weak connections. No recordings/replays (live only).
 5. **Trustworthy attendance** — auto-tracked by time stayed (present = ≥75% of session) + join/leave logs. Moderators can correct for network drops. Participants see progress live (e.g. "2 of 3 sessions, 67% — you need 80%") and get at-risk alerts.
-6. **Verifiable certificates** — eligible only if attendance % met (trainer-set 60–100%, default 80%) + paid if required. Trainer approves final list (can't approve ineligible). Co-branded (trainer logo/signature + Wudi seal), unique number, public verification page, revocation support.
+6. **Verifiable certificates** — eligible only if attendance % met (trainer-set 60–100%, default 80%) + paid if required. Trainer approves final list (can't approve ineligible). Co-branded (trainer logo/signature + Learnovize seal), unique number, public verification page, revocation support.
 7. **Explore feed** — scrollable promo feed for upcoming trainings (≤1 min video, e-card, infographic). Watch, share, register, follow trainer, save, like. Search by topic/date/free vs certified.
-8. **Payments & payouts (NGN)** — cards (Verve/Visa/Mastercard), bank transfer, USSD via one main Nigerian provider (Paystack/Flutterwave TBD). Clear split: amount / provider fee / Wudi commission / trainer payout. Payout after last session + holding period.
+8. **Payments & payouts (NGN)** — cards (Verve/Visa/Mastercard), bank transfer, USSD via one main Nigerian provider (Paystack/Flutterwave TBD). Clear split: amount / provider fee / Learnovize commission / trainer payout. Payout after last session + holding period.
 
 ## Roles
 
@@ -81,10 +81,10 @@ Self-hosting media = team owns capacity, monitoring, bandwidth cost. Load-test t
 ## Repo layout
 
 ```
-WUDI/
+LEARNOVIZE/
   README.md
   DOCS/
-    Product Requirements Document- Wudi.md
+    Product Requirements Document- Learnovize.md
 ```
 
 Code (`apps/web`, `apps/mobile`, `backend/`) lands in stages 1–6.

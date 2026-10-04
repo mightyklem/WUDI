@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@wudi/shared'],
+  transpilePackages: ['@learnovize/shared'],
   outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
 };
 

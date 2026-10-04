@@ -10,15 +10,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@learnovize/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@livekit/components-react':
         specifier: ^2.9.24
         version: 2.9.24(livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tslib@2.8.1)
       '@prisma/client':
         specifier: ^6.0.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
-      '@wudi/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3

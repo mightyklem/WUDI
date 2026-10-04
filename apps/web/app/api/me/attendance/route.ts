@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
-import { programPct } from '@wudi/shared';
+import { programPct } from '@learnovize/shared';
 
 export const dynamic = 'force-dynamic';
 

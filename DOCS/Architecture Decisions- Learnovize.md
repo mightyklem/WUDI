@@ -1,7 +1,7 @@
-# Architectural Decisions & Recommendations: Wudi
+# Architectural Decisions & Recommendations: Learnovize
 
-Source: PRD §6 Technical Direction (`DOCS/Product Requirements Document- Wudi.md:202-215`)
-Companion: `DOCS/Implementation Plan- Wudi.md` Phase 0
+Source: PRD §6 Technical Direction (`DOCS/Product Requirements Document- Learnovize.md:202-215`)
+Companion: `DOCS/Implementation Plan- Learnovize.md` Phase 0
 
 All decisions optimize for: Nigeria-first (expensive data, weak networks, NGN payments), 50/200/500 class caps, web + iOS + Android parity, and verifiable certificates.
 
@@ -44,7 +44,7 @@ Consequences: Vercel or any Node host works; must set OG image cache + <3s budge
 
 Context: Same core features on iPhone + Android with one team (PRD §5, §6).
 
-Decision: Expo managed workflow, EAS builds, Expo Router + deep links (`wudi://t/:slug`, `https://wudi.ng/t/:slug`). LiveKit RN SDK; default to audio-only on cellular.
+Decision: Expo managed workflow, EAS builds, Expo Router + deep links (`learnovize://t/:slug`, `https://learnovize.ng/t/:slug`). LiveKit RN SDK; default to audio-only on cellular.
 
 Alternatives: Native Swift/Kotlin, Flutter — rejected (two codebases or new language, slower for JS team).
 
@@ -83,7 +83,7 @@ Hosting note: Start API + LiveKit in EU-West (best Lagos latency/cost trade-off 
 `sessions(id, training_id, starts_at_utc, ends_at_utc, livekit_room, status)`
 `registrations(id, training_id, user_id, cert_consent_public bool, cert_paid bool, status[active|cancelled], unique(training_id,user_id), partial unique(training_id,user_id) where active)`
 `attendance_logs(id, session_id, user_id, joined_at, left_at, stayed_ms, present bool, corrected_by?, correction_reason?, unique(session_id,user_id))`
-`certificates(id, number unique text check `WUDI-YYYY-XXXXXX` format, training_id, user_id, pdf_url, image_url, sha256, status[valid|revoked], revoked_reason?)` — immutable, never overwritten.
+`certificates(id, number unique text check `LEARNOVIZE-YYYY-XXXXXX` format, training_id, user_id, pdf_url, image_url, sha256, status[valid|revoked], revoked_reason?)` — immutable, never overwritten.
 `payments(id, registration_id, provider, provider_ref unique, amount_ngn, provider_fee_ngn, commission_ngn, net_ngn, status, idempotency_key unique, raw_webhook jsonb)`
 `payouts(id, trainer_id, training_id, amount_net, status[pending|held|paid|failed], hold_until)`
 `feed_posts(id, training_id, type[video|ecard|infographic], media_url, thumb_url?, status[live|hidden|removed], reports_count)`

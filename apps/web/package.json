@@ -1,5 +1,5 @@
 {
-  "name": "@wudi/web",
+  "name": "@learnovize/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
   "dependencies": {
     "@livekit/components-react": "^2.9.24",
     "@prisma/client": "^6.0.0",
-    "@wudi/shared": "workspace:*",
+    "@learnovize/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.0",
     "livekit-client": "^2.22.3",

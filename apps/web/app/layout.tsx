@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Wudi — live trainings with verifiable certificates',
+  title: 'Learnovize — live trainings with verifiable certificates',
   description: 'Host live trainings, track real attendance, issue verifiable certificates.',
 };
 

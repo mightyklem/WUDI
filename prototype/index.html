@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta property="og:title" content="Wudi — Intro to Solar Installation">
+<meta property="og:title" content="Learnovize — Intro to Solar Installation">
 <meta property="og:description" content="Live training · Sat Oct 4, 10:00 WAT · Free attendance, optional certificate">
-<title>Wudi Prototype — Home</title>
+<title>Learnovize Prototype — Home</title>
 <style>
 :root{
   --bg:#FFFFFF; --ink:#1C2B33; --mut:#8A9299; --line:#22333C;
@@ -97,11 +97,11 @@ dialog .body{padding:26px}
 <div class="card" style="margin-top:18px">
 <p class="eyebrow">Public verification — no login needed</p>
 <div class="btnrow" style="margin-top:0">
-<input type="text" id="verifyInput" placeholder="WUDI-2026-XXXXXX">
+<input type="text" id="verifyInput" placeholder="LEARNOVIZE-2026-XXXXXX">
 <button class="btn primary" onclick="verify()">Check</button>
 </div>
 <p id="verifyOut" style="margin:12px 0 0"></p>
-<p class="muted" style="font-size:13px">Try <b>WUDI-2026-4F8K2Q</b> (valid) or <b>WUDI-2026-REVOKED</b> (revoked). Certificates confirm attendance/completion — not government accreditation.</p>
+<p class="muted" style="font-size:13px">Try <b>LEARNOVIZE-2026-4F8K2Q</b> (valid) or <b>LEARNOVIZE-2026-REVOKED</b> (revoked). Certificates confirm attendance/completion — not government accreditation.</p>
 </div>
 
 <h2 class="sec">Your progress (demo)</h2>
@@ -124,7 +124,7 @@ dialog .body{padding:26px}
 <span><label class="fl">Certification</label><select><option>Paid cert ₦2,500</option><option>Free cert</option><option>None</option></select></span>
 <span><label class="fl">Min attendance</label><select><option>80% (default)</option><option>60%</option><option>100%</option></select></span>
 </div>
-<div class="btnrow"><button class="btn primary" onclick="toast('Training saved (demo). Invite: wudi.prototype/t/solar-101/register')">Save + generate invite</button></div>
+<div class="btnrow"><button class="btn primary" onclick="toast('Training saved (demo). Invite: learnovize.prototype/t/solar-101/register')">Save + generate invite</button></div>
 </div>
 
 <p class="muted" style="font-size:13px;margin:26px 0 0">Prototype only — data stays in this browser (localStorage). No gradients, no images: every card is a flat outlined panel so invite pages stay under the low-data budget.</p>
@@ -153,9 +153,9 @@ const TRAININGS={
  phone:{title:"Phone Photography Basics",trainer:"Tunde O.",cap:200,cert:"Paid cert · ₦1,500",min:80,total:2,lessons:"2 sessions",day:"14",mon:"Oct",when:"Tue 11:00 AM WAT",detail:"Session 1 of 2 · Tue, Oct 14, 11:00 WAT"},
  excel:{title:"Excel for Market Traders",trainer:"Fatima N.",cap:50,cert:"Free cert",min:60,total:4,lessons:"4 sessions",day:"18",mon:"Oct",when:"Sat 11:00 AM WAT",detail:"Session 1 of 4 · Sat, Oct 18, 11:00 WAT"}};
 const ORDER=["solar","phone","excel"];
-let seats=JSON.parse(localStorage.getItem("wudi_seats")||'{"solar":32,"phone":150,"excel":49}');
-let mine=JSON.parse(localStorage.getItem("wudi_mine")||'{"attended":0,"training":null}');
-let name=localStorage.getItem("wudi_name")||"Guest";
+let seats=JSON.parse(localStorage.getItem("learnovize_seats")||'{"solar":32,"phone":150,"excel":49}');
+let mine=JSON.parse(localStorage.getItem("learnovize_mine")||'{"attended":0,"training":null}');
+let name=localStorage.getItem("learnovize_name")||"Guest";
 let current="solar";
 const left=k=>TRAININGS[k].cap-seats[k];
 const hr=()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening";};
@@ -180,7 +180,7 @@ function render(){
  const c=mine.training?TRAININGS[mine.training]:null,pct=c?Math.round(mine.attended/c.total*100):0;
  const earned=c&&pct>=c.min;
  document.getElementById("certs").innerHTML=
-  (earned?`<div class="rowitem"><div style="font-size:26px">🏅</div><div><p class="rtitle">${c.title}</p><p class="rmeta">Earned · WUDI-2026-4F8K2Q</p></div><span class="rbtn"><button class="btn" onclick="toast('Certificate PDF downloaded (simulated).')">Download</button></span></div>`:"")+
+  (earned?`<div class="rowitem"><div style="font-size:26px">🏅</div><div><p class="rtitle">${c.title}</p><p class="rmeta">Earned · LEARNOVIZE-2026-4F8K2Q</p></div><span class="rbtn"><button class="btn" onclick="toast('Certificate PDF downloaded (simulated).')">Download</button></span></div>`:"")+
   `<div class="rowitem"><div style="font-size:26px">${earned?"🔒":"🏅"}</div><div><p class="rtitle">${c?c.title:"Intro to Solar Installation"}</p><p class="rmeta">${c?(pct>=c.min?"Ready for trainer approval":`Finish ${c.total-mine.attended} more session(s) · ${pct}% of ${c.min}% needed`):"Reserve a seat to start earning"}</p></div></div>`;
  document.getElementById("progText").textContent=c?`${mine.attended} of ${c.total} sessions · ${pct}% — need ${c.min}%${pct>=c.min?" — eligible ✓":""}`:"Not registered yet — reserve a seat above.";
  document.getElementById("progBar").style.width=(c?pct:0)+"%";
@@ -191,21 +191,21 @@ function openRegister(k){current=k;const t=TRAININGS[k];
  document.getElementById("regDialog").showModal();}
 function submitReg(){const n=document.getElementById("fName").value.trim()||"Guest";
  if(left(current)<=0){toast("Sorry, this training is full.");return;}
- name=n;localStorage.setItem("wudi_name",n);
+ name=n;localStorage.setItem("learnovize_name",n);
  seats[current]++;mine={attended:0,training:current};
- localStorage.setItem("wudi_seats",JSON.stringify(seats));localStorage.setItem("wudi_mine",JSON.stringify(mine));
+ localStorage.setItem("learnovize_seats",JSON.stringify(seats));localStorage.setItem("learnovize_mine",JSON.stringify(mine));
  document.getElementById("regDialog").close();render();
  toast(`Seat reserved for ${n}. Confirmation + T-24h/T-1h reminders simulated.${document.getElementById("fCert").checked?" Certificate add-on reserved.":""} Free cancel until 24h before start.`);}
 function simulateSession(){if(!mine.training){toast("Reserve a seat first.");return;}
  const t=TRAININGS[mine.training];
  if(mine.attended>=t.total){toast("All sessions attended — trainer approval + download unlock in Phase 5.");return;}
- mine.attended++;localStorage.setItem("wudi_mine",JSON.stringify(mine));render();
+ mine.attended++;localStorage.setItem("learnovize_mine",JSON.stringify(mine));render();
  const pct=Math.round(mine.attended/t.total*100);
  toast(pct>=t.min?`Session recorded ✓ ${mine.attended}/${t.total} (${pct}%) — certificate unlocked below.`:`Session recorded ✓ ${mine.attended}/${t.total} (${pct}%) — attend the next live session.`);}
-function resetDemo(){localStorage.removeItem("wudi_seats");localStorage.removeItem("wudi_mine");seats={solar:32,phone:150,excel:49};mine={attended:0,training:null};render();toast("Demo reset.");}
+function resetDemo(){localStorage.removeItem("learnovize_seats");localStorage.removeItem("learnovize_mine");seats={solar:32,phone:150,excel:49};mine={attended:0,training:null};render();toast("Demo reset.");}
 function verify(){const v=document.getElementById("verifyInput").value.trim().toUpperCase(),out=document.getElementById("verifyOut");
- if(v==="WUDI-2026-4F8K2Q")out.innerHTML=`<span class="badge ok">✓ VALID</span> Adaeze K. · Intro to Solar Installation · Oct 2026`;
- else if(v==="WUDI-2026-REVOKED")out.innerHTML=`<span class="badge rev">REVOKED</span> This certificate was revoked.`;
+ if(v==="LEARNOVIZE-2026-4F8K2Q")out.innerHTML=`<span class="badge ok">✓ VALID</span> Adaeze K. · Intro to Solar Installation · Oct 2026`;
+ else if(v==="LEARNOVIZE-2026-REVOKED")out.innerHTML=`<span class="badge rev">REVOKED</span> This certificate was revoked.`;
  else out.innerHTML=`<span class="badge">NOT FOUND</span> No certificate with this number.`;}
 function toast(m){const t=document.getElementById("regToast");t.textContent=m;t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),6000);}
 render();

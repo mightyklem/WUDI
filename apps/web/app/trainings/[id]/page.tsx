@@ -21,7 +21,7 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
   const full = left <= 0 || t.status === 'full';
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Wudi 無敵</span>
+      <div className="topbar"><span className="logo">Learnovize</span>
         <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href={`/t/${t.slug}/register`}>Invite link</Link></nav>
       </div>
       <p className="eyebrow">{t.topic || 'Training'} · {t.format === 'audio' ? 'Audio-only' : 'Video + audio'} · {t.trainer.displayName}</p>

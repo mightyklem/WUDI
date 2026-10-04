@@ -36,9 +36,9 @@ describe('certificates (FR-8)', () => {
     assert.equal(isEligible({ pct: 100, minPct: 80, certMode: 'none' }), true);
   });
   it('cert number format', () => {
-    assert.equal(isCertNumber('WUDI-2026-4F8K2Q'), true);
-    assert.equal(isCertNumber('WUDI-26-ABC'), false);
-    assert.equal(isCertNumber('wudi-2026-4F8K2Q'), false);
+    assert.equal(isCertNumber('LEARNOVIZE-2026-4F8K2Q'), true);
+    assert.equal(isCertNumber('LEARNOVIZE-26-ABC'), false);
+    assert.equal(isCertNumber('learnovize-2026-4F8K2Q'), false);
   });
 });
 

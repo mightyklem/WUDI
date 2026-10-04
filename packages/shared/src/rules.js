@@ -1,5 +1,5 @@
 /**
- * Wudi shared business rules — pure functions, no I/O.
+ * Learnovize shared business rules — pure functions, no I/O.
  * Source of truth for: PRD FR-7 (attendance), FR-8 (certificates),
  * FR-9 (commission/refunds), FR-3.3/5.4 (seat caps).
  * The API MUST re-validate every result server-side; clients use these read-only.
@@ -46,7 +46,7 @@ export function isEligible({ pct, minPct = DEFAULT_MIN_PCT, certMode = 'none', p
 }
 
 /**
- * FR-9.2: Wudi commission in kobo-safe integer NGN.
+ * FR-9.2: Learnovize commission in kobo-safe integer NGN.
  * Amounts are whole naira; result rounded to nearest naira.
  */
 export function commission(plan, amountNgn) {
@@ -90,8 +90,8 @@ export function refundDecision({ cancelledBy, hoursBeforeStart = 0, trainerHeld 
   return { refund: false, reason: 'no-refund' };
 }
 
-/** Certificate number format WUDI-YYYY-XXXXXX (ADR-006). */
-const CERT_RE = /^WUDI-(19|20)\d{2}-[A-Z0-9]{6}$/;
+/** Certificate number format LEARNOVIZE-YYYY-XXXXXX (ADR-006). */
+const CERT_RE = /^LEARNOVIZE-(19|20)\d{2}-[A-Z0-9]{6}$/;
 export function isCertNumber(s) {
   return typeof s === 'string' && CERT_RE.test(s);
 }

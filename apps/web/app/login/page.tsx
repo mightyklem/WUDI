@@ -22,7 +22,7 @@ export default function Login() {
   return (
     <div className="wrap">
       <h1>Log in.</h1>
-      <p className="sub">Welcome back to Wudi.</p>
+      <p className="sub">Welcome back to Learnovize.</p>
       <form onSubmit={submit} className="card" style={{ marginTop: 18 }}>
         <label className="fl">Email</label>
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />

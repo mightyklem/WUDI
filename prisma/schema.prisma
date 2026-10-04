@@ -1,4 +1,4 @@
-// Wudi data model v1 — hardened per ADR-006.
+// Learnovize data model v1 — hardened per ADR-006.
 // DB: Postgres 16 locally (docker compose), managed Postgres in cloud.
 
 generator client {
@@ -152,7 +152,7 @@ model AttendanceLog {
 
 model Certificate {
   id          String   @id @default(cuid())
-  number      String   @unique // WUDI-YYYY-XXXXXX, validated in app
+  number      String   @unique // LEARNOVIZE-YYYY-XXXXXX, validated in app
   trainingId  String
   training    Training @relation(fields: [trainingId], references: [id])
   userId      String

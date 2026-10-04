@@ -20,7 +20,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { email } = (await req.json().catch(() => ({}))) as { email?: string };
   if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user) return NextResponse.json({ error: 'No Wudi account with that email' }, { status: 404 });
+  if (!user) return NextResponse.json({ error: 'No Learnovize account with that email' }, { status: 404 });
   if (user.id === t.trainerId) return NextResponse.json({ error: 'Trainer is already in charge' }, { status: 400 });
   const mod = await prisma.moderator.upsert({
     where: { trainingId_userId: { trainingId: id, userId: user.id } },

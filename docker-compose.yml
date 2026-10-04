@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: wudi
-      POSTGRES_PASSWORD: wudi
-      POSTGRES_DB: wudi
+      POSTGRES_USER: learnovize
+      POSTGRES_PASSWORD: learnovize
+      POSTGRES_DB: learnovize
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wudi"]
+      test: ["CMD-SHELL", "pg_isready -U learnovize"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -33,7 +33,7 @@ services:
     volumes:
       - s3mockdata:/s3mockroot
     environment:
-      initialBuckets: "wudi-public, wudi-private"
+      initialBuckets: "learnovize-public, learnovize-private"
 
   # Live media (Phase 3): self-hosted LiveKit SFU in dev mode.
   # --dev enables built-in TURN; recording/egress are NOT configured (replays forbidden, FR-6.7).

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyWebhook } from '@/lib/livekit';
-import { isPresent, programPct } from '@wudi/shared';
+import { isPresent, programPct } from '@learnovize/shared';
 
 export const dynamic = 'force-dynamic';
 

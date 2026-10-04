@@ -7,7 +7,7 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
   const { sessionId } = await params;
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Wudi 無敵</span>
+      <div className="topbar"><span className="logo">Learnovize</span>
         <nav><Link className="btn link" href="/">Home</Link></nav>
       </div>
       <h1>Classroom.</h1>

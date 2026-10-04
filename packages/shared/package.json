@@ -1,7 +1,7 @@
 {
-  "name": "@wudi/shared",
+  "name": "@learnovize/shared",
   "version": "0.1.0",
-  "description": "Wudi shared business rules (pure, framework-free). Imported by API and clients read-only.",
+  "description": "Learnovize shared business rules (pure, framework-free). Imported by API and clients read-only.",
   "type": "module",
   "main": "./src/rules.js",
   "scripts": {
