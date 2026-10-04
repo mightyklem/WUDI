@@ -42,6 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!role) return NextResponse.json({ error: 'Not on the roster' }, { status: 403 });
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || user.suspended) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const jwt = await mintRoomToken({
     identity: userId,
     name: user?.email || userId,

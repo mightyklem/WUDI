@@ -21,6 +21,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!t || (t.status !== 'live' && t.status !== 'full')) {
     return NextResponse.json({ error: 'Training not open' }, { status: 404 });
   }
+  const me = await prisma.user.findUnique({ where: { id: userId } });
+  if (!me || me.suspended) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   // Paid certification is an add-on: register free now, buy the cert before the last session ends.
   try {
     const reg = await prisma.$transaction(async (tx) => {

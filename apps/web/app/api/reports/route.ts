@@ -26,6 +26,16 @@ export async function POST(req: Request) {
       data: { reportsCount: { increment: 1 } },
     });
   }
+  // FR-12.7: instant alert when a target trips the velocity threshold.
+  const openCount = await prisma.report.count({
+    where: { targetType, targetId, status: 'open' },
+  });
+  if (openCount >= 3 && process.env.SLACK_WEBHOOK_URL) {
+    fetch(process.env.SLACK_WEBHOOK_URL, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: `🚨 Learnovize flag: ${targetType} ${targetId} has ${openCount} open reports.` }),
+    }).catch(() => {});
+  }
   await notify({
     userIds: [userId], type: 'report-received',
     payload: { targetType, targetId },

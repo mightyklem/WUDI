@@ -17,6 +17,9 @@ export async function POST(req: Request) {
   if (!user || !(await checkPassword(password, user.passwordHash))) {
     return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
   }
+  if (user.suspended) {
+    return NextResponse.json({ error: 'Account suspended — contact support' }, { status: 403 });
+  }
   const access = await signAccessToken(user.id);
   const { token: refresh, tokenHash } = newRefreshToken();
   await prisma.refreshToken.create({ data: { userId: user.id, tokenHash } });
