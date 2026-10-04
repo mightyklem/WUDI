@@ -21,9 +21,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!t || (t.status !== 'live' && t.status !== 'full')) {
     return NextResponse.json({ error: 'Training not open' }, { status: 404 });
   }
-  if (t.certMode === 'paid') {
-    return NextResponse.json({ error: 'Paid certification arrives in Phase 6' }, { status: 409 });
-  }
+  // Paid certification is an add-on: register free now, buy the cert before the last session ends.
   try {
     const reg = await prisma.$transaction(async (tx) => {
       const dup = await tx.registration.findUnique({

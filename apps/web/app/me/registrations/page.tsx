@@ -5,7 +5,8 @@ import { getAccess } from '@/lib/client-auth';
 
 type Reg = {
   id: string;
-  training: { id: string; title: string; slug: string; sessions: { startsAtUtc: string }[] };
+  certPaid: boolean;
+  training: { id: string; title: string; slug: string; certMode: string; certPriceNgn: number | null; sessions: { startsAtUtc: string }[] };
 };
 
 type Progress = {
@@ -78,7 +79,27 @@ export default function MyRegistrations() {
         {regs !== null && regs.length === 0 && <p className="muted">No seats yet — go find a training.</p>}
         {regs?.map((r) => {
           const p = progress[r.training.id];
-          return (
+  async function buyCert(regId: string) {
+    const access = getAccess();
+    if (!access) return;
+    const r = await fetch(`/api/registrations/${regId}/checkout`, {
+      method: 'POST', headers: { authorization: `Bearer ${access}` },
+    });
+    const j = await r.json();
+    if (!r.ok) return setMsg(j.error || 'Checkout failed');
+    if (j.payUrl) {
+      window.location.href = j.payUrl; // Paystack hosted page
+      return;
+    }
+    // Mock provider (local dev): simulate the participant paying now.
+    const m = await fetch('/api/payments/mock/complete', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reference: j.reference }),
+    });
+    setMsg(m.ok ? `Certificate paid (${j.reference}).` : 'Payment simulation failed.');
+  }
+
+  return (
           <div className="rowitem" key={r.id} style={{ borderRadius: 16, marginBottom: 12 }}>
             <div>
               <p className="rtitle" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{r.training.title}</p>
@@ -93,6 +114,10 @@ export default function MyRegistrations() {
             </div>
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <Link className="btn" href={`/trainings/${r.training.id}`}>View</Link>
+              {r.training.certMode === 'paid' && !r.certPaid && (
+                <button className="btn primary" onClick={() => buyCert(r.id)}>Buy cert ₦{r.training.certPriceNgn}</button>
+              )}
+              {r.training.certMode === 'paid' && r.certPaid && <span className="muted">✓ cert paid</span>}
               <button className="btn" onClick={() => cancel(r.id)}>Cancel</button>
             </span>
           </div>

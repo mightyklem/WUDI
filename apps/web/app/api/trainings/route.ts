@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { makeSlug, validateTrainingInput } from '@/lib/trainings';
+import { PLAN_CAPS } from '@learnovize/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +34,14 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const tid = await trainerId(req);
   if (!tid) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
+  const profile = await prisma.trainerProfile.findUnique({ where: { userId: tid } });
+  const plan = profile?.plan === 'pro' || profile?.plan === 'business' ? profile.plan : 'free';
   const body = await req.json().catch(() => ({}));
-  // Phase 6 gates paid certs; for now nobody is approved.
-  const v = validateTrainingInput(body, false);
+  const v = validateTrainingInput(body, profile?.paidCertApproved === true);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
+  if (v.data.cap > PLAN_CAPS[plan]) {
+    return NextResponse.json({ error: `Cap ${v.data.cap} exceeds your ${plan} plan (${PLAN_CAPS[plan]}). Upgrade to raise it.` }, { status: 403 });
+  }
 
   const training = await prisma.training.create({
     data: {
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
       certPriceNgn: v.data.certPriceNgn,
       minPct: v.data.minPct,
       cap: v.data.cap,
-      plan: 'free',
+      plan,
       status: 'live',
       sessions: {
         create: v.data.sessions.map((s, i) => ({

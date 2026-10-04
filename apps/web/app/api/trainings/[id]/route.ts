@@ -39,6 +39,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Training is closed' }, { status: 409 });
   }
   const body = await req.json().catch(() => ({}));
+  const profile = await prisma.trainerProfile.findUnique({ where: { userId: t.trainerId } });
   const v = validateTrainingInput(
     { title: body.title ?? t.title, description: body.description ?? t.description,
       topic: body.topic ?? t.topic, format: body.format ?? t.format,
@@ -46,7 +47,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       minPct: body.minPct ?? t.minPct, cap: body.cap ?? t.cap,
       sessions: body.sessions ?? (await prisma.session.findMany({ where: { trainingId: id } }))
         .map((s) => ({ startsAtUtc: s.startsAtUtc.toISOString(), endsAtUtc: s.endsAtUtc.toISOString() })) },
-    false,
+    profile?.paidCertApproved === true,
   );
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
   if (v.data.cap < t.seatsTaken) {

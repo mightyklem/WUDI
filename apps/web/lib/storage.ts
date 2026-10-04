@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 function env(name: string, fallback = ''): string {
   return process.env[name] || fallback;
@@ -30,7 +31,27 @@ export function publicUrl(key: string): string {
   return `${endpoint.replace('https://', `https://${bucket}.`)}/${key}`;
 }
 
-/** Immutable upload — keys contain the unique cert number, never overwritten. */
+export function privateBucket(): string {
+  return env('S3_PRIVATE_BUCKET', 'learnovize-private');
+}
+
+/** Private upload (trainer ID docs, approval evidence). Never publicly readable. */
+export async function putPrivate(key: string, body: Uint8Array, contentType: string): Promise<string> {
+  await storage().send(
+    new PutObjectCommand({ Bucket: privateBucket(), Key: key, Body: body, ContentType: contentType }),
+  );
+  return key;
+}
+
+/** 5-minute signed read URL for private objects (access is logged by callers). */
+export async function signPrivate(key: string, seconds = 300): Promise<string> {
+  return getSignedUrl(
+    storage(),
+    new GetObjectCommand({ Bucket: privateBucket(), Key: key }),
+    { expiresIn: seconds },
+  );
+}
+/** Immutable upload — keys contain unique ids, never overwritten. */
 export async function putPublic(key: string, body: Uint8Array, contentType: string): Promise<string> {
   await storage().send(
     new PutObjectCommand({ Bucket: publicBucket(), Key: key, Body: body, ContentType: contentType }),
