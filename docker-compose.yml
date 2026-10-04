@@ -35,16 +35,18 @@ services:
     environment:
       initialBuckets: "wudi-public, wudi-private"
 
-  # Optional: uncomment when starting Phase 3 classroom work.
-  # livekit:
-  #   image: livekit/livekit-server:latest
-  #   command: --dev --bind 0.0.0.0
-  #   environment:
-  #     LIVEKIT_KEYS: "devkey: devsecret"
-  #   ports:
-  #     - "7880:7880"
-  #     - "7881:7881"
-  #     - "7882:7882/udp"
+  # Live media (Phase 3): self-hosted LiveKit SFU in dev mode.
+  # --dev enables built-in TURN; recording/egress are NOT configured (replays forbidden, FR-6.7).
+  # Cloud: dedicated LiveKit + coturn with TLS on 443 (see ADR-005).
+  livekit:
+    image: livekit/livekit-server:v1.8
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
 
 volumes:
   pgdata:

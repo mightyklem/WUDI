@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import RegisterButton from '../RegisterButton';
+import ModeratorInvite from '../ModeratorInvite';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,10 +30,12 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
       <div className="card" style={{ marginTop: 18 }}>
         <p className="eyebrow">{t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} · {left} / {t.cap} seats left {full && '(FULL)'}</p>
         {t.sessions.map((s) => (
-          <p key={s.id} className="meta">🗓 {s.startsAtUtc.toUTCString()} → {s.endsAtUtc.toUTCString()}</p>
+          <p key={s.id} className="meta">🗓 {s.startsAtUtc.toUTCString()} → {s.endsAtUtc.toUTCString()} <Link className="btn link" href={`/classroom/${s.id}`}>Join classroom →</Link></p>
         ))}
         <div className="btnrow"><RegisterButton trainingId={t.id} full={full || t.status !== 'live'} /></div>
       </div>
+      <h2 className="sec">Moderators</h2>
+      <div className="card"><ModeratorInvite trainingId={t.id} /></div>
     </div>
   );
 }
