@@ -5,6 +5,7 @@ import RegisterButton from '../RegisterButton';
 import ModeratorInvite from '../ModeratorInvite';
 import AttendanceSection from '../AttendanceSection';
 import IssueCertificates from '../IssueCertificates';
+import PostComposer from '../PostComposer';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,8 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
       <div className="card"><ModeratorInvite trainingId={t.id} /></div>
       <AttendanceSection trainingId={t.id} sessionIds={t.sessions.map((s) => s.id)} />
       <IssueCertificates trainingId={t.id} />
+      <h2 className="sec">Explore post</h2>
+      <div className="card"><PostComposer trainingId={t.id} /></div>
     </div>
   );
 }

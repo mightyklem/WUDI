@@ -15,6 +15,7 @@ export default async function Home() {
       <div className="topbar">
         <span className="logo">Learnovize</span>
         <nav>
+          <Link className="btn link" href="/feed">Explore</Link>
           <Link className="btn link" href="/trainers">Trainers</Link>
           <Link className="btn link" href="/me/registrations">My seats</Link>
           <Link className="btn link" href="/login">Log in</Link>

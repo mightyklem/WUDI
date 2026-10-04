@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { makeSlug, validateTrainingInput } from '@/lib/trainings';
+import { notify } from '@/lib/notify';
 import { PLAN_CAPS } from '@learnovize/shared';
 
 export const dynamic = 'force-dynamic';
@@ -73,6 +74,18 @@ export async function POST(req: Request) {
     await prisma.session.update({
       where: { id: s.id },
       data: { livekitRoom: `${training.id}-${s.id}` },
+    });
+  }
+  // FR-11.2: followers hear about the new training first.
+  const followers = await prisma.follow.findMany({
+    where: { trainerId: tid }, select: { followerId: true },
+  });
+  if (followers.length) {
+    await notify({
+      userIds: followers.map((f) => f.followerId),
+      type: 'new-training-from-followed',
+      payload: { trainingId: training.id, title: training.title },
+      email: { subject: `${profile?.displayName || 'A trainer you follow'} announced: ${training.title}`, text: `Register: /t/${training.slug}/register` },
     });
   }
   return NextResponse.json({ training: { ...training, invitePath: `/t/${training.slug}/register` } }, { status: 201 });

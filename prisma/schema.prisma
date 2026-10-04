@@ -27,6 +27,7 @@ model User {
   moderating     Moderator[]
   auditActs      AuditLog[]      @relation("AuditActor")
   notifications  Notification[]
+  pushTokens     PushToken[]
 }
 
 model RefreshToken {
@@ -261,4 +262,14 @@ model Notification {
   createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
+}
+
+model PushToken {
+  token     String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform  String   @default("unknown") // ios|android|web
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
