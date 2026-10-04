@@ -16,6 +16,7 @@ export default async function Home() {
         <span className="logo">Wudi 無敵</span>
         <nav>
           <Link className="btn link" href="/trainers">Trainers</Link>
+          <Link className="btn link" href="/me/registrations">My seats</Link>
           <Link className="btn link" href="/login">Log in</Link>
           <Link className="btn primary" href="/signup">Sign up</Link>
         </nav>
@@ -31,6 +32,7 @@ export default async function Home() {
         <div className="btnrow">
           <Link className="btn primary" href="/trainers">Browse trainers</Link>
           <Link className="btn" href="/onboarding">Become a trainer</Link>
+          <Link className="btn" href="/trainings/new">Host a training</Link>
         </div>
       </div>
       <h2 className="sec">How it works</h2>
