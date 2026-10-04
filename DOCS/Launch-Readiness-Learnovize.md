@@ -16,8 +16,8 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
 
 - [x] **R2 storage (staging-verified 2026-10-04):** buckets `learnovize-public`/`learnovize-private` live;
   write+read verified on public, signed-URL read verified on private, test objects cleaned up.
-  Remaining: enable public access on `learnovize-public` (r2.dev for staging) and set `PUBLIC_FILES_BASE`;
-  custom domain + true CDN for production.
+  Public HTTP verified 2026-10-04: staging base `https://pub-c21f5276b2a14494898359cefb8d82b6.r2.dev` serves objects (200, byte-match).
+  Remaining: custom domain + true CDN for production.
 - [ ] Paystack live keys + recurring billing · [ ] Termii SMS/WhatsApp · [ ] Resend email ·
   [ ] Expo push (EAS project) · [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
 
