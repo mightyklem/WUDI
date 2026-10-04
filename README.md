@@ -83,9 +83,17 @@ Self-hosting media = team owns capacity, monitoring, bandwidth cost. Load-test t
 ```
 LEARNOVIZE/
   README.md
-  DOCS/
-    Product Requirements Document- Learnovize.md
+  DOCS/                  product spec, plan, ADRs, design system
+  prototype/             clickable HTML prototype (reference)
+  docker-compose.yml     local Postgres + Redis + S3Mock + LiveKit
+  prisma/                data model v1 (19+ tables)
+  packages/shared/       pure business rules + tests
+  apps/web/              Next.js web app (Phases 1–8 live)
+  apps/mobile/           Expo iOS/Android app (Phase 9)
 ```
+
+Mobile: `pnpm --filter @learnovize/mobile exec expo start` (set `EXPO_PUBLIC_BACKEND_URL` to your PC's LAN URL, e.g. `http://192.168.x.x:3000`).
+Native classroom needs a dev build (`eas build --profile development`); web export verified via `expo export --platform web`.
 
 Code (`apps/web`, `apps/mobile`, `backend/`) lands in stages 1–6.
 
