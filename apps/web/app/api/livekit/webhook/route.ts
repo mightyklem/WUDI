@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyWebhook } from '@/lib/livekit';
-import { isPresent } from '@wudi/shared';
+import { isPresent, programPct } from '@wudi/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,10 +34,38 @@ export async function POST(req: Request) {
     if (joined) {
       const stayed = Date.now() - joined;
       const duration = session.endsAtUtc.getTime() - session.startsAtUtc.getTime();
+      const present = isPresent(duration, stayed);
       await prisma.attendanceLog.update({
         where: { sessionId_userId: { sessionId: session.id, userId: evt.identity } },
-        data: { leftAt: new Date(), stayedMs: stayed, present: isPresent(duration, stayed) },
+        data: { leftAt: new Date(), stayedMs: stayed, present },
       });
+      // FR-7.6: confirm the recording, and warn while still fixable.
+      await prisma.notification.create({
+        data: {
+          userId: evt.identity, type: 'attendance-recorded',
+          payload: { trainingId: session.trainingId, sessionId: session.id, present },
+        },
+      });
+      const training = await prisma.training.findUnique({
+        where: { id: session.trainingId },
+        include: { sessions: { orderBy: { startsAtUtc: 'asc' } } },
+      });
+      if (training) {
+        const allLogs = await prisma.attendanceLog.findMany({
+          where: { userId: evt.identity, session: { trainingId: session.trainingId } },
+        });
+        const presentCount = allLogs.filter((l) => l.present).length;
+        const pct = programPct(presentCount, training.sessions.length);
+        const remaining = training.sessions.filter((s) => s.endsAtUtc.getTime() > Date.now()).length;
+        if (pct < training.minPct && remaining > 0) {
+          await prisma.notification.create({
+            data: {
+              userId: evt.identity, type: 'attendance-at-risk',
+              payload: { trainingId: session.trainingId, pct, minPct: training.minPct, remaining },
+            },
+          });
+        }
+      }
     }
   }
   return NextResponse.json({ ok: true });
