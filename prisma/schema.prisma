@@ -1,0 +1,261 @@
+// Wudi data model v1 — hardened per ADR-006.
+// DB: Postgres 16 locally (docker compose), managed Postgres in cloud.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String?  @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  trainerProfile TrainerProfile?
+  refreshTokens  RefreshToken[]
+  registrations  Registration[]
+  attendanceLogs AttendanceLog[]
+  certificates   Certificate[]
+  moderating     Moderator[]
+  auditActs      AuditLog[]      @relation("AuditActor")
+  notifications  Notification[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model TrainerProfile {
+  userId            String  @id
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String
+  photoUrl          String?
+  bio               String?
+  topics            String[]
+  logoUrl           String?
+  signatureUrl      String?
+  paidCertApproved  Boolean @default(false)
+  approvalState     String  @default("none") // none|pending|approved|rejected|revoked
+  rejectionReason   String?
+
+  approvals TrainerApproval[]
+  trainings Training[]
+}
+
+model TrainerApproval {
+  id                String   @id @default(cuid())
+  trainerId         String
+  trainer           TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  idDocUrls         String[] // private bucket only, never public
+  expertiseEvidence String?
+  status            String   @default("pending") // pending|approved|rejected|revoked
+  reviewerId        String?
+  decidedAt         DateTime?
+  createdAt         DateTime @default(now())
+}
+
+model Moderator {
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     String   @default("invited") // invited|active|removed
+
+  @@id([trainingId, userId])
+}
+
+model Training {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  trainerId  String
+  trainer    TrainerProfile @relation(fields: [trainerId], references: [userId])
+  title      String
+  description String?
+  topic      String?
+  format     String   // video|audio
+  certMode   String   @default("none") // none|free|paid
+  certPriceNgn Int?
+  minPct     Int      @default(80)
+  cap        Int
+  seatsTaken Int      @default(0)
+  plan       String   @default("free") // free|pro|business
+  status     String   @default("draft") // draft|live|full|cancelled|finished
+  createdAt  DateTime @default(now())
+
+  sessions      Session[]
+  registrations Registration[]
+  moderators    Moderator[]
+  feedPosts     FeedPost[]
+  certificates  Certificate[]
+  payouts       Payout[]
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  trainingId  String
+  training    Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  startsAtUtc DateTime
+  endsAtUtc   DateTime
+  livekitRoom String   @unique
+  status      String   @default("scheduled") // scheduled|live|ended|cancelled
+
+  attendanceLogs AttendanceLog[]
+}
+
+model Registration {
+  id                String   @id @default(cuid())
+  trainingId        String
+  training          Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  certConsentPublic Boolean  @default(false)
+  certPaid          Boolean  @default(false)
+  status            String   @default("active") // active|cancelled
+  createdAt         DateTime @default(now())
+
+  payments Payment[]
+
+  @@unique([trainingId, userId])
+  @@index([trainingId, status])
+}
+
+model AttendanceLog {
+  id               String    @id @default(cuid())
+  sessionId        String
+  session          Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt         DateTime?
+  leftAt           DateTime?
+  stayedMs         Int       @default(0)
+  present          Boolean   @default(false)
+  correctedBy      String?
+  correctionReason String?
+
+  @@unique([sessionId, userId])
+  @@index([userId, sessionId])
+}
+
+model Certificate {
+  id          String   @id @default(cuid())
+  number      String   @unique // WUDI-YYYY-XXXXXX, validated in app
+  trainingId  String
+  training    Training @relation(fields: [trainingId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  pdfUrl      String
+  imageUrl    String?
+  sha256      String
+  status      String   @default("valid") // valid|revoked
+  revokedReason String?
+  createdAt   DateTime @default(now())
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  provider       String   // paystack|flutterwave
+  providerRef    String   @unique
+  amountNgn      Int
+  providerFeeNgn Int      @default(0)
+  commissionNgn  Int      @default(0)
+  netNgn         Int      @default(0)
+  status         String   @default("pending") // pending|paid|refunded|failed
+  idempotencyKey String   @unique
+  rawWebhook     Json?
+  createdAt      DateTime @default(now())
+
+  @@index([providerRef, idempotencyKey])
+}
+
+model Payout {
+  id         String   @id @default(cuid())
+  trainerId  String
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id])
+  amountNet  Int
+  status     String   @default("pending") // pending|held|paid|failed
+  holdUntil  DateTime?
+  createdAt  DateTime @default(now())
+}
+
+model FeedPost {
+  id            String   @id @default(cuid())
+  trainingId    String
+  training      Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  type          String   // video|ecard|infographic
+  mediaUrl      String
+  thumbUrl      String?
+  status        String   @default("live") // live|hidden|removed
+  reportsCount  Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model Follow {
+  followerId String
+  trainerId  String
+
+  @@id([followerId, trainerId])
+}
+
+model Save {
+  userId     String
+  trainingId String
+
+  @@id([userId, trainingId])
+}
+
+model Like {
+  userId String
+  postId String
+
+  @@id([userId, postId])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  targetType String   // post|trainer|certificate
+  targetId   String
+  reporterId String
+  reason     String
+  status     String   @default("open") // open|actioned|dismissed
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  actor     User     @relation("AuditActor", fields: [actorId], references: [id])
+  action    String
+  target    String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}

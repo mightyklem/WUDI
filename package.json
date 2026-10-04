@@ -1,0 +1,11 @@
+{
+  "name": "wudi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wudi — live training platform (monorepo)",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "test": "pnpm -r test",
+    "test:shared": "pnpm --filter @wudi/shared test"
+  }
+}

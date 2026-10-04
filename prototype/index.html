@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:title" content="Wudi — Intro to Solar Installation">
+<meta property="og:description" content="Live training · Sat Oct 4, 10:00 WAT · Free attendance, optional certificate">
+<title>Wudi Prototype — Home</title>
+<style>
+:root{
+  --bg:#FFFFFF; --ink:#1C2B33; --mut:#8A9299; --line:#22333C;
+  --accent:#1B7E8D; --pill:#F1F4F5; --radius:16px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.5 -apple-system,"Segoe UI",Inter,Roboto,sans-serif;padding-bottom:110px}
+.wrap{max-width:960px;margin:0 auto;padding:28px 22px 0}
+h1{font-size:30px;margin:0;color:var(--mut);font-weight:700}
+.sub{margin:6px 0 0;font-size:16px}
+h2.sec{font-size:22px;color:var(--mut);margin:34px 0 12px;font-weight:700}
+.sechead{display:flex;align-items:baseline;justify-content:space-between}
+.sechead a{color:var(--accent);font-size:14px}
+.card{border:1.5px solid var(--line);border-radius:var(--radius);background:#fff;padding:24px}
+.eyebrow{font-size:13px;color:var(--mut);margin:0 0 8px}
+.bigtitle{font-size:26px;font-weight:800;margin:0 0 8px}
+.meta{font-size:15px;margin:0 0 18px}
+.btnrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.btn{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:12px;
+  padding:12px 22px;font-weight:600;font-size:15px;cursor:pointer;min-height:48px}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.link{border:0;color:var(--accent);padding:12px 4px;min-height:0}
+.play{width:56px;height:56px;border-radius:50%;background:var(--ink);color:#fff;
+  display:inline-grid;place-items:center;font-size:20px;cursor:pointer;border:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.course{border:1.5px solid var(--line);border-radius:var(--radius);padding:22px;min-height:170px;
+  display:flex;flex-direction:column;gap:8px;cursor:pointer;background:#fff;text-align:left;font:inherit;color:inherit;width:100%}
+.course:hover{background:#FAFCFC}
+.status{font-size:13px;color:var(--mut)}
+.ctitle{font-size:20px;font-weight:800;margin:0}
+.cmeta{font-size:15px;margin:0}
+.cfoot{font-size:15px;margin:auto 0 0;padding-top:14px}
+.rowitem{border:1.5px solid var(--line);background:#fff;padding:18px 22px;display:flex;gap:18px;align-items:center}
+.rowitem:first-child{border-radius:var(--radius) var(--radius) 0 0}
+.rowitem:last-child{border-radius:0 0 var(--radius) var(--radius)}
+.rowitem:only-child{border-radius:var(--radius)}
+.rowitem + .rowitem{border-top:0}
+.dateblock{min-width:52px;text-align:center}
+.dateblock b{display:block;font-size:24px}
+.dateblock span{font-size:14px}
+.rtitle{font-size:18px;font-weight:700;margin:0}
+.rmeta{font-size:15px;margin:2px 0 0}
+.rbtn{margin-left:auto;white-space:nowrap}
+.badge{display:inline-block;background:var(--pill);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700}
+.badge.ok{background:#DFF2E5;color:#0B1F14}.badge.rev{background:#FDE4E4;color:#8F1D1D}
+.bar{height:8px;background:#ECEFF1;border-radius:999px;overflow:hidden;margin-top:10px}
+.bar>i{display:block;height:100%;background:var(--accent)}
+input[type=text]{width:100%;max-width:320px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;min-height:48px}
+label.fl{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
+select{padding:12px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;background:#fff}
+.bottomnav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1.5px solid var(--line);z-index:30}
+.bottomnav .in{max-width:960px;margin:0 auto;display:flex;padding:10px 0 14px}
+.bottomnav a{flex:1;text-align:center;text-decoration:none;color:var(--mut);font-size:13px}
+.bottomnav a.on{color:var(--ink);font-weight:700}
+.bottomnav .e{display:block;font-size:20px}
+.toast{border:1.5px solid var(--line);border-radius:12px;padding:12px 16px;margin-top:12px;display:none;background:#FAFCFC}
+.toast.show{display:block}
+dialog{border:1.5px solid var(--line);border-radius:20px;padding:0;max-width:440px;width:calc(100% - 40px)}
+dialog .body{padding:26px}
+.muted{color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1 id="greet">Good morning, Guest</h1>
+<p class="sub" id="weekline">You have 3 trainings and 2 live sessions this week.</p>
+
+<div class="card" style="margin-top:22px" id="continueCard">
+<p class="eyebrow">Up next · live only, no replays</p>
+<p class="bigtitle" id="nextTitle">Intro to Solar Installation</p>
+<p class="meta" id="nextMeta">Session 1 of 3 · Sat, Oct 4, 10:00 WAT · 18 / 50 seats left</p>
+<div class="btnrow">
+<button class="btn primary" id="resumeBtn" onclick="openRegister(current)">Reserve seat</button>
+<button class="play" onclick="toast('Doors open 10 min before start. Reminder set for T-24h and T-1h (simulated).')" aria-label="More info">▶</button>
+</div>
+</div>
+
+<div class="sechead"><h2 class="sec">My trainings</h2><a href="#" onclick="toast('Full catalog lands in Phase 7 Explore feed.');return false;">Browse all</a></div>
+<div class="grid2" id="cards"></div>
+
+<h2 class="sec">Live sessions</h2>
+<div id="sessions"></div>
+
+<h2 class="sec">Certificates</h2>
+<div id="certs"></div>
+<div class="card" style="margin-top:18px">
+<p class="eyebrow">Public verification — no login needed</p>
+<div class="btnrow" style="margin-top:0">
+<input type="text" id="verifyInput" placeholder="WUDI-2026-XXXXXX">
+<button class="btn primary" onclick="verify()">Check</button>
+</div>
+<p id="verifyOut" style="margin:12px 0 0"></p>
+<p class="muted" style="font-size:13px">Try <b>WUDI-2026-4F8K2Q</b> (valid) or <b>WUDI-2026-REVOKED</b> (revoked). Certificates confirm attendance/completion — not government accreditation.</p>
+</div>
+
+<h2 class="sec">Your progress (demo)</h2>
+<div class="card">
+<p style="margin:0" id="progText">Not registered yet — reserve a seat above.</p>
+<div class="bar"><i id="progBar" style="width:0%"></i></div>
+<div class="btnrow">
+<button class="btn" onclick="simulateSession()">Simulate attending next session</button>
+<button class="btn link" onclick="resetDemo()">Reset demo</button>
+</div>
+<div class="toast" id="regToast"></div>
+</div>
+
+<h2 class="sec">Host a training (demo fields)</h2>
+<div class="card">
+<p class="eyebrow">Real builder lands in Phase 2 · fields from FR-3.1–3.7</p>
+<label class="fl">Title</label><input type="text" value="Intro to Solar Installation" style="max-width:100%">
+<div class="btnrow">
+<span><label class="fl">Format</label><select><option>Video + audio</option><option>Audio-only</option></select></span>
+<span><label class="fl">Certification</label><select><option>Paid cert ₦2,500</option><option>Free cert</option><option>None</option></select></span>
+<span><label class="fl">Min attendance</label><select><option>80% (default)</option><option>60%</option><option>100%</option></select></span>
+</div>
+<div class="btnrow"><button class="btn primary" onclick="toast('Training saved (demo). Invite: wudi.prototype/t/solar-101/register')">Save + generate invite</button></div>
+</div>
+
+<p class="muted" style="font-size:13px;margin:26px 0 0">Prototype only — data stays in this browser (localStorage). No gradients, no images: every card is a flat outlined panel so invite pages stay under the low-data budget.</p>
+</div>
+
+<nav class="bottomnav"><div class="in">
+<a href="#" class="on" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;"><span class="e">🏠</span>Home</a>
+<a href="#cards" onclick="document.getElementById('cards').scrollIntoView({behavior:'smooth'});return false;"><span class="e">📚</span>Trainings</a>
+<a href="#sessions" onclick="document.getElementById('sessions').scrollIntoView({behavior:'smooth'});return false;"><span class="e">🎥</span>Live</a>
+<a href="#certs" onclick="document.getElementById('certs').scrollIntoView({behavior:'smooth'});return false;"><span class="e">🏅</span>Certificates</a>
+</div></nav>
+
+<dialog id="regDialog"><div class="body">
+<h3 style="margin-top:0" id="dlgTitle">Reserve seat</h3>
+<p class="muted" id="dlgMeta"></p>
+<label class="fl">Full name</label><input type="text" id="fName" placeholder="Adaeze Kalu" style="max-width:100%">
+<label class="fl">Email or phone</label><input type="text" id="fContact" placeholder="adaeze@example.com / 0803…" style="max-width:100%">
+<label class="fl"><input type="checkbox" id="fCert" style="width:auto;min-height:0"> Add certificate</label>
+<label class="fl"><input type="checkbox" id="fConsent" checked style="width:auto;min-height:0"> Show my name on the public verification page</label>
+<div class="btnrow"><button class="btn primary" onclick="submitReg()">Confirm</button><button class="btn" onclick="document.getElementById('regDialog').close()">Cancel</button></div>
+</div></dialog>
+
+<script>
+const TRAININGS={
+ solar:{title:"Intro to Solar Installation",trainer:"Adaeze K.",cap:50,cert:"Paid cert · ₦2,500",min:80,total:3,lessons:"3 sessions",day:"09",mon:"Oct",when:"Sat 10:00 AM WAT",detail:"Session 1 of 3 · Sat, Oct 4, 10:00 WAT"},
+ phone:{title:"Phone Photography Basics",trainer:"Tunde O.",cap:200,cert:"Paid cert · ₦1,500",min:80,total:2,lessons:"2 sessions",day:"14",mon:"Oct",when:"Tue 11:00 AM WAT",detail:"Session 1 of 2 · Tue, Oct 14, 11:00 WAT"},
+ excel:{title:"Excel for Market Traders",trainer:"Fatima N.",cap:50,cert:"Free cert",min:60,total:4,lessons:"4 sessions",day:"18",mon:"Oct",when:"Sat 11:00 AM WAT",detail:"Session 1 of 4 · Sat, Oct 18, 11:00 WAT"}};
+const ORDER=["solar","phone","excel"];
+let seats=JSON.parse(localStorage.getItem("wudi_seats")||'{"solar":32,"phone":150,"excel":49}');
+let mine=JSON.parse(localStorage.getItem("wudi_mine")||'{"attended":0,"training":null}');
+let name=localStorage.getItem("wudi_name")||"Guest";
+let current="solar";
+const left=k=>TRAININGS[k].cap-seats[k];
+const hr=()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening";};
+function render(){
+ document.getElementById("greet").textContent=`${hr()}, ${name}`;
+ const open=ORDER.filter(k=>left(k)>0).length;
+ document.getElementById("weekline").textContent=`You have ${ORDER.length} trainings and ${open} open live sessions this week.`;
+ const t=TRAININGS[current],l=left(current);
+ document.getElementById("nextTitle").textContent=t.title;
+ document.getElementById("nextMeta").textContent=`${t.detail} · ${l>0?l+" / "+t.cap+" seats left":"Full"}`;
+ document.getElementById("resumeBtn").textContent=l>0?"Reserve seat":"Full";
+ document.getElementById("cards").innerHTML=ORDER.map(k=>{const x=TRAININGS[k],s=mine.training===k?mine.attended:0,
+  pct=Math.round(s/x.total*100),st=mine.training===k?(pct>=x.min?"Eligible":"In progress"):(left(k)>0?"Not started":"Full");
+  return `<button class="course" onclick="openRegister('${k}')"><span class="status">${st}</span>
+  <span class="ctitle">${x.title}</span><span class="cmeta">${x.lessons} · ${x.trainer}</span>
+  <span class="cfoot">${mine.training===k?pct+"% of sessions · need "+x.min+"%":left(k)+" seats left · "+x.cert}</span>
+  ${mine.training===k?`<span class="bar"><i style="width:${pct}%"></i></span>`:""}</button>`;}).join("");
+ document.getElementById("sessions").innerHTML=ORDER.map(k=>{const x=TRAININGS[k],L=left(k);
+  return `<div class="rowitem"><div class="dateblock"><b>${x.day}</b><span>${x.mon}</span></div>
+  <div><p class="rtitle">${x.title}</p><p class="rmeta">${x.when} · ${x.trainer} · ${L>0?L+" seats left":"Full"}</p></div>
+  <span class="rbtn">${k==="solar"?`<button class="btn" onclick="toast('Added to calendar (simulated).')">Add to calendar</button>`:`<button class="btn ${L>0?"primary":""}" ${L>0?"":"disabled"} onclick="openRegister('${k}')">${L>0?"Reserve seat":"Full"}</button>`}</span></div>`;}).join("");
+ const c=mine.training?TRAININGS[mine.training]:null,pct=c?Math.round(mine.attended/c.total*100):0;
+ const earned=c&&pct>=c.min;
+ document.getElementById("certs").innerHTML=
+  (earned?`<div class="rowitem"><div style="font-size:26px">🏅</div><div><p class="rtitle">${c.title}</p><p class="rmeta">Earned · WUDI-2026-4F8K2Q</p></div><span class="rbtn"><button class="btn" onclick="toast('Certificate PDF downloaded (simulated).')">Download</button></span></div>`:"")+
+  `<div class="rowitem"><div style="font-size:26px">${earned?"🔒":"🏅"}</div><div><p class="rtitle">${c?c.title:"Intro to Solar Installation"}</p><p class="rmeta">${c?(pct>=c.min?"Ready for trainer approval":`Finish ${c.total-mine.attended} more session(s) · ${pct}% of ${c.min}% needed`):"Reserve a seat to start earning"}</p></div></div>`;
+ document.getElementById("progText").textContent=c?`${mine.attended} of ${c.total} sessions · ${pct}% — need ${c.min}%${pct>=c.min?" — eligible ✓":""}`:"Not registered yet — reserve a seat above.";
+ document.getElementById("progBar").style.width=(c?pct:0)+"%";
+}
+function openRegister(k){current=k;const t=TRAININGS[k];
+ document.getElementById("dlgTitle").textContent="Reserve seat — "+t.title;
+ document.getElementById("dlgMeta").textContent=`${t.trainer} · ${t.detail} · ${left(k)} seats left · ${t.cert}`;
+ document.getElementById("regDialog").showModal();}
+function submitReg(){const n=document.getElementById("fName").value.trim()||"Guest";
+ if(left(current)<=0){toast("Sorry, this training is full.");return;}
+ name=n;localStorage.setItem("wudi_name",n);
+ seats[current]++;mine={attended:0,training:current};
+ localStorage.setItem("wudi_seats",JSON.stringify(seats));localStorage.setItem("wudi_mine",JSON.stringify(mine));
+ document.getElementById("regDialog").close();render();
+ toast(`Seat reserved for ${n}. Confirmation + T-24h/T-1h reminders simulated.${document.getElementById("fCert").checked?" Certificate add-on reserved.":""} Free cancel until 24h before start.`);}
+function simulateSession(){if(!mine.training){toast("Reserve a seat first.");return;}
+ const t=TRAININGS[mine.training];
+ if(mine.attended>=t.total){toast("All sessions attended — trainer approval + download unlock in Phase 5.");return;}
+ mine.attended++;localStorage.setItem("wudi_mine",JSON.stringify(mine));render();
+ const pct=Math.round(mine.attended/t.total*100);
+ toast(pct>=t.min?`Session recorded ✓ ${mine.attended}/${t.total} (${pct}%) — certificate unlocked below.`:`Session recorded ✓ ${mine.attended}/${t.total} (${pct}%) — attend the next live session.`);}
+function resetDemo(){localStorage.removeItem("wudi_seats");localStorage.removeItem("wudi_mine");seats={solar:32,phone:150,excel:49};mine={attended:0,training:null};render();toast("Demo reset.");}
+function verify(){const v=document.getElementById("verifyInput").value.trim().toUpperCase(),out=document.getElementById("verifyOut");
+ if(v==="WUDI-2026-4F8K2Q")out.innerHTML=`<span class="badge ok">✓ VALID</span> Adaeze K. · Intro to Solar Installation · Oct 2026`;
+ else if(v==="WUDI-2026-REVOKED")out.innerHTML=`<span class="badge rev">REVOKED</span> This certificate was revoked.`;
+ else out.innerHTML=`<span class="badge">NOT FOUND</span> No certificate with this number.`;}
+function toast(m){const t=document.getElementById("regToast");t.textContent=m;t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),6000);}
+render();
+</script>
+</body>
+</html>
