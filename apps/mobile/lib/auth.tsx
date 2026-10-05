@@ -32,6 +32,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refreshMe(); }, [refreshMe]);
 
+  // Re-register on every cold start. Expo rotates the token on reinstall and after a
+  // device restore; an app that only registers at login silently stops receiving pushes.
+  useEffect(() => {
+    if (session) registerPushToken().catch(() => {});
+  }, [session?.id]);
+
   async function finish(access: string, refresh: string) {
     await saveSession(access, refresh);
     await refreshMe();

@@ -100,17 +100,43 @@ export type VerifyResult =
   | { status: 'revoked'; number: string }
   | { status: 'not-found' };
 
-/** Register this device for push and send the token to the backend (Phase 7 wiring). */
+/** Register this device for push and send the token to the backend. */
 export async function registerPushToken(): Promise<boolean> {
   if (!Device.isDevice || Platform.OS === 'web') return false;
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== 'granted') return false;
   const { access } = await tokens();
   if (!access) return false;
-  const expoToken = (await Notifications.getExpoPushTokenAsync()).data;
+  // EAS builds need the project ID or Expo cannot route the token to our app.
+  const projectId =
+    (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId;
+  if (!projectId || projectId === '00000000-0000-0000-0000-000000000000') return false;
+  const { data: expoToken } = await Notifications.getExpoPushTokenAsync({ projectId });
   await req('/api/me/push-token', {
     method: 'POST',
     body: JSON.stringify({ token: expoToken, platform: Platform.OS }),
   });
   return true;
+}
+
+/**
+ * Re-register on every launch. Tokens are rotated when the app is reinstalled, and an old
+ * one that lingers silently eats push quota until it comes back DeviceNotRegistered.
+ */
+export async function unregisterPushToken(): Promise<void> {
+  if (!Device.isDevice || Platform.OS === 'web') return;
+  const projectId =
+    (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId;
+  if (!projectId) return;
+  try {
+    await Notifications.getExpoPushTokenAsync({ projectId });
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Default',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#1B7E8D',
+    });
+  } catch {
+    // Non-fatal: notifications still work, just without our channel tuning.
+  }
 }

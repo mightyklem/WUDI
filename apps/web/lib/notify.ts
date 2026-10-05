@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import type { Prisma } from '../generated/prisma';
 import { emailEnabled, sendEmail } from '@/lib/email';
+import { pushEnabled, sendPush } from '@/lib/push';
 
 /**
  * Fan-out dispatcher (Phase 7). Every notification is ALWAYS stored in-app.
@@ -9,6 +10,26 @@ import { emailEnabled, sendEmail } from '@/lib/email';
  * Termii SMS/WhatsApp plugs in here when show-up rate demands it.
  */
 export type Channel = 'inapp' | 'email' | 'push';
+
+/**
+ * Only time-critical events get a push. Pushing everything trains people to dismiss the
+ * app without reading, which costs us permission prompts later (FR-11.2).
+ */
+const PUSHABLE: string[] = [
+  'new-training-from-followed',
+  'session-starting',
+  'certificate-issued',
+  'payment-received',
+  'report-received',
+];
+
+const PUSH_TITLES: Record<string, string> = {
+  'new-training-from-followed': 'New training',
+  'session-starting': 'Starting soon',
+  'certificate-issued': 'Your certificate is ready',
+  'payment-received': 'Payment received',
+  'report-received': 'Thanks — we received your report',
+};
 
 export async function notify(opts: {
   userIds: string[];
@@ -37,30 +58,21 @@ export async function notify(opts: {
     if (results.length && results.every(Boolean)) channels.push('email');
   }
 
-  try {
+  // Push fires only for events a user must act on soon; stored in-app regardless.
+  if (PUSHABLE.includes(opts.type) && pushEnabled()) {
     const tokens = await prisma.pushToken.findMany({
       where: { userId: { in: opts.userIds } }, select: { token: true },
     });
-    if (tokens.length && process.env.EXPO_ACCESS_TOKEN) {
-      const r = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${process.env.EXPO_ACCESS_TOKEN}`,
-        },
-        body: JSON.stringify(
-          tokens.map((t) => ({
-            to: t.token,
-            title: 'Learnovize',
-            body: opts.email?.subject || opts.type,
-            data: opts.payload || {},
-          })),
-        ),
+    if (tokens.length) {
+      const res = await sendPush({
+        tokens: tokens.map((t) => t.token),
+        title: PUSH_TITLES[opts.type] || 'Learnovize',
+        body: opts.email?.subject || PUSH_TITLES[opts.type] || opts.type,
+        data: (opts.payload || {}) as Record<string, unknown>,
       });
-      if (r.ok) channels.push('push');
+      // Only claim the channel if Expo accepted at least one ticket.
+      if (res.sent > 0) channels.push('push');
     }
-  } catch (e) {
-    console.error('[notify] push failed, in-app kept:', e instanceof Error ? e.message : e);
   }
   return { channels };
 }

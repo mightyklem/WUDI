@@ -29,8 +29,20 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
   HTML injection neutralised; links absolute. Sends never throw and never roll back a seat claim or payment.
   **Blocker for real users:** no domain verified yet — Resend's shared `onboarding@resend.dev` only delivers
   to the account owner's own address and is capped at ~100/day. Add a domain and set `EMAIL_FROM` before launch.
-- [ ] Termii SMS/WhatsApp ·
-  [ ] Expo push (EAS project) · [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
+- [x] **Expo push (verified 2026-10-04):** 17 automated checks passed — malformed tokens rejected at the
+  endpoint (5 cases, 0 junk rows), multi-device support, correct fan-out, 250 tokens chunked 100/100/50,
+  and `DeviceNotRegistered` tokens pruned (250 sent → 125 retained). Added the ticket/receipt distinction,
+  100-message batching, and dead-token cleanup the old code lacked.
+  **Blocker for real devices:** no Expo account/EAS project yet — `app.json` still has the placeholder
+  project ID and devices refuse to mint a token without one. See below.
+- [ ] Termii SMS/WhatsApp · [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
+
+### To finish push on real devices
+
+1. Create an Expo account and run `npx eas-cli@latest init` inside `apps/mobile` to create the EAS project.
+2. Paste the returned project ID — I will write it into `apps/mobile/app.json` and `EXPO_PROJECT_ID`.
+3. Create an access token at expo.dev → Settings → Access Tokens (Enhanced Security if available) → `EXPO_ACCESS_TOKEN`.
+4. Build with `eas build` (a dev-client build is enough to receive pushes; Expo Go cannot).
 
 ## Security checklist
 
