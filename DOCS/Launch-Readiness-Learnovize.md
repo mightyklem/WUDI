@@ -37,7 +37,13 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
   project ID and devices refuse to mint a token without one. See below.
 - [x] **Termii SMS/WhatsApp (verified 2026-10-04):** 8 stub-verified E2E checks passed — phone normalisation (`080...` → `234...`), correct DND routing, sender ID pass-through, API key/bearer auth, message length cap, and opt-in WhatsApp. Enabled for pushable types only (new training from a followed trainer, report receipt); without API key the path is a no-op.
   **Before launch:** create a Termii account, set `TERMII_API_KEY`/`TERMII_SENDER_ID`, and decide whether `TERMII_WHATSAPP=true` is needed.
-- [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
+- [ ] LiveKit prod (TURN/TLS still requires a real staging domain + certs) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
+
+### LiveKit staging config prepared (not yet run against a public domain)
+
+- `infra/livekit/livekit-staging.yaml` is a committed, invalid-secret-free config: LiveKit WS on 7880, RTC TCP 7881, UDP range 50000–60000, and TURN/TLS on 443 once `turn.enabled` is flipped and certificates are mounted.
+- `docker-compose.staging.yml` mirrors dev services but mounts that config read-only. Local validation: `docker compose -f docker-compose.staging.yml config --quiet` passes.
+- Before public launch, run a 500-user mixed video/audio-only room through this config behind a publicly trusted TLS cert and record join p95/packet loss/drop rate.
 
 ### To finish push on real devices
 

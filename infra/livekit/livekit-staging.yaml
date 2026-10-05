@@ -1,0 +1,47 @@
+# LiveKit staging/production config for Learnovize.
+# No secrets are embedded: replace both key values before deploy, or inject them via
+# LIVEKIT_KEYS env only in Docker single-node setups. Pass this file with:
+#   livekit-server --config /config/livekit-staging.yaml
+
+port: 7880
+log_level: info
+
+keys:
+  CHANGE_ME_LIVEKIT_API_KEY: "CHANGE_ME_LIVEKIT_API_SECRET"
+
+webhook:
+  api_key: "CHANGE_ME_LIVEKIT_API_KEY"
+  api_secret: "CHANGE_ME_LIVEKIT_API_SECRET"
+  urls:
+    - "https://staging.learnovize.ng/api/livekit/webhook"
+
+# LiveKit must be reachable over TLS because clients connect with wss://.
+# Provision a real cert for your LiveKit domain (Let's Encrypt or a paid CA).
+# On staging, mount the PEM files read-only from outside the repo, e.g.:
+#   /etc/letsencrypt/livekit/fullchain.pem
+#   /etc/letsencrypt/livekit/privkey.pem
+
+# Self-hosted TURN is required for Nigerian mobile networks and restrictive firewalls.
+# TLS TURN on 443 makes the stream indistinguishable from HTTPS to most firewalls.
+turn:
+  # Flip to true once TURN_DOMAIN has a publicly trusted TLS certificate mounted below.
+  enabled: false
+  domain: "turn.example.com"
+  tls_port: 443
+  udp_port: 3478
+  cert_file: "/etc/letsencrypt/turn/fullchain.pem"
+  key_file: "/etc/letsencrypt/turn/privkey.pem"
+  # If you use an L4 cloud load balancer for TLS termination, set:
+  # external_tls: true
+  # and leave cert_file/key_file unset.
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  # Raise if you plan to pack more than ~300 audio-only streams per node.
+  port_range_end: 60000
+  # Set true for most cloud VMs where the host IP differs from the announced IP.
+  use_external_ip: true
+
+# Audio-only is the default product posture on cellular. Video publish remains possible
+# for trainers/moderators via the web client, but recording must never be enabled.
