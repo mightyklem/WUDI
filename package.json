@@ -6,6 +6,8 @@
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "test": "pnpm -r test",
-    "test:shared": "pnpm --filter @learnovize/shared test"
+    "test:shared": "pnpm --filter @learnovize/shared test",
+    "db:push": "pnpm --filter @learnovize/web exec prisma db push --schema ../../prisma/schema.prisma --accept-data-loss",
+    "db:generate": "pnpm --filter @learnovize/web exec prisma generate --schema ../../prisma/schema.prisma"
   }
 }

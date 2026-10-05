@@ -11,7 +11,9 @@
 
 [build]
   base = ""
-  command = "pnpm --filter @learnovize/web build"
+  # db:push runs first so a fresh hosted Postgres gets the schema before the app builds.
+  # It is idempotent — safe to re-run on every deploy.
+  command = "pnpm run db:push && pnpm --filter @learnovize/web build"
   publish = "apps/web/.next"
 
 [build.environment]
