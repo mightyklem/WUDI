@@ -1,9 +1,13 @@
 # Netlify build settings for the Next.js web app inside the pnpm monorepo.
 # Local dev is unaffected; this file only matters when you connect the repo to Netlify.
 #
-# IMPORTANT: leave Base directory EMPTY and set Package directory to `apps/web`.
-# Netlify's auto-detect picks apps/mobile (Expo) instead, which makes every path in this
-# file resolve relative to apps/mobile and the publish dir land at apps/mobile/apps/web/.next.
+# Base directory is deliberately EMPTY. All paths below are relative to the repo root,
+# which is where the pnpm workspace and pnpm-lock.yaml live — running the install from
+# apps/web would not see the workspace and dependency install fails.
+#
+# The buildbot's "package directory" (set in the Netlify UI, not here) MUST be `apps/web`.
+# When it is left on auto-detect, Netlify picks apps/mobile (Expo) as the site and resolves
+# every path below relative to apps/mobile.
 
 [build]
   base = ""
