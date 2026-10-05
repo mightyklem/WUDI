@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '../generated/prisma';
 import { emailEnabled, sendEmail } from '@/lib/email';
 import { pushEnabled, sendPush } from '@/lib/push';
+import { sendTermiiSms, sendTermiiWhatsapp, termiiEnabled } from '@/lib/termii';
 
 /**
  * Fan-out dispatcher (Phase 7). Every notification is ALWAYS stored in-app.
@@ -56,6 +57,18 @@ export async function notify(opts: {
     // Only claim the channel if every send landed — a silent partial would hide a
     // broken domain or a bad address from the caller.
     if (results.length && results.every(Boolean)) channels.push('email');
+  }
+
+if (PUSHABLE.includes(opts.type) && termiiEnabled() && opts.email) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: opts.userIds } }, select: { id: true, email: true, phone: true },
+    });
+    for (const u of users) {
+      if (!u.phone) continue;
+      // SMS first (transactional DND); WhatsApp only when ops has opted in.
+      await sendTermiiSms({ to: u.phone, text: opts.email.text });
+      await sendTermiiWhatsapp({ to: u.phone, text: opts.email.text });
+    }
   }
 
   // Push fires only for events a user must act on soon; stored in-app regardless.

@@ -35,7 +35,9 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
   100-message batching, and dead-token cleanup the old code lacked.
   **Blocker for real devices:** no Expo account/EAS project yet — `app.json` still has the placeholder
   project ID and devices refuse to mint a token without one. See below.
-- [ ] Termii SMS/WhatsApp · [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
+- [x] **Termii SMS/WhatsApp (verified 2026-10-04):** 8 stub-verified E2E checks passed — phone normalisation (`080...` → `234...`), correct DND routing, sender ID pass-through, API key/bearer auth, message length cap, and opt-in WhatsApp. Enabled for pushable types only (new training from a followed trainer, report receipt); without API key the path is a no-op.
+  **Before launch:** create a Termii account, set `TERMII_API_KEY`/`TERMII_SENDER_ID`, and decide whether `TERMII_WHATSAPP=true` is needed.
+- [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
 
 ### To finish push on real devices
 
@@ -56,7 +58,8 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
 - [x] Verify endpoint reveals nothing enumerable (valid shows only consented name; misses uniform).
 - [x] ID docs: private bucket, 5-min signed URLs, logged access, 90-day purge rule (lawyer to confirm).
 - [ ] Recurring plan billing (Paystack Plans) — dev upgrade endpoint only; required before selling Pro/Business publicly.
-- [ ] SMS/WhatsApp reminders (Termii) — wired as Phase-7 follow-up if show-up <60%.
+- [x] SMS/WhatsApp reminders are wired via Termii (stub-verified); enable with `TERMII_API_KEY`/`TERMII_WHATSAPP=true`.
+- [ ] Session reminders over Termii for T-24h/T-1h schedules — the `notify` fan-out hook is ready, a scheduler is still needed.
 - [ ] Independent pen-test + NDPC registration + lawyer sign-off on ToS/privacy (open questions §12.10).
 
 ## Analytics (§10, live at GET /api/admin/analytics + /admin console)
