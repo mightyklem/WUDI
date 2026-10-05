@@ -175,6 +175,7 @@ model Payment {
   registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
   provider       String   // paystack|flutterwave
   providerRef    String   @unique
+  accessCode     String?  // Paystack hosted-checkout code — lets an abandoned checkout resume the same transaction
   amountNgn      Int
   providerFeeNgn Int      @default(0)
   commissionNgn  Int      @default(0)

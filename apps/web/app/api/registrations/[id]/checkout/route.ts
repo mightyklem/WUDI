@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
-import { initCheckout, newReference, provider } from '@/lib/payments';
+import { initCheckout, newReference, provider, resumeUrl } from '@/lib/payments';
+import { reconcilePendingPayments } from '@/lib/reconcile';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,9 +31,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   const existing = await prisma.payment.findFirst({
     where: { registrationId: id, status: 'pending' },
+    orderBy: { createdAt: 'desc' },
   });
   if (existing) {
-    return NextResponse.json({ reference: existing.providerRef, payUrl: null, resumed: true });
+    // The participant may have already paid and only lost the webhook — check before resuming.
+    const recon = await reconcilePendingPayments({ paymentId: existing.id });
+    if (recon.settled) {
+      return NextResponse.json({ reference: existing.providerRef, payUrl: null, paid: true });
+    }
+    const stillPending = await prisma.payment.findUnique({ where: { id: existing.id } });
+    if (stillPending?.status === 'pending') {
+      // Abandoned checkout: hand back the SAME hosted transaction so they cannot double-pay.
+      return NextResponse.json({
+        reference: existing.providerRef,
+        payUrl: resumeUrl(stillPending.accessCode),
+        resumed: true,
+      });
+    }
   }
   const reference = newReference();
   const init = await initCheckout({
@@ -41,6 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await prisma.payment.create({
     data: {
       registrationId: id, provider: provider(), providerRef: reference,
+      accessCode: init.accessCode,
       amountNgn: reg.training.certPriceNgn,
       providerFeeNgn: 0, commissionNgn: 0, netNgn: 0,
       status: 'pending', idempotencyKey: reference,

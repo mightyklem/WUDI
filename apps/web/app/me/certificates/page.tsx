@@ -14,9 +14,16 @@ export default function MyCertificates() {
   useEffect(() => {
     const access = getAccess();
     if (!access) return;
-    fetch('/api/certificates/mine', { headers: { authorization: `Bearer ${access}` } })
-      .then((r) => r.json())
-      .then((j) => setCerts(j.certificates || []));
+    const headers = { authorization: `Bearer ${access}` };
+    // This page is where Paystack returns the participant after paying. If the webhook
+    // never reached us, settle them here before rendering, otherwise they see nothing.
+    fetch('/api/payments/reconcile', { method: 'POST', headers })
+      .catch(() => undefined)
+      .finally(() => {
+        fetch('/api/certificates/mine', { headers })
+          .then((r) => r.json())
+          .then((j) => setCerts(j.certificates || []));
+      });
   }, []);
 
   return (

@@ -18,7 +18,13 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
   write+read verified on public, signed-URL read verified on private, test objects cleaned up.
   Public HTTP verified 2026-10-04: staging base `https://pub-c21f5276b2a14494898359cefb8d82b6.r2.dev` serves objects (200, byte-match).
   Remaining: custom domain + true CDN for production.
-- [ ] Paystack live keys + recurring billing · [ ] Termii SMS/WhatsApp · [ ] Resend email ·
+- [x] **Paystack (test mode, verified 2026-10-04):** 27 automated checks passed — key auth, checkout init,
+  kobo↔naira round-trip, HMAC-SHA512 signature, credit + split + payout, replay idempotency, forged/tampered
+  signature rejection (401), and dropped-webhook recovery. Fixed three real bugs found during this work:
+  abandoned checkouts now resume the same transaction (no double-charge), `fee`/`fees` unit confusion that
+  would have overstated trainer net 100×, and payments stranded when a webhook is never delivered.
+  Remaining: live keys + business KYC, public HTTPS webhook URL, recurring Plans.
+- [ ] Termii SMS/WhatsApp · [ ] Resend email ·
   [ ] Expo push (EAS project) · [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
 
 ## Security checklist

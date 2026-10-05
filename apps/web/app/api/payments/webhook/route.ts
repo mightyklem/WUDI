@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import type { Prisma } from '@/generated/prisma';
+import { prisma } from '@/lib/db';
 import { provider, validPaystackSignature, verifyPaystack } from '@/lib/payments';
 import { settlePaidPayment } from '@/lib/settle';
 
@@ -16,6 +18,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Bad signature' }, { status: 401 });
   }
   const evt = JSON.parse(raw) as { event?: string; data?: { reference?: string; status?: string } };
+  const webhookJson = JSON.parse(raw) as Record<string, unknown>; // stored verbatim as dispute evidence
   if (evt.event !== 'charge.success' || !evt.data?.reference) {
     return NextResponse.json({ ok: true, ignored: true });
   }
@@ -25,6 +28,11 @@ export async function POST(req: Request) {
   try {
     await settlePaidPayment({
       providerRef: evt.data.reference, amountNgn: v.amountNgn, providerFeeNgn: v.feeNgn,
+    });
+    // Keep the provider's payload verbatim — dispute/refund evidence (FR-9.4).
+    await prisma.payment.updateMany({
+      where: { providerRef: evt.data.reference },
+      data: { rawWebhook: webhookJson as Prisma.InputJsonValue },
     });
   } catch (e) {
     if (e instanceof Error && ['UNKNOWN_REF', 'BAD_STATE', 'UNDERPAID'].includes((e as { code?: string }).code || '')) {
