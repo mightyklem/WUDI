@@ -1,31 +1,38 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
+import { prisma, safeDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-async function lookup(number: string) {
-  const cert = await prisma.certificate.findUnique({
-    where: { number },
-    include: {
-      training: { select: { title: true, trainer: { select: { displayName: true } } } },
-      user: { select: { email: true } },
-    },
-  });
-  if (!cert) return { status: 'not-found' as const };
-  if (cert.status === 'revoked') return { status: 'revoked' as const, number: cert.number };
-  const reg = await prisma.registration.findUnique({
-    where: { trainingId_userId: { trainingId: cert.trainingId, userId: cert.userId } },
-  });
-  return {
-    status: 'valid' as const,
-    number: cert.number,
-    participant: reg?.certConsentPublic === true ? cert.user.email : null,
-    training: cert.training.title,
-    trainer: cert.training.trainer.displayName,
-    pdfUrl: cert.pdfUrl,
-  };
-}
+type VerifyResult =
+  | { status: 'valid'; number: string; participant: string | null; training: string; trainer: string; pdfUrl: string }
+  | { status: 'revoked'; number: string }
+  | { status: 'not-found' }
+  | { status: 'unavailable' };
+
+async function lookup(number: string): Promise<VerifyResult> {
+  return safeDb<VerifyResult>(async () => {
+    const cert = await prisma.certificate.findUnique({
+      where: { number },
+      include: {
+        training: { select: { title: true, trainer: { select: { displayName: true } } } },
+        user: { select: { email: true } },
+      },
+    });
+    if (!cert) return { status: 'not-found' as const };
+    if (cert.status === 'revoked') return { status: 'revoked' as const, number: cert.number };
+    const reg = await prisma.registration.findUnique({
+      where: { trainingId_userId: { trainingId: cert.trainingId, userId: cert.userId } },
+    });
+    return {
+      status: 'valid' as const,
+      number: cert.number,
+      participant: reg?.certConsentPublic === true ? cert.user.email : null,
+      training: cert.training.title,
+      trainer: cert.training.trainer.displayName,
+      pdfUrl: cert.pdfUrl,
+    };
+  }, { status: 'unavailable' as const });}
 
 export async function generateMetadata({ params }: { params: Promise<{ number: string }> }): Promise<Metadata> {
   const { number } = await params;
@@ -60,6 +67,9 @@ export default async function VerifyPage({ params }: { params: Promise<{ number:
         )}
         {v.status === 'not-found' && (
           <div><p><span className="badge">NOT FOUND</span></p><p className="muted">No certificate with this number.</p></div>
+        )}
+        {v.status === 'unavailable' && (
+          <div><p><span className="badge">UNAVAILABLE</span></p><p className="muted">Certificate verification is temporarily unavailable. Try again shortly.</p></div>
         )}
       </div>
       <p className="muted" style={{ fontSize: 13 }}>Learnovize certificates confirm attendance and completion only — not government accreditation.</p>

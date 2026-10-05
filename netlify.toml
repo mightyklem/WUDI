@@ -12,8 +12,10 @@
 [build]
   base = ""
   # db:push runs first so a fresh hosted Postgres gets the schema before the app builds.
-  # It is idempotent — safe to re-run on every deploy.
-  command = "pnpm run db:push && pnpm --filter @learnovize/web build"
+  # It is idempotent — safe to re-run on every deploy. Generate runs explicitly right
+  # after: with pnpm's isolated layout, @prisma/client only resolves for the package
+  # that declares it, so the generate step must run inside @learnovize/web.
+  command = "pnpm run db:push && pnpm run db:generate && pnpm --filter @learnovize/web build"
   publish = "apps/web/.next"
 
 [build.environment]

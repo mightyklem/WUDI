@@ -1,13 +1,13 @@
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
+import { prisma, safeDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const [trainerCount, trainingCount] = await Promise.all([
-    prisma.trainerProfile.count(),
-    prisma.training.count(),
-  ]);
+  const [trainerCount, trainingCount] = await safeDb(
+    () => Promise.all([prisma.trainerProfile.count(), prisma.training.count()]),
+    [0, 0] as const,
+  );
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   return (
