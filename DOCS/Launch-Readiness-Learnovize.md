@@ -37,7 +37,9 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
   project ID and devices refuse to mint a token without one. See below.
 - [x] **Termii SMS/WhatsApp (verified 2026-10-04):** 8 stub-verified E2E checks passed — phone normalisation (`080...` → `234...`), correct DND routing, sender ID pass-through, API key/bearer auth, message length cap, and opt-in WhatsApp. Enabled for pushable types only (new training from a followed trainer, report receipt); without API key the path is a no-op.
   **Before launch:** create a Termii account, set `TERMII_API_KEY`/`TERMII_SENDER_ID`, and decide whether `TERMII_WHATSAPP=true` is needed.
-- [ ] LiveKit prod (TURN/TLS still requires a real staging domain + certs) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
+- [x] Slack alerts (verified 2026-10-04): one webhook alert fires when a target hits 3 open reports,
+  includes target type/ID, open count, reason, and an admin button. Local stub E2E: 7/7 passed.
+- [ ] EAS mobile builds · [ ] pen-test · [ ] NDPC/lawyer.
 
 ### LiveKit staging config prepared (not yet run against a public domain)
 

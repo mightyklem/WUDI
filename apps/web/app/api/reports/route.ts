@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { notify } from '@/lib/notify';
+import { flagAlert } from '@/lib/slack';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +31,8 @@ export async function POST(req: Request) {
   const openCount = await prisma.report.count({
     where: { targetType, targetId, status: 'open' },
   });
-  if (openCount >= 3 && process.env.SLACK_WEBHOOK_URL) {
-    fetch(process.env.SLACK_WEBHOOK_URL, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: `🚨 Learnovize flag: ${targetType} ${targetId} has ${openCount} open reports.` }),
-    }).catch(() => {});
+  if (openCount >= 3) {
+    void flagAlert({ targetType, targetId, openCount, reason });
   }
   await notify({
     userIds: [userId], type: 'report-received',
