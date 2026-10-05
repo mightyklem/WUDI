@@ -126,6 +126,9 @@ importers:
         specifier: ^19.0.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
+      '@netlify/plugin-nextjs':
+        specifier: latest
+        version: 5.16.2
       '@types/bcryptjs':
         specifier: ^2.4.6
         version: 2.4.6
@@ -1029,6 +1032,10 @@ packages:
       livekit-client: ^2.19.0
       react: '*'
       react-native: '*'
+
+  '@netlify/plugin-nextjs@5.16.2':
+    resolution: {integrity: sha512-bjB7UsijeAbWFceYeDOHG9vnRQ+AQGCn3198OB0ctXI43W4VXm7rG155dBaX9kpJyRf5zrcf321I1ZpWwi/neg==}
+    engines: {node: '>=18.0.0'}
 
   '@next/env@15.5.27':
     resolution: {integrity: sha512-WC5hvVqiuFOcRyz6gKPeJkiVvSMf3scNeAV49CdWtVqxmUlzh8UKR6YHt9yiNkh8LngtzqSlVz07/Ma3ZAzchA==}
@@ -5211,6 +5218,8 @@ snapshots:
       - '@livekit/krisp-noise-filter'
       - react-dom
       - tslib
+
+  '@netlify/plugin-nextjs@5.16.2': {}
 
   '@next/env@15.5.27': {}
 

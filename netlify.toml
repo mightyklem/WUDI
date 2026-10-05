@@ -1,0 +1,14 @@
+# Netlify build settings for the Next.js web app inside the pnpm monorepo.
+# Local dev is unaffected; this file only matters when you connect the repo to Netlify.
+
+[build]
+  command = "pnpm --filter @learnovize/web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Prisma client generation runs inside the build command.
+  DATABASE_URL = "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
