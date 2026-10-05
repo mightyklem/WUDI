@@ -1,13 +1,23 @@
 # Netlify build settings for the Next.js web app inside the pnpm monorepo.
 # Local dev is unaffected; this file only matters when you connect the repo to Netlify.
+#
+# IMPORTANT: leave Base directory EMPTY and set Package directory to `apps/web`.
+# Netlify's auto-detect picks apps/mobile (Expo) instead, which makes every path in this
+# file resolve relative to apps/mobile and the publish dir land at apps/mobile/apps/web/.next.
 
 [build]
+  base = ""
   command = "pnpm --filter @learnovize/web build"
   publish = "apps/web/.next"
 
 [build.environment]
   NODE_VERSION = "22"
-  # Prisma client generation runs inside the build command.
+  NEXT_TELEMETRY_DISABLED = "1"
+  # Prisma's postinstall tries to `pnpm add prisma` when it cannot find the CLI. On Netlify
+  # that auto-install fails (frozen lockfile), which broke the build. Our build command runs
+  # `prisma generate` explicitly, so the auto-install is unnecessary — skip it.
+  PRISMA_GENERATE_SKIP_AUTOINSTALL = "true"
+  # Prisma client generation runs inside the build command; this value is never connected to.
   DATABASE_URL = "postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 [[plugins]]
