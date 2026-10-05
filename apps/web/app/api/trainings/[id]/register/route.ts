@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '../../../../../generated/prisma';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
+import { emailEnabled, seatConfirmedEmail, sendEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
+
+/** Seat confirmation email — best effort, never blocks or fails the claim (FR-2.4). */
+async function sendSeatConfirmation(userId: string, title: string) {
+  if (!emailEnabled()) return;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (!user) return;
+  await sendEmail({ ...seatConfirmedEmail({ trainingTitle: title, seatPath: '/me/registrations' }), to: user.email });
+}
 
 // POST /api/trainings/[id]/register { certConsentPublic? }
 // Atomic: duplicate-check + conditional seat increment in one transaction.
@@ -50,12 +59,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (updated && updated.seatsTaken >= updated.cap) {
         await tx.training.update({ where: { id }, data: { status: 'full' } });
       }
-      // Confirmation inbox notification (email/push land in Phase 7).
       await tx.notification.create({
         data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title } },
       });
       return registration;
     });
+    // Outside the transaction: a slow or failed email must never roll back the seat claim.
+    await sendSeatConfirmation(userId, t.title);
     return NextResponse.json({ registration: { id: reg.id, trainingId: id } }, { status: 201 });
   } catch (e: unknown) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {

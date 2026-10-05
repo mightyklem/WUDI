@@ -24,7 +24,12 @@ Date: 2026-10-04 · Environment: local Docker (Postgres 16, Redis 7, S3Mock, Liv
   abandoned checkouts now resume the same transaction (no double-charge), `fee`/`fees` unit confusion that
   would have overstated trainer net 100×, and payments stranded when a webhook is never delivered.
   Remaining: live keys + business KYC, public HTTPS webhook URL, recurring Plans.
-- [ ] Termii SMS/WhatsApp · [ ] Resend email ·
+- [x] **Resend email (verified 2026-10-04):** all 5 templates sent and confirmed `delivered` by Resend.
+  Real seat claim fires the confirmation email with in-app notification intact (201 + duplicate still 409);
+  HTML injection neutralised; links absolute. Sends never throw and never roll back a seat claim or payment.
+  **Blocker for real users:** no domain verified yet — Resend's shared `onboarding@resend.dev` only delivers
+  to the account owner's own address and is capped at ~100/day. Add a domain and set `EMAIL_FROM` before launch.
+- [ ] Termii SMS/WhatsApp ·
   [ ] Expo push (EAS project) · [ ] LiveKit prod (TURN/TLS) · [ ] Slack alerts · [ ] pen-test · [ ] NDPC/lawyer.
 
 ## Security checklist

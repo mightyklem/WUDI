@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { makeSlug, validateTrainingInput } from '@/lib/trainings';
 import { notify } from '@/lib/notify';
+import { trainingAnnouncedEmail } from '@/lib/email';
 import { PLAN_CAPS } from '@learnovize/shared';
 
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,11 @@ export async function POST(req: Request) {
       userIds: followers.map((f) => f.followerId),
       type: 'new-training-from-followed',
       payload: { trainingId: training.id, title: training.title },
-      email: { subject: `${profile?.displayName || 'A trainer you follow'} announced: ${training.title}`, text: `Register: /t/${training.slug}/register` },
+      email: trainingAnnouncedEmail({
+        trainerName: profile?.displayName || 'A trainer you follow',
+        title: training.title,
+        registerPath: `/t/${training.slug}/register`,
+      }),
     });
   }
   return NextResponse.json({ training: { ...training, invitePath: `/t/${training.slug}/register` } }, { status: 201 });

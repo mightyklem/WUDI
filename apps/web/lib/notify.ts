@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/db';
 import type { Prisma } from '../generated/prisma';
+import { emailEnabled, sendEmail } from '@/lib/email';
 
 /**
  * Fan-out dispatcher (Phase 7). Every notification is ALWAYS stored in-app.
- * Email goes out only when EMAIL_* is configured; Expo push only to registered
- * tokens. Returns which channels fired so callers/tests can assert delivery.
+ * Email goes out only when Resend is configured (see lib/email.ts); Expo push only to
+ * registered tokens. Returns which channels fired so callers/tests can assert delivery.
  * Termii SMS/WhatsApp plugs in here when show-up rate demands it.
  */
 export type Channel = 'inapp' | 'email' | 'push';
@@ -23,25 +24,17 @@ export async function notify(opts: {
     })),
   });
 
-  if (opts.email && process.env.EMAIL_FROM && process.env.EMAIL_API_URL) {
-    try {
-      const users = await prisma.user.findMany({
-        where: { id: { in: opts.userIds } }, select: { id: true, email: true },
-      });
-      for (const u of users) {
-        await fetch(process.env.EMAIL_API_URL, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            authorization: `Bearer ${process.env.EMAIL_API_KEY || ''}`,
-          },
-          body: JSON.stringify({ from: process.env.EMAIL_FROM, to: u.email, ...opts.email }),
-        });
-      }
-      channels.push('email');
-    } catch (e) {
-      console.error('[notify] email failed, in-app kept:', e instanceof Error ? e.message : e);
-    }
+  if (opts.email && emailEnabled()) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: opts.userIds } }, select: { id: true, email: true },
+    });
+    // One request per recipient so a single bad address can't fail the whole batch.
+    const results = await Promise.all(
+      users.map((u) => sendEmail({ ...opts.email!, to: u.email })),
+    );
+    // Only claim the channel if every send landed — a silent partial would hide a
+    // broken domain or a bad address from the caller.
+    if (results.length && results.every(Boolean)) channels.push('email');
   }
 
   try {

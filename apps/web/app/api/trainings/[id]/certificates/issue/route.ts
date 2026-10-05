@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { issueCertificate } from '@/lib/certs';
+import { certificateReadyEmail, emailEnabled, sendEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await prisma.notification.create({
         data: { userId, type: 'certificate-issued', payload: { trainingId: id, number: cert.number } },
       });
+      // Best effort: never let a mail failure turn a successful issue into a rejection.
+      const recipient = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+      if (recipient && emailEnabled()) {
+        await sendEmail({
+          ...certificateReadyEmail({ trainingTitle: t.title, number: cert.number, certsPath: '/me/certificates' }),
+          to: recipient.email,
+        });
+      }
     } catch (e) {
       rejected.push({ userId, reason: e instanceof Error ? e.message : 'Issue failed' });
     }

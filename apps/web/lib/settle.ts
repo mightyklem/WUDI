@@ -1,5 +1,24 @@
 import { prisma } from '@/lib/db';
 import { splitPayment, payoutHoldDays } from '@/lib/payments';
+import { emailEnabled, paymentReceiptEmail, sendEmail } from '@/lib/email';
+
+/** Payment receipt — best effort, never blocks or fails settlement (FR-9.1). */
+async function sendPaymentReceipt(receipt: {
+  userId: string; trainingTitle: string; amountNgn: number; reference: string;
+}) {
+  if (!emailEnabled()) return;
+  const user = await prisma.user.findUnique({ where: { id: receipt.userId }, select: { email: true } });
+  if (!user) return;
+  await sendEmail({
+    ...paymentReceiptEmail({
+      trainingTitle: receipt.trainingTitle,
+      amountNgn: receipt.amountNgn,
+      reference: receipt.reference,
+      certsPath: '/me/certificates',
+    }),
+    to: user.email,
+  });
+}
 
 /**
  * Settle a paid cert payment (shared by mock completion + Paystack webhook).
@@ -35,7 +54,10 @@ export async function settlePaidPayment(opts: {
   const lastEnd = payment.registration.training.sessions[0]?.endsAtUtc ?? new Date();
   const holdUntil = new Date(lastEnd.getTime() + payoutHoldDays() * 24 * 3600 * 1000);
 
-  return prisma.$transaction(async (tx) => {
+  // Captured inside the transaction, emailed after it commits.
+  let receipt: { userId: string; trainingTitle: string; amountNgn: number; reference: string } | null = null;
+
+  const paidRow = await prisma.$transaction(async (tx) => {
     const paid = await tx.payment.update({
       where: { id: payment.id },
       data: {
@@ -77,6 +99,12 @@ export async function settlePaidPayment(opts: {
         payload: { trainingId: payment.registration.trainingId, amountNgn: payment.amountNgn },
       },
     });
+    receipt = {
+      userId: payment.registration.userId,
+      trainingTitle: payment.registration.training.title,
+      amountNgn: payment.amountNgn,
+      reference: payment.providerRef,
+    };
     await tx.notification.create({
       data: {
         userId: payment.registration.training.trainerId, type: 'payment-received',
@@ -85,4 +113,8 @@ export async function settlePaidPayment(opts: {
     });
     return paid;
   });
+
+  // Receipt goes out only after the money is committed, and never blocks or fails settlement.
+  if (receipt) await sendPaymentReceipt(receipt);
+  return paidRow;
 }
