@@ -20,6 +20,14 @@ export async function POST(req: Request) {
   if (user.suspended) {
     return NextResponse.json({ error: 'Account suspended — contact support' }, { status: 403 });
   }
+  // Unverified addresses cannot hold a session (ADR-002). Password was already checked, so
+  // this leaks nothing that the generic invalid-credentials response does not.
+  if (!user.emailVerifiedAt) {
+    return NextResponse.json(
+      { error: 'Confirm your email address to continue', verificationRequired: true },
+      { status: 403 },
+    );
+  }
   const access = await signAccessToken(user.id);
   const { token: refresh, tokenHash } = newRefreshToken();
   await prisma.refreshToken.create({ data: { userId: user.id, tokenHash } });

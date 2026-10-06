@@ -2,7 +2,8 @@ import { PrismaClient } from '../generated/prisma';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Schema lives at repo root ../prisma/schema.prisma; client output defaults to node_modules.
+// Schema lives at apps/web/prisma/schema.prisma, next to the package that declares both
+// `prisma` and `@prisma/client`, so client generation resolves identically on every platform.
 export const prisma =
   globalForPrisma.prisma ?? new PrismaClient();
 

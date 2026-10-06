@@ -12,6 +12,10 @@ const LIMITS: { prefix: string; max: number; windowMs: number }[] = [
   { prefix: '/api/auth/', max: 20, windowMs: 60_000 }, // login/signup/refresh: 20/min/IP
   { prefix: '/api/verify/', max: 60, windowMs: 60_000 }, // public verify: 60/min/IP
   { prefix: '/register', max: 300, windowMs: 60_000 }, // seat claims burst (launch day, shared IPs)
+  // A 6-digit code is only 1e6 possibilities, so guessing must be slow per IP on top of the
+  // per-account attempt cap inside the route.
+  { prefix: '/api/auth/verify-email', max: 10, windowMs: 60_000 },
+  { prefix: '/api/auth/resend-verification', max: 5, windowMs: 60_000 },
 ];
 
 function clientIp(req: NextRequest): string {

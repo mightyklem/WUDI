@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { hashPassword, signAccessToken, newRefreshToken } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
+import { issueOtp } from '@/lib/otp';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/auth/signup { email, password, name? }
+// POST /api/auth/signup { email, password }
+// Creates the account UNVERIFIED and emails a 6-digit code. No session is issued here —
+// the caller must verify first (ADR-002), so an address nobody owns cannot be used to host
+// a training or submit ID documents.
 export async function POST(req: Request) {
   const { email, password } = (await req.json().catch(() => ({}))) as {
     email?: string; password?: string;
@@ -15,16 +19,23 @@ export async function POST(req: Request) {
   if (!password || password.length < 8) {
     return NextResponse.json({ error: 'Password must be 8+ characters' }, { status: 400 });
   }
-  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (existing) return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
+  const lower = email.toLowerCase();
+  if (await prisma.user.findUnique({ where: { email: lower } })) {
+    return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
+  }
 
   const user = await prisma.user.create({
-    data: { email: email.toLowerCase(), passwordHash: await hashPassword(password) },
+    data: { email: lower, passwordHash: await hashPassword(password) },
   });
-  const access = await signAccessToken(user.id);
-  const { token: refresh, tokenHash } = newRefreshToken();
-  await prisma.refreshToken.create({
-    data: { userId: user.id, tokenHash },
-  });
-  return NextResponse.json({ user: { id: user.id, email: user.email }, access, refresh });
+  // Best effort: if mail fails the account still exists and the resend endpoint covers it.
+  await issueOtp({ id: user.id, email: user.email, emailOtpExpiresAt: null });
+
+  return NextResponse.json(
+    {
+      user: { id: user.id, email: user.email },
+      verificationRequired: true,
+      emailSent: true,
+    },
+    { status: 201 },
+  );
 }

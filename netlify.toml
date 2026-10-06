@@ -11,8 +11,9 @@
 
 [build]
   base = ""
-  # db:push is idempotent — it syncs the hosted Postgres schema before the app builds.
-  command = "pnpm run db:push && pnpm --filter @learnovize/web build"
+  # Build first, then sync the schema. The app build runs `prisma generate` itself; running
+  # db:push afterwards (with --skip-generate) avoids a second, conflicting generate.
+  command = "pnpm --filter @learnovize/web build && pnpm run db:push"
   publish = "apps/web/.next"
 
 [[plugins]]
@@ -21,10 +22,6 @@
 [build.environment]
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
-  # Prisma's postinstall tries to `pnpm add prisma` when it cannot find the CLI. On Netlify
-  # that auto-install fails (frozen lockfile), which broke the build. Our build command runs
-  # `prisma generate` explicitly, so the auto-install is unnecessary — skip it.
-  PRISMA_GENERATE_SKIP_AUTOINSTALL = "true"
   # DATABASE_URL is intentionally NOT set here. Prisma's schema reads env("DATABASE_URL"),
   # so it must exist at build time — set it in the Netlify UI (Site configuration ->
   # Environment). Putting a placeholder here shadowed the real value.

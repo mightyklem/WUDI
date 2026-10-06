@@ -37,7 +37,7 @@ export function absoluteUrl(path: string): string {
  * <style> blocks and block remote assets, so a template that looks right in a browser
  * renders blank in Gmail.
  */
-function shell(title: string, bodyHtml: string): string {
+export function shell(title: string, bodyHtml: string): string {
   return `<!doctype html><html><body style="margin:0;padding:24px;background:#f6f8f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1c2b33">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #dfe5e8;border-radius:8px">
@@ -52,13 +52,13 @@ You are receiving this because you use Learnovize.
 </table></td></tr></table></body></html>`;
 }
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
   ));
 }
 
-function button(href: string, label: string): string {
+export function button(href: string, label: string): string {
   return `<p style="margin:20px 0 0 0"><a href="${escapeHtml(href)}" style="display:inline-block;background:#1b7e8d;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:11px 20px;border-radius:6px">${escapeHtml(label)}</a></p>`;
 }
 

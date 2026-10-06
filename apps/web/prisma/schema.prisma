@@ -1,9 +1,16 @@
 // Learnovize data model v1 — hardened per ADR-006.
 // DB: Postgres 16 locally (docker compose), managed Postgres in cloud.
+//
+// This schema lives INSIDE apps/web rather than at the repo root on purpose. The Prisma CLI
+// resolves `@prisma/client` relative to the schema's own directory, and under pnpm's isolated
+// layout a workspace root with no dependencies exposes nothing to resolve. With the schema at
+// the root, `prisma generate` worked on Windows but failed on Linux (Netlify) with
+// "Could not resolve @prisma/client". Co-locating it with the package that declares both
+// `prisma` and `@prisma/client` makes generation deterministic on every platform.
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../apps/web/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -18,6 +25,11 @@ model User {
   passwordHash String
   isAdmin      Boolean  @default(false)
   suspended    Boolean  @default(false)
+  // Email ownership proof (ADR-002). Null hash = nothing pending; null verifiedAt = unverified.
+  emailVerifiedAt   DateTime?
+  emailOtpHash      String?
+  emailOtpExpiresAt DateTime?
+  emailOtpAttempts  Int       @default(0)
   createdAt    DateTime @default(now())
 
   trainerProfile TrainerProfile?

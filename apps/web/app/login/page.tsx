@@ -7,17 +7,29 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [needsVerify, setNeedsVerify] = useState(false);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
+    setNeedsVerify(false);
     const r = await fetch('/api/auth/login', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     const j = await r.json();
-    if (!r.ok) return setMsg({ ok: false, text: j.error || 'Login failed' });
+    if (!r.ok) {
+      if (j.verificationRequired) setNeedsVerify(true);
+      return setMsg({ ok: false, text: j.error || 'Login failed' });
+    }
     saveSession(j.access, j.refresh);
     setMsg({ ok: true, text: 'Logged in.' });
+  }
+  async function resend() {
+    await fetch('/api/auth/resend-verification', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    setMsg({ ok: true, text: 'If that address needs confirming, a new code is on its way.' });
   }
   return (
     <div className="wrap">
@@ -30,7 +42,13 @@ export default function Login() {
         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         <div className="btnrow"><button className="btn primary" type="submit">Log in</button>
         <Link className="btn link" href="/signup">New here? Sign up</Link></div>
-        {msg && <div className={msg.ok ? 'okmsg' : 'err'}>{msg.text}{msg.ok && <> <Link href="/">Go home →</Link></>}</div>}
+        {msg && <div className={msg.ok ? 'okmsg' : 'err'}>{msg.text}{msg.ok && msg.text === 'Logged in.' && <> <Link href="/">Go home →</Link></>}</div>}
+        {needsVerify && (
+          <p style={{ marginTop: 10, fontSize: 14 }}>
+            <button className="btn link" type="button" onClick={resend}>Resend the code</button>{' '}
+            <Link className="btn link" href="/signup">Enter it here</Link>
+          </p>
+        )}
       </form>
     </div>
   );
