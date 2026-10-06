@@ -1,18 +1,20 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/db';
+import { prisma, safeDb } from '@/lib/db';
 import RegisterButton from '../../../trainings/RegisterButton';
 
 export const dynamic = 'force-dynamic';
 
 async function bySlug(slug: string) {
-  return prisma.training.findUnique({
-    where: { slug },
-    include: {
-      trainer: { select: { displayName: true } },
-      sessions: { orderBy: { startsAtUtc: 'asc' } },
-    },
-  });
+  return safeDb(() =>
+    prisma.training.findUnique({
+      where: { slug },
+      include: {
+        trainer: { select: { displayName: true } },
+        sessions: { orderBy: { startsAtUtc: 'asc' } },
+      },
+    }),
+  null);
 }
 
 // SSR Open Graph preview for WhatsApp/X/Telegram (FR-4.2). No app required (PRD §5).

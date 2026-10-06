@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/db';
+import { prisma, safeDb } from '@/lib/db';
 import RegisterButton from '../RegisterButton';
 import ModeratorInvite from '../ModeratorInvite';
 import AttendanceSection from '../AttendanceSection';
@@ -11,13 +11,15 @@ export const dynamic = 'force-dynamic';
 
 export default async function TrainingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const t = await prisma.training.findUnique({
-    where: { id },
-    include: {
-      trainer: { select: { displayName: true } },
-      sessions: { orderBy: { startsAtUtc: 'asc' } },
-    },
-  });
+  const t = await safeDb(() =>
+    prisma.training.findUnique({
+      where: { id },
+      include: {
+        trainer: { select: { displayName: true } },
+        sessions: { orderBy: { startsAtUtc: 'asc' } },
+      },
+    }),
+  null);
   if (!t) return notFound();
   const left = t.cap - t.seatsTaken;
   const full = left <= 0 || t.status === 'full';

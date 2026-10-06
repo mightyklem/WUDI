@@ -10,14 +10,20 @@ export default function Signup() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const r = await fetch('/api/auth/signup', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const j = await r.json();
-    if (!r.ok) return setMsg({ ok: false, text: j.error || 'Signup failed' });
-    saveSession(j.access, j.refresh);
-    setMsg({ ok: true, text: 'Account created. You are logged in.' });
+    try {
+      const r = await fetch('/api/auth/signup', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const j = await r.json().catch(() => null);
+      if (!r.ok) {
+        return setMsg({ ok: false, text: j?.error || `Signup failed (${r.status}). Try again.` });
+      }
+      saveSession(j.access, j.refresh);
+      setMsg({ ok: true, text: 'Account created. You are logged in.' });
+    } catch {
+      setMsg({ ok: false, text: 'Network problem — the request did not go through. Check your connection and try again.' });
+    }
   }
   return (
     <div className="wrap">
