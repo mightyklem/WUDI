@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import { MOTTO, QuoteStrip } from './QuoteStrip';
 
 type Post = {
   id: string; type: string; mediaUrl: string; likeCount: number;
@@ -53,7 +54,11 @@ export default function Feed() {
         <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/me/registrations">My seats</Link></nav>
       </div>
       <h1>Explore.</h1>
+      <p className="sub" style={{ fontSize: 16, color: '#1B7E8D', fontWeight: 600 }}>
+        {MOTTO}
+      </p>
       <p className="sub">Upcoming live trainings — watch, follow, save, register.</p>
+      <QuoteStrip />
       <div className="card" style={{ marginTop: 12 }}>
         <div className="btnrow" style={{ marginTop: 0 }}>
           <input type="text" placeholder="Search trainings…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 220 }} />
