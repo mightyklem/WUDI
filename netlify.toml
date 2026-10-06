@@ -1,20 +1,22 @@
 # Netlify build settings for the Next.js web app inside the pnpm monorepo.
 # Local dev is unaffected; this file only matters when you connect the repo to Netlify.
 #
-# Base directory is deliberately EMPTY. All paths below are relative to the repo root,
-# which is where the pnpm workspace and pnpm-lock.yaml live — running the install from
-# apps/web would not see the workspace and dependency install fails.
+# base is deliberately EMPTY so pnpm installs the whole workspace from the repo root
+# (where pnpm-lock.yaml lives). Every path below is relative to that root.
 #
-# The buildbot's "package directory" (set in the Netlify UI, not here) MUST be `apps/web`.
-# When it is left on auto-detect, Netlify picks apps/mobile (Expo) as the site and resolves
-# every path below relative to apps/mobile.
+# The buildbot's "package directory" (set in the Netlify UI, NOT in this file) must be
+# `apps/web`. Netlify auto-detect otherwise picks apps/mobile (Expo) as the site, which
+# makes it resolve these paths relative to apps/mobile and run the Next.js runtime
+# against an Expo project.
 
 [build]
   base = ""
-  # db:push runs first so a fresh hosted Postgres gets the schema before the app builds.
-  # It is idempotent — safe to re-run on every deploy.
+  # db:push is idempotent — it syncs the hosted Postgres schema before the app builds.
   command = "pnpm run db:push && pnpm --filter @learnovize/web build"
   publish = "apps/web/.next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [build.environment]
   NODE_VERSION = "22"
@@ -26,6 +28,3 @@
   # DATABASE_URL is intentionally NOT set here. Prisma's schema reads env("DATABASE_URL"),
   # so it must exist at build time — set it in the Netlify UI (Site configuration ->
   # Environment). Putting a placeholder here shadowed the real value.
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
