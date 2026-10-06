@@ -9,5 +9,8 @@
     "test:shared": "pnpm --filter @learnovize/shared test",
     "db:push": "pnpm --filter @learnovize/web exec prisma db push --schema ../../prisma/schema.prisma --accept-data-loss --skip-generate",
     "db:generate": "pnpm --filter @learnovize/web exec prisma generate --schema ../../prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0"
   }
 }

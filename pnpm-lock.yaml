@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      '@prisma/client':
+        specifier: ^6.0.0
+        version: 6.19.3(prisma@6.19.3(typescript@6.0.3))(typescript@6.0.3)
 
   apps/mobile:
     dependencies:
@@ -5260,6 +5264,11 @@ snapshots:
       prisma: 6.19.3(typescript@5.9.3)
       typescript: 5.9.3
 
+  '@prisma/client@6.19.3(prisma@6.19.3(typescript@6.0.3))(typescript@6.0.3)':
+    optionalDependencies:
+      prisma: 6.19.3(typescript@6.0.3)
+      typescript: 6.0.3
+
   '@prisma/config@6.19.3':
     dependencies:
       c12: 3.1.0
@@ -7681,6 +7690,16 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - magicast
+
+  prisma@6.19.3(typescript@6.0.3):
+    dependencies:
+      '@prisma/config': 6.19.3
+      '@prisma/engines': 6.19.3
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - magicast
+    optional: true
 
   proc-log@4.2.0: {}
 
