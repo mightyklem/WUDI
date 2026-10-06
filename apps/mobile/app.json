@@ -43,7 +43,7 @@
       ]
     ],
     "extra": {
-      "backendUrl": "http://localhost:3000",
+      "backendUrl": "https://learnovize.com",
       "eas": { "projectId": "00000000-0000-0000-0000-000000000000" }
     },
     "experiments": {
