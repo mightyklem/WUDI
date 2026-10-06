@@ -1,7 +1,13 @@
+import { fileURLToPath } from 'url';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@learnovize/shared'],
-  outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
+  // fileURLToPath, NOT `new URL(...).pathname`. On Windows `.pathname` yields
+  // "/C:/Users/DELL%20PC/..." — a POSIX path with a URL-encoded space. Next.js then
+  // derives a bogus relativeAppDir full of "..", which Netlify's Next.js runtime
+  // rejects with "publish directory does not contain expected Next.js build output".
+  outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   async headers() {
     return [
       {
