@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { dbUnavailable, prisma } from '@/lib/db';
 import { hashRefreshToken, newRefreshToken, signAccessToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -8,6 +8,12 @@ export const dynamic = 'force-dynamic';
 // Rotates: consumes the presented token, issues a new pair.
 // Reuse of a consumed token revokes the whole chain (theft detection).
 export async function POST(req: Request) {
+  if (dbUnavailable()) {
+    return NextResponse.json(
+      { error: 'Service temporarily unavailable — try again shortly' },
+      { status: 503 },
+    );
+  }
   const { refresh } = (await req.json().catch(() => ({}))) as { refresh?: string };
   if (!refresh) return NextResponse.json({ error: 'Refresh token required' }, { status: 400 });
 

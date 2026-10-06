@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { dbUnavailable, prisma } from '@/lib/db';
 import { checkPassword, signAccessToken, newRefreshToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // POST /api/auth/login { email, password }
 export async function POST(req: Request) {
+  if (dbUnavailable()) {
+    return NextResponse.json(
+      { error: 'Service temporarily unavailable — try again shortly' },
+      { status: 503 },
+    );
+  }
   const { email, password } = (await req.json().catch(() => ({}))) as {
     email?: string; password?: string;
   };
