@@ -67,6 +67,8 @@ export async function GET(req: Request) {
         certMode: p.training.certMode, certPriceNgn: p.training.certPriceNgn,
         status: p.training.status,
         seatsLeft: p.training.cap - p.training.seatsTaken,
+        cap: p.training.cap,
+        seatsTaken: p.training.seatsTaken,
         firstSession: p.training.sessions[0]?.startsAtUtc || null,
       },
       liked: liked.has(p.id),
