@@ -33,6 +33,9 @@ export default function Feed() {
   }
   useEffect(load, []);
 
+  // Distinguish "your filters hid everything" from "the platform is empty".
+  const filtered = Boolean(q || topic || cert !== 'any');
+
   async function authed(path: string, opts: RequestInit = {}) {
     const access = getAccess();
     if (!access) { setMsg('Log in first.'); return null; }
@@ -82,9 +85,38 @@ export default function Feed() {
         </div>
       </div>
       {msg && <div className="okmsg">{msg}</div>}
+
+      {posts !== null && posts.length === 0 && (
+        // E1/E3 — a brand-new platform looks identical to "your filters hid everything".
+        // Never leave a cold feed as a single dead sentence.
+        <div className="card" style={{ marginTop: 16, textAlign: 'center', padding: 34 }}>
+          <div style={{ fontSize: 30, marginBottom: 8 }} aria-hidden>◎</div>
+          <p style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>
+            {filtered ? 'Nothing matches those filters' : 'No sessions announced yet'}
+          </p>
+          <p className="muted" style={{ margin: '8px auto 0', maxWidth: 460 }}>
+            {filtered
+              ? 'Try widening your search, or clear the filters to see everything that is live.'
+              : 'Trainers are being onboarded now. Follow the ones you like and you will be notified the moment they go live.'}
+          </p>
+          <div className="btnrow" style={{ justifyContent: 'center' }}>
+            {filtered ? (
+              <>
+                <button className="btn primary" onClick={() => { setQ(''); setTopic(''); setCert('any'); }}>Clear filters</button>
+                <button className="btn" onClick={load}>Try again</button>
+              </>
+            ) : (
+              <>
+                <Link className="btn primary" href="/trainers">Browse trainers</Link>
+                <Link className="btn" href="/onboarding">Become a trainer</Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{ marginTop: 18, display: 'grid', gap: 16 }}>
         {posts === null && <p className="muted">Loading feed…</p>}
-        {posts !== null && posts.length === 0 && <p className="muted">Nothing upcoming matches — try clearing filters.</p>}
         {posts?.map((p) => {
           const full = p.training.status === 'full';
           return (
