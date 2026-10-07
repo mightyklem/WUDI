@@ -22,8 +22,6 @@ const QUOTES: { text: string; author: string }[] = [
 
 const ROTATE_MS = 9000;
 
-export const MOTTO = 'Tailoring your education for your purpose in life';
-
 export function QuoteStrip() {
   const [i, setI] = useState(0);
 

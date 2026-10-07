@@ -2,8 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
-import { MOTTO, QuoteStrip } from './QuoteStrip';
-import { HeroCard } from './Hero';
+import { QuoteStrip } from './QuoteStrip';
 
 type Post = {
   id: string; type: string; mediaUrl: string; likeCount: number;
@@ -56,8 +55,6 @@ export default function Feed() {
       </div>
       <h1>Explore.</h1>
       <p className="sub">Upcoming live trainings — watch, follow, save, register.</p>
-
-      <HeroCard line={MOTTO} />
 
       <QuoteStrip />
 

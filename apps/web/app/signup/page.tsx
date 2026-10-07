@@ -3,10 +3,29 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { saveSession } from '@/lib/client-auth';
 
+const STEPS = [
+  {
+    title: 'Attend live, not someday',
+    body: 'Real trainers, real time. Join a session while it is happening — no replay treadmill.',
+    points: ['Scheduled sessions you can see upfront', 'Reminders before each one starts'],
+  },
+  {
+    title: 'Proof, not a promise',
+    body: 'Attendance is measured from the classroom itself, so the certificate you earn means something.',
+    points: ['Verified automatically when you attend', 'Anyone can check a certificate number'],
+  },
+  {
+    title: 'Learn for a purpose',
+    body: 'Trainers here teach towards an outcome. Hosts build a following as they teach.',
+    points: ['Follow trainers and get their new sessions', 'Host your own once you are ready'],
+  },
+];
+
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [step, setStep] = useState(0);
   const [stage, setStage] = useState<'form' | 'verify'>('form');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -92,9 +111,39 @@ export default function Signup() {
     );
   }
 
+  if (step < STEPS.length) {
+    const s = STEPS[step];
+    const last = step === STEPS.length - 1;
+    return (
+      <div className="wrap">
+        <div className="card" style={{ marginTop: 18, padding: 28 }}>
+          <p style={{ margin: 0, fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)' }}>
+            Step {step + 1} of {STEPS.length}
+          </p>
+          <h2 style={{ margin: '10px 0 8px', fontSize: 26, fontWeight: 800, lineHeight: 1.25 }}>{s.title}</h2>
+          <p className="muted" style={{ margin: '0 0 18px', fontSize: 16 }}>{s.body}</p>
+          <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--ink)', fontSize: 15, lineHeight: 1.7 }}>
+            {s.points.map((pt) => <li key={pt}>{pt}</li>)}
+          </ul>
+          <div className="btnrow">
+            <button className="btn primary" onClick={() => setStep(step + 1)}>
+              {last ? 'Create an account' : 'Next'}
+            </button>
+            <button className="btn link" onClick={() => setStep(STEPS.length)}>Skip</button>
+          </div>
+        </div>
+        <nav className="bottomnav"><div className="in">
+          <Link href="/" className="on">🏠<br />Home</Link>
+          <Link href="/feed">◎<br />Explore</Link>
+          <Link href="/login">→<br />Log in</Link>
+        </div></nav>
+      </div>
+    );
+  }
+
   return (
     <div className="wrap">
-      <h1>Sign up.</h1>
+      <h1>Create your account.</h1>
       <p className="sub">Every account can attend. Complete a trainer profile to host.</p>
       <form onSubmit={submit} className="card" style={{ marginTop: 18 }}>
         <label className="fl">Email</label>
@@ -103,6 +152,7 @@ export default function Signup() {
         <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
         <div className="btnrow">
           <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
+          <button className="btn link" type="button" onClick={() => setStep(0)}>Back</button>
           <Link className="btn link" href="/login">Have an account? Log in</Link>
         </div>
         {msg && <div className={msg.ok ? 'okmsg' : 'err'}>{msg.text}</div>}
