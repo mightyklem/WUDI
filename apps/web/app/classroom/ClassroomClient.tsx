@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   LiveKitRoom, useRoomContext, useTracks, useLocalParticipant,
-  VideoTrack, AudioTrack,
+  VideoTrack, RoomAudioRenderer,
 } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
 import { getAccess } from '@/lib/client-auth';
@@ -30,9 +30,15 @@ function Tiles({ lowData }: { lowData: boolean }) {
         <div key={t.participant.identity + t.source} style={{ border: '1.5px solid var(--line)', borderRadius: 12, overflow: 'hidden', minHeight: 140, background: '#0B1F14', color: '#fff', position: 'relative' }}>
           {t.publication?.kind === 'video' ? (
             <VideoTrack trackRef={t as never} style={{ width: '100%' }} />
-          ) : t.publication?.kind === 'audio' ? (
-            <AudioTrack trackRef={t as never} />
-          ) : null}
+          ) : (
+            // Audio is rendered once by RoomAudioRenderer below, not per tile.
+            // Two elements playing the same track means the learner hears it twice.
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140 }}>
+              <span style={{ fontSize: 28 }} aria-hidden>
+                {t.participant.isSpeaking ? '🎙' : '🔇'}
+              </span>
+            </div>
+          )}
           <span style={{ position: 'absolute', left: 8, bottom: 6, fontSize: 12, background: 'rgba(0,0,0,.6)', padding: '2px 8px', borderRadius: 8 }}>
             {t.participant.name || t.participant.identity}
           </span>
@@ -291,7 +297,10 @@ export default function ClassroomClient({ sessionId }: { sessionId: string }) {
       video={!lowData} audio
       onDisconnected={() => setErr('Disconnected from the room.')}
     >
-      <p className="muted">Room: {creds.room} · you are <b>{creds.role}</b></p>
+      <p className="muted" style={{ fontSize: 13 }}>you are <b>{creds.role}</b></p>
+      {/* Renders every remote audio track and handles the browser autoplay block.
+          Without it the learner hears nothing until they click something. */}
+      <RoomAudioRenderer />
       <RoomBody sessionId={sessionId} role={creds.role} myId={creds.myId} lowData={lowData} onLowData={setLowData} />
     </LiveKitRoom>
   );
