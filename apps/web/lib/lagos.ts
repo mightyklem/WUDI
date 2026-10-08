@@ -80,12 +80,18 @@ export function lagosDateOptions(count = 45) {
 }
 
 /**
- * Class time slots at 30-minute steps across the working day. A dropdown of the
+ * Class time slots at 30-minute steps across the whole day. A dropdown of the
  * times people actually teach beats a free-text time picker.
+ *
+ * Starts at 00:00 rather than a working-day hour: evening and night classes are
+ * real, and a trainer scheduling one must not be unable to say when it starts.
+ * The last slot is the final one that fits inside the day, so 23:30 for 30-minute
+ * steps rather than stopping at 23:00.
  */
-export function lagosTimeOptions(fromHour = 6, toHour = 23, stepMinutes = 30) {
+export function lagosTimeOptions(stepMinutes = 30) {
   const out: { value: string; label: string }[] = [];
-  for (let m = fromHour * 60; m <= toHour * 60; m += stepMinutes) {
+  const minutesInDay = 24 * 60;
+  for (let m = 0; m + stepMinutes <= minutesInDay; m += stepMinutes) {
     const hh = String(Math.floor(m / 60)).padStart(2, '0');
     const mm = String(m % 60).padStart(2, '0');
     const value = `${hh}:${mm}`;
