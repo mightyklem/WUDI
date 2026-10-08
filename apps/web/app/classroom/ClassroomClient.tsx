@@ -8,45 +8,118 @@ import { RoomEvent, Track } from 'livekit-client';
 import { getAccess } from '@/lib/client-auth';
 
 type Role = 'trainer' | 'moderator' | 'participant';
-type ChatMsg = { from: string; text: string; at: number };
+type ChatMsg = { from: string; who: string; text: string; at: number };
 type Poll = { id: string; question: string; options: string[]; open: boolean; votes: Record<number, number>; seen: Set<string> };
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
-function Tiles({ lowData }: { lowData: boolean }) {
-  const tracks = useTracks(
-    lowData
-      ? [{ source: Track.Source.Microphone, withPlaceholder: true }]
-      : [
-          { source: Track.Source.Camera, withPlaceholder: true },
-          { source: Track.Source.ScreenShare, withPlaceholder: false },
-          { source: Track.Source.Microphone, withPlaceholder: true },
-        ],
-  );
+/**
+ * Chat and the hand list arrive keyed on participant identity, which is a database
+ * id like cmuyynvyr0000uk8sssz6hj9d. Show something a person recognises: the
+ * email local part, falling back to the full address and then the id.
+ */
+function displayName(p?: { identity: string; name?: string }): string {
+  const raw = p?.name || p?.identity || 'someone';
+  const local = raw.split('@')[0];
+  return (local || raw).trim();
+}
+
+/**
+ * One main stage plus a picture-in-picture round of cameras.
+ *
+ * A screen share always takes the stage when someone is sharing. Otherwise the
+ * stage goes to whoever is speaking, falling back to the first camera. The round
+ * keeps every camera visible without the duplicate feeds the grid used to produce.
+ */
+function StageAndRound() {
+  const room = useRoomContext();
+  const [big, setBig] = useState(false);
+
+  const screens = useTracks([{ source: Track.Source.ScreenShare, withPlaceholder: false }]);
+  const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: false }]);
+
+  const share = screens[0] ?? null;
+  const speaking = cameras.find((t) => t.participant.isSpeaking) ?? null;
+  const stage = share ?? speaking ?? cameras[0] ?? null;
+  // Everyone not already on the stage, so nobody appears twice.
+  const round = cameras.filter((t) => t !== stage);
+
+  if (!stage) {
+    return (
+      <div style={{ border: '1.5px solid var(--line)', borderRadius: 14, minHeight: 260, background: '#0B1F14', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p className="muted" style={{ color: '#fff' }}>Waiting for the trainer to start…</p>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-      {tracks.map((t) => (
-        <div key={t.participant.identity + t.source} style={{ border: '1.5px solid var(--line)', borderRadius: 12, overflow: 'hidden', minHeight: 140, background: '#0B1F14', color: '#fff', position: 'relative' }}>
-          {t.publication?.kind === 'video' ? (
-            <VideoTrack trackRef={t as never} style={{ width: '100%' }} />
-          ) : (
-            // Audio is rendered once by RoomAudioRenderer below, not per tile.
-            // Two elements playing the same track means the learner hears it twice.
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140 }}>
-              <span style={{ fontSize: 28 }} aria-hidden>
-                {t.participant.isSpeaking ? '🎙' : '🔇'}
+    <div style={{ position: big ? 'fixed' : 'relative', inset: big ? 0 : undefined, zIndex: big ? 50 : undefined, background: big ? '#000' : undefined, borderRadius: big ? 0 : 14 }}>
+      <div
+        style={{
+          position: 'relative',
+          background: '#0B1F14',
+          borderRadius: big ? 0 : 14,
+          overflow: 'hidden',
+          border: '1.5px solid var(--line)',
+        }}
+      >
+        <VideoTrack trackRef={stage as never} style={{ width: '100%', maxHeight: big ? '100vh' : 460, display: 'block' }} />
+        <span style={{ position: 'absolute', left: 10, top: 10, background: 'rgba(0,0,0,.65)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: 13 }}>
+          {share ? `🖥 ${displayName(stage.participant)} is presenting` : displayName(stage.participant)}
+        </span>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => setBig((v) => !v)}
+          style={{ position: 'absolute', right: 10, top: 10 }}
+        >
+          {big ? '⤡ Exit full screen' : '⤢ Full screen'}
+        </button>
+      </div>
+
+      {round.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            flexWrap: 'wrap',
+            marginTop: 10,
+            ...(big ? { position: 'fixed', right: 16, bottom: 16, zIndex: 51, marginTop: 0 } : {}),
+          }}
+        >
+          {round.map((t) => (
+            <div
+              key={t.participant.identity}
+              style={{
+                width: 96, height: 96, borderRadius: '50%', overflow: 'hidden',
+                border: `2px solid ${t.participant.isSpeaking ? 'var(--accent)' : 'var(--line)'}`,
+                background: '#0B1F14',
+                position: 'relative',
+              }}
+            >
+              <VideoTrack trackRef={t as never} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <span
+                style={{
+                  position: 'absolute', inset: 'auto 0 0 0', background: 'rgba(0,0,0,.6)',
+                  color: '#fff', fontSize: 10, textAlign: 'center', padding: '2px 0',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}
+              >
+                {displayName(t.participant)}
               </span>
             </div>
-          )}
-          <span style={{ position: 'absolute', left: 8, bottom: 6, fontSize: 12, background: 'rgba(0,0,0,.6)', padding: '2px 8px', borderRadius: 8 }}>
-            {t.participant.name || t.participant.identity}
-          </span>
+          ))}
         </div>
-      ))}
-      {tracks.length === 0 && <p className="muted">Waiting for others to join…</p>}
+      )}
     </div>
   );
+}
+
+/** Resolve a participant id to a display name via the room's roster. */
+function nameOf(room: ReturnType<typeof useRoomContext>, identity: string): string {
+  const p = room.getParticipantByIdentity(identity);
+  return displayName(p ?? { identity });
 }
 
 function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: string; role: Role; myId: string; lowData: boolean; onLowData: (v: boolean) => void }) {
@@ -76,11 +149,14 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
   }, [room, myId, localParticipant]);
 
   useEffect(() => {
-    const onData = (payload: Uint8Array, participant?: { identity: string }, _kind?: unknown, topic?: string) => {
+    const onData = (payload: Uint8Array, participant?: { identity: string; name?: string }, _kind?: unknown, topic?: string) => {
       try {
         const m = JSON.parse(dec.decode(payload));
         const from = participant?.identity || 'unknown';
-        if (topic === 'chat' && m.text) setChat((c) => [...c.slice(-99), { from, text: String(m.text).slice(0, 500), at: Date.now() }]);
+        // Keep the display name alongside the id: chat lines and the hand list
+        // both read better with a name, but the id is what the trainer acts on.
+        const who = displayName(participant);
+        if (topic === 'chat' && m.text) setChat((c) => [...c.slice(-99), { from, who, text: String(m.text).slice(0, 500), at: Date.now() }]);
         if (topic === 'poll') {
           if (m.kind === 'open') setPoll({ id: m.id, question: m.question, options: m.options, open: true, votes: {}, seen: new Set() });
           if (m.kind === 'close') setPoll((p) => (p && p.id === m.id ? { ...p, open: false } : p));
@@ -168,14 +244,18 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
         <label style={{ fontSize: 14 }}><input type="checkbox" checked={lowData} onChange={(e) => onLowData(e.target.checked)} /> Low-data / audio-only</label>
         {role === 'trainer' && <button className="btn primary" onClick={() => moderate('end')}>⏻ End session</button>}
       </div>
-      {hands.size > 0 && <p className="muted">✋ Hands up: {[...hands].join(', ')}</p>}
-      <div style={{ marginTop: 14 }}><Tiles lowData={lowData} /></div>
+      {hands.size > 0 && (
+        <p className="muted">
+          ✋ Waiting to speak: {[...hands].map((id) => nameOf(room, id)).join(', ')}
+        </p>
+      )}
+      <div style={{ marginTop: 14 }}><StageAndRound /></div>
 
       <h2 className="sec">Chat</h2>
       <div className="card">
         <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 10 }}>
           {chat.length === 0 && <p className="muted">No messages yet — works on 2G (data channel).</p>}
-          {chat.map((c, i) => <p key={i} style={{ margin: '4px 0' }}><b>{c.from}:</b> {c.text}</p>)}
+          {chat.map((c, i) => <p key={i} style={{ margin: '4px 0' }}><b>{c.who}</b>: {c.text}</p>)}
         </div>
         <div className="btnrow" style={{ marginTop: 0 }}>
           <input type="text" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Message everyone…" style={{ maxWidth: 320 }} />
@@ -253,7 +333,7 @@ function RemoteRoster({
         return (
           <div key={p.identity} className="btnrow" style={{ marginTop: 6, alignItems: 'center' }}>
             <span>
-              {p.name || p.identity}
+              {displayName(p)}
               {raised && !speaking ? ' ✋' : ''}
               {speaking ? ' 🎙' : ''}
             </span>
