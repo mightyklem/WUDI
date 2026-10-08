@@ -30,7 +30,10 @@ model User {
   isOfficial   Boolean  @default(false)
   // Points and level rank. Attendance awards points on free and paid classes alike (FR-13).
   points       Int      @default(0)
-  rank         String   @default("Newcomer")
+  // Cached mirror of rankFor(points). The ladder is Stone/Bronze/Silver/Gold,
+  // so the default must match rankFor(0) — anything else shows a rank that
+  // does not exist in the ladder. Read rankFor() where correctness matters.
+  rank         String   @default("Stone")
   // Email ownership proof (ADR-002). Null hash = nothing pending; null verifiedAt = unverified.
   emailVerifiedAt   DateTime?
   emailOtpHash      String?
