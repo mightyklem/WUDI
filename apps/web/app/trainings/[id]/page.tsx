@@ -23,16 +23,18 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
         orderBy: { dayIndex: 'asc' },
         include: {
           sessions: { select: { startsAtUtc: true } },
-          _count: { select: { sessions: true, enrollments: true } },
+          // Only buyers who are still active count as having locked the day.
+          _count: {
+            select: { sessions: true, enrollments: { where: { registration: { status: 'active' } } } },
+          },
         },
       },
       _count: { select: { registrations: { where: { status: 'active' } } } },
     },
   });
-  if (!t) return notFound();
-  const regCount = t._count.registrations;
-  const left = t.cap - t.seatsTaken;
+if (!t) return notFound();
   const price = quoteFor(t);
+  const left = t.cap - t.seatsTaken;
   const full = left <= 0 || t.status === 'full';
   return (
     <div className="wrap">
@@ -68,7 +70,6 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
           trainingId={t.id}
           tier={t.tier}
           accessType={t.accessType}
-          locked={regCount > 0}
           days={t.days.map((d) => ({
             id: d.id,
             dayIndex: d.dayIndex,
@@ -78,6 +79,7 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
             priceNgn: d.priceNgn,
             sessionCount: d._count.sessions,
             enrolled: d._count.enrollments,
+            sold: d._count.enrollments,
             started: d.sessions.some((s) => new Date(s.startsAtUtc).getTime() <= Date.now()),
           }))}
         />

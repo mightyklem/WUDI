@@ -12,6 +12,8 @@ export type EditableDay = {
   priceNgn: number;
   sessionCount: number;
   enrolled: number;
+  /** Active learners who bought this specific day. */
+  sold: number;
   started: boolean;
 };
 
@@ -20,15 +22,13 @@ type Props = {
   days: EditableDay[];
   tier: string | null;
   accessType: string;
-  /** Locked once anyone has registered or a day has begun. */
-  locked: boolean;
 };
 
 /**
  * Trainer screen for per-day pricing (FR-11): set each day's topic, mark a single
  * day of a paid class free, or reprice it inside the class's category band.
  */
-export default function DayPricingEditor({ trainingId, days, tier, accessType, locked }: Props) {
+export default function DayPricingEditor({ trainingId, days, tier, accessType }: Props) {
   const [rows, setRows] = useState(days);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -74,7 +74,7 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType, l
           This is a free class, so every day is free. It issues no certificate —
           attendees still earn points.
         </p>
-        <DayList rows={rows} onTopic={locked ? undefined : patch} />
+        <DayList rows={rows} onTopic={patch} />
       </div>
     );
   }
@@ -88,18 +88,14 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType, l
       </p>
       <p className="muted" style={{ margin: '0 0 12px', fontSize: 13 }}>
         Price each day, or open one for free. A learner pays only for the days they pick.
+        Once a day has been bought its topic and price are locked.
       </p>
-
-      {locked && (
-        <p className="muted" style={{ fontSize: 13, margin: '0 0 12px' }}>
-          Day prices are locked once participants have registered.
-        </p>
-      )}
 
       <div style={{ display: 'grid', gap: 12 }}>
         {rows.map((d) => {
           const free = d.accessType !== 'paid';
-          const priceLocked = locked || d.started;
+          // A day that has been bought, or has already started, is frozen.
+          const priceLocked = d.sold > 0 || d.started;
           return (
             <div
               key={d.id}
@@ -152,7 +148,8 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType, l
                   {free ? 'Free' : formatNgn(d.priceNgn)}
                 </span>
                 <span className="muted" style={{ fontSize: 13, marginLeft: 'auto' }}>
-                  {d.sessionCount} session{d.sessionCount === 1 ? '' : 's'} · {d.enrolled} enrolled
+                  {priceLocked ? '🔒 locked' : `${d.sessionCount} session${d.sessionCount === 1 ? '' : 's'}`}
+                  {d.enrolled > 0 ? ` · ${d.enrolled} bought` : ''}
                 </span>
               </div>
 
@@ -191,7 +188,8 @@ function DayList({ rows, onTopic }: { rows: EditableDay[]; onTopic?: (id: string
           )}
           <span className="muted" style={{ fontSize: 13 }}>{d.dateUtc}</span>
           <span className="muted" style={{ fontSize: 13 }}>
-            {d.sessionCount} session{d.sessionCount === 1 ? '' : 's'} · {d.enrolled} enrolled
+            {d.sessionCount} session{d.sessionCount === 1 ? '' : 's'} ·{' '}
+            {d.enrolled > 0 ? `${d.enrolled} bought` : 'not booked'}
           </span>
         </div>
       ))}

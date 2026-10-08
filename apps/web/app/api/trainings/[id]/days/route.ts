@@ -37,8 +37,18 @@ export async function GET(req: Request, { params }: Ctx) {
 }
 
 // PATCH /api/trainings/[id]/days — change one day's topic, price, or free/paid.
-// A day that has already been delivered, or priced after anyone registered, is
-// locked: changing it would either rewrite history or alter what people owe.
+//
+// Once anyone has bought a day, that day is frozen: its topic, its price and its
+// free/paid status. The topic is not merely a label — it is part of what the
+// learner selected and paid for, and it is what their certificate will name.
+// Renaming it afterwards would hand them a different day than the one they
+// agreed to buy.
+//
+// The lock is per day, not per training. A day nobody has enrolled in can still
+// be renamed or priced after the class has sold other days.
+//
+// A day that has already been delivered can never change, even with no
+// enrolments, because the attendance record already refers to it.
 export async function PATCH(req: Request, { params }: Ctx) {
   const { id } = await params;
   const ctx = await ownerOrMod(req, id);
@@ -58,33 +68,20 @@ export async function PATCH(req: Request, { params }: Ctx) {
   });
   if (!day) return NextResponse.json({ error: 'Day not found' }, { status: 404 });
 
+  // Sold, or already taught: this day can no longer change in any respect.
+  const sold = await prisma.dayEnrollment.count({
+    where: { dayId: day.id, registration: { status: 'active' } },
+  });
+  const delivered = day.sessions.some((s) => new Date(s.startsAtUtc).getTime() <= Date.now());
+  if (sold > 0 || delivered) {
+    const why = delivered
+      ? 'This day has already started — it can no longer be changed'
+      : `This day has already been bought by ${sold} learner${sold === 1 ? '' : 's'} — topic and price are locked`;
+    return NextResponse.json({ error: why, locked: true }, { status: 409 });
+  }
+
   const topic = typeof body.topic === 'string' ? body.topic.trim().slice(0, 80) : day.topic;
   const accessType = body.accessType ?? day.accessType;
-
-  // Free/paid and price are both money decisions.
-  const pricingChanged =
-    accessType !== day.accessType ||
-    (accessType === 'paid' && Number(body.priceNgn ?? day.priceNgn) !== day.priceNgn);
-
-  if (pricingChanged) {
-    // Anything already delivered cannot be repriced after the fact.
-    const delivered = day.sessions.some((s) => new Date(s.startsAtUtc).getTime() <= Date.now());
-    if (delivered) {
-      return NextResponse.json(
-        { error: 'This day has already started — its price can no longer change' },
-        { status: 409 },
-      );
-    }
-    const activeRegs = await prisma.registration.count({
-      where: { trainingId: id, status: 'active' },
-    });
-    if (activeRegs > 0) {
-      return NextResponse.json(
-        { error: 'Price and free/paid are locked once participants have registered' },
-        { status: 409 },
-      );
-    }
-  }
 
   const v = validateDayPricing({
     tier: ctx.training.tier,
