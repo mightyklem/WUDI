@@ -23,10 +23,14 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ ok: true });
 
   if (evt.event === 'participant_joined') {
+    // A rejoin starts a new attendance window, so the previous exit has to be
+    // cleared. Setting only joinedAt left the row self-contradictory — leftAt
+    // from the earlier exit could end up earlier than the new joinedAt, and
+    // stayedMs and present would still describe the previous stay.
     await prisma.attendanceLog.upsert({
       where: { sessionId_userId: { sessionId: session.id, userId: evt.identity } },
       create: { sessionId: session.id, userId: evt.identity, joinedAt: new Date(), stayedMs: 0, present: false },
-      update: { joinedAt: new Date() },
+      update: { joinedAt: new Date(), leftAt: null, stayedMs: 0, present: false },
     });
   } else if (evt.event === 'participant_left') {
     const log = await prisma.attendanceLog.findUnique({
