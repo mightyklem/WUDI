@@ -95,3 +95,10 @@ const CERT_RE = /^LEARNOVIZE-(19|20)\d{2}-[A-Z0-9]{6}$/;
 export function isCertNumber(s) {
   return typeof s === 'string' && CERT_RE.test(s);
 }
+
+// Paid-class pricing (FR-11) lives in its own module but ships from the same
+// entrypoint so callers keep one import.
+export * from './pricing.js';
+
+// Points and level ranks (FR-13), same reasoning.
+export * from './points.js';
