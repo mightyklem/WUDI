@@ -5,8 +5,13 @@ import { roomService } from '@/lib/livekit';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/sessions/[id]/moderate { action: 'mute'|'remove'|'end', identity? }
+// POST /api/sessions/[id]/moderate { action: 'mute'|'allowSpeak'|'remove'|'end', identity? }
 // Trainer or active moderator only. Mute/remove target one participant; end closes the room.
+//
+// Learners are minted with canPublish:false, so a class is listen-only by default and
+// cheap on data. 'allowSpeak' is how a learner who raised a hand actually gets to talk:
+// the server grants that one participant publish rights. It is server-side on purpose, so
+// a learner cannot grant themselves the ability to speak by sending a data-channel message.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
@@ -36,9 +41,38 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ ok: true });
   }
   if (!identity) return NextResponse.json({ error: 'identity required' }, { status: 400 });
-  if (action === 'mute') {
-    await svc.updateParticipant(session.livekitRoom, identity, { permission: { canPublish: false, canSubscribe: true, canPublishData: true } });
-    return NextResponse.json({ ok: true });
+  if (action === 'mute' || action === 'allowSpeak') {
+    const canPublish = action === 'allowSpeak';
+    try {
+      await svc.updateParticipant(session.livekitRoom, identity, {
+        permission: { canPublish, canSubscribe: true, canPublishData: true },
+      });
+    } catch (e) {
+      // LiveKit only tracks participants that are actually connected. A trainer
+      // clicking this on someone who just dropped would otherwise get a 500, so
+      // say plainly what happened. Note the grant does not survive a reconnect:
+      // permissions are per-participant, not per-registration.
+      const detail = e instanceof Error ? e.message : String(e);
+      const gone = /does not exist|not found/i.test(detail);
+      return NextResponse.json(
+        {
+          error: gone
+            ? 'That learner is no longer in the room'
+            : 'Could not change their permission',
+        },
+        { status: gone ? 409 : 502 },
+      );
+    }
+    // Worth recording: who was allowed to speak, and when.
+    await prisma.auditLog.create({
+      data: {
+        actorId: userId,
+        action: canPublish ? 'participant.allow-speech' : 'participant.mute',
+        target: `session:${id} user:${identity}`,
+        reason: canPublish ? 'raised hand' : null,
+      },
+    });
+    return NextResponse.json({ ok: true, canPublish });
   }
   if (action === 'remove') {
     await svc.removeParticipant(session.livekitRoom, identity);

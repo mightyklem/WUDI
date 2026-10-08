@@ -4,7 +4,7 @@ import {
   LiveKitRoom, useRoomContext, useTracks, useLocalParticipant,
   VideoTrack, AudioTrack,
 } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { RoomEvent, Track } from 'livekit-client';
 import { getAccess } from '@/lib/client-auth';
 
 type Role = 'trainer' | 'moderator' | 'participant';
@@ -43,10 +43,9 @@ function Tiles({ lowData }: { lowData: boolean }) {
   );
 }
 
-function RoomBody({ sessionId, role, myId }: { sessionId: string; role: Role; myId: string }) {
+function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: string; role: Role; myId: string; lowData: boolean; onLowData: (v: boolean) => void }) {
   const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
-  const [lowData, setLowData] = useState(false);
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [draft, setDraft] = useState('');
   const [poll, setPoll] = useState<Poll | null>(null);
@@ -54,6 +53,21 @@ function RoomBody({ sessionId, role, myId }: { sessionId: string; role: Role; my
   const [popts, setPopts] = useState('Pricing, Wiring, Safety');
   const [hands, setHands] = useState<Set<string>>(new Set());
   const [msg, setMsg] = useState<string | null>(null);
+  // Learners are minted listen-only. This flips true only when the server grants
+  // publish rights, which arrives as a real permission event rather than a
+  // data-channel message a learner could forge for themselves.
+  const [canSpeak, setCanSpeak] = useState(role !== 'participant');
+
+  useEffect(() => {
+    setCanSpeak(!!localParticipant.permissions?.canPublish);
+    // ParticipantPermission is declared in @livekit/protocol but not re-exported from
+    // livekit-client, so describe the slice of it we actually read.
+    const onPerm = (_prev: unknown, who: { identity: string; permissions?: { canPublish?: boolean } }) => {
+      if (who.identity === myId) setCanSpeak(!!who.permissions?.canPublish);
+    };
+    room.on(RoomEvent.ParticipantPermissionsChanged, onPerm);
+    return () => { room.off(RoomEvent.ParticipantPermissionsChanged, onPerm); };
+  }, [room, myId, localParticipant]);
 
   useEffect(() => {
     const onData = (payload: Uint8Array, participant?: { identity: string }, _kind?: unknown, topic?: string) => {
@@ -87,8 +101,9 @@ function RoomBody({ sessionId, role, myId }: { sessionId: string; role: Role; my
 
   const totalVotes = useMemo(() => Object.values(poll?.votes || {}).reduce((a, b) => a + b, 0), [poll]);
   const canMod = role === 'trainer' || role === 'moderator';
+  const mayPublish = role !== 'participant' || canSpeak;
 
-  async function moderate(action: 'mute' | 'remove' | 'end', identity?: string) {
+  async function moderate(action: 'mute' | 'allowSpeak' | 'remove' | 'end', identity?: string) {
     const access = getAccess();
     const r = await fetch(`/api/sessions/${sessionId}/moderate`, {
       method: 'POST',
@@ -96,23 +111,55 @@ function RoomBody({ sessionId, role, myId }: { sessionId: string; role: Role; my
       body: JSON.stringify({ action, identity }),
     });
     const j = await r.json().catch(() => ({}));
-    setMsg(r.ok ? (action === 'end' ? 'Session ended.' : `${action} sent.`) : (j.error || 'Action failed'));
+    const said = action === 'end' ? 'Session ended.' : action === 'allowSpeak' ? 'They can speak now.' : `${action} sent.`;
+    setMsg(r.ok ? said : (j.error || 'Action failed'));
   }
 
   return (
     <div>
+      {!mayPublish && (
+        <p className="muted" style={{ fontSize: 14, marginTop: 0 }}>
+          You are listening. Raise your hand and the trainer will let you speak.
+        </p>
+      )}
+      {mayPublish && role === 'participant' && (
+        <p className="muted" style={{ fontSize: 14, marginTop: 0 }}>
+          The trainer has let you speak. Turn your mic or camera on below.
+        </p>
+      )}
       <div className="btnrow" style={{ marginTop: 0 }}>
-        <button className="btn" onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}>
+        <button
+          className="btn"
+          disabled={!mayPublish}
+          onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
+        >
           {localParticipant.isMicrophoneEnabled ? '🎙 Mute me' : '🎙 Unmute'}
         </button>
         {!lowData && (
-          <button className="btn" onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}>
+          <button
+            className="btn"
+            disabled={!mayPublish}
+            onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
+          >
             {localParticipant.isCameraEnabled ? '📷 Cam off' : '📷 Cam on'}
           </button>
         )}
-        <button className="btn" onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}>🖥 Share</button>
-        <button className="btn" onClick={() => send('hand', { up: !hands.has(myId) })}>✋ {hands.has(myId) ? 'Lower hand' : 'Raise hand'}</button>
-        <label style={{ fontSize: 14 }}><input type="checkbox" checked={lowData} onChange={(e) => setLowData(e.target.checked)} /> Low-data / audio-only</label>
+        <button
+          className="btn"
+          disabled={!mayPublish}
+          onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
+        >
+          🖥 Share
+        </button>
+        {!mayPublish && (
+          <button className="btn" onClick={() => send('hand', { up: true })}>✋ Ask to speak</button>
+        )}
+        {mayPublish && (
+          <button className="btn" onClick={() => send('hand', { up: !hands.has(myId) })}>
+            ✋ {hands.has(myId) ? 'Lower hand' : 'Raise hand'}
+          </button>
+        )}
+        <label style={{ fontSize: 14 }}><input type="checkbox" checked={lowData} onChange={(e) => onLowData(e.target.checked)} /> Low-data / audio-only</label>
         {role === 'trainer' && <button className="btn primary" onClick={() => moderate('end')}>⏻ End session</button>}
       </div>
       {hands.size > 0 && <p className="muted">✋ Hands up: {[...hands].join(', ')}</p>}
@@ -165,25 +212,54 @@ function RoomBody({ sessionId, role, myId }: { sessionId: string; role: Role; my
         )}
       </div>
       {msg && <div className="okmsg">{msg}</div>}
-      {canMod && <p className="muted" style={{ fontSize: 13 }}>Moderation: click a tile name below to mute/remove (trainer or moderator only, enforced server-side).</p>}
-      {canMod && <RemoteRoster onMute={(id) => moderate('mute', id)} onRemove={(id) => moderate('remove', id)} />}
+      {canMod && <p className="muted" style={{ fontSize: 13 }}>A learner can only speak once you allow it. Everyone else is listen-only.</p>}
+      {canMod && (
+        <RemoteRoster
+          hands={hands}
+          onAllow={(id) => moderate('allowSpeak', id)}
+          onMute={(id) => moderate('mute', id)}
+          onRemove={(id) => moderate('remove', id)}
+        />
+      )}
     </div>
   );
 }
 
-function RemoteRoster({ onMute, onRemove }: { onMute: (id: string) => void; onRemove: (id: string) => void }) {
+function RemoteRoster({
+  hands,
+  onAllow,
+  onMute,
+  onRemove,
+}: {
+  hands: Set<string>;
+  onAllow: (id: string) => void;
+  onMute: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
   const room = useRoomContext();
   const remotes = [...room.remoteParticipants.values()];
   if (!remotes.length) return null;
   return (
     <div className="card" style={{ marginTop: 12 }}>
-      {remotes.map((p) => (
-        <div key={p.identity} className="btnrow" style={{ marginTop: 6 }}>
-          <span>{p.name || p.identity}</span>
-          <button className="btn" onClick={() => onMute(p.identity)}>Mute</button>
-          <button className="btn" onClick={() => onRemove(p.identity)}>Remove</button>
-        </div>
-      ))}
+      {remotes.map((p) => {
+        const speaking = !!p.permissions?.canPublish;
+        const raised = hands.has(p.identity);
+        return (
+          <div key={p.identity} className="btnrow" style={{ marginTop: 6, alignItems: 'center' }}>
+            <span>
+              {p.name || p.identity}
+              {raised && !speaking ? ' ✋' : ''}
+              {speaking ? ' 🎙' : ''}
+            </span>
+            {!speaking ? (
+              <button className="btn primary" onClick={() => onAllow(p.identity)}>Allow speech</button>
+            ) : (
+              <button className="btn" onClick={() => onMute(p.identity)}>Mute</button>
+            )}
+            <button className="btn" onClick={() => onRemove(p.identity)}>Remove</button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -215,8 +291,8 @@ export default function ClassroomClient({ sessionId }: { sessionId: string }) {
       video={!lowData} audio
       onDisconnected={() => setErr('Disconnected from the room.')}
     >
-      <p className="muted">Room: {creds.room} · you are <b>{creds.role}</b> · <label style={{ fontSize: 13 }}><input type="checkbox" checked={lowData} onChange={(e) => setLowData(e.target.checked)} /> join audio-only</label></p>
-      <RoomBody sessionId={sessionId} role={creds.role} myId={creds.myId} />
+      <p className="muted">Room: {creds.room} · you are <b>{creds.role}</b></p>
+      <RoomBody sessionId={sessionId} role={creds.role} myId={creds.myId} lowData={lowData} onLowData={setLowData} />
     </LiveKitRoom>
   );
 }
