@@ -52,3 +52,44 @@ export function lagosRangeLabel(startIso: string, endIso: string): string {
   const when = `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
   return `${when}, ${s.time}–${e.time} Lagos`;
 }
+
+/** Today in Lagos as YYYY-MM-DD. */
+export function lagosToday(): string {
+  return utcToLagosParts(new Date()).date;
+}
+
+/** Add whole days to a YYYY-MM-DD string, staying on calendar dates. */
+export function addDays(date: string, days: number): string {
+  const d = new Date(date + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Upcoming dates to schedule against. Scheduling is a near-future act, so a
+ * rolling list beats a calendar widget here and renders identically everywhere.
+ */
+export function lagosDateOptions(count = 45) {
+  const today = lagosToday();
+  return Array.from({ length: count }, (_, i) => {
+    const value = addDays(today, i);
+    const d = new Date(value + 'T00:00:00Z');
+    const day = `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+    return { value, label: i === 0 ? `Today · ${day}` : i === 1 ? `Tomorrow · ${day}` : day };
+  });
+}
+
+/**
+ * Class time slots at 30-minute steps across the working day. A dropdown of the
+ * times people actually teach beats a free-text time picker.
+ */
+export function lagosTimeOptions(fromHour = 6, toHour = 23, stepMinutes = 30) {
+  const out: { value: string; label: string }[] = [];
+  for (let m = fromHour * 60; m <= toHour * 60; m += stepMinutes) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    const value = `${hh}:${mm}`;
+    out.push({ value, label: value });
+  }
+  return out;
+}

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAccess } from '@/lib/client-auth';
 import { PRICING_TIERS, formatNgn, quote, tierRangeText } from '@learnovize/shared';
-import { lagosRangeLabel, lagosToUtcIso, utcToLagosParts } from '@/lib/lagos';
+import { lagosDateOptions, lagosRangeLabel, lagosTimeOptions, lagosToUtcIso, utcToLagosParts } from '@/lib/lagos';
 
 type TierKey = 'basic' | 'standard' | 'premium';
 const TIERS: readonly TierKey[] = ['basic', 'standard', 'premium'];
@@ -12,12 +12,12 @@ type Slot = { date: string; start: string; end: string };
 
 // Seed with a sensible class two days out so the form is never empty on arrival.
 function defaultSlots(): Slot[] {
-  const base = new Date(Date.now() + 2 * 86400000);
-  const d1 = utcToLagosParts(base);
-  const d2 = utcToLagosParts(new Date(base.getTime() + 86400000));
+  const dates = lagosDateOptions(45);
+  const d1 = dates[2]?.value ?? '';
+  const d2 = dates[3]?.value ?? d1;
   return [
-    { date: d1.date, start: '09:00', end: '11:00' },
-    { date: d2.date, start: '09:00', end: '11:00' },
+    { date: d1, start: '09:00', end: '11:00' },
+    { date: d2, start: '09:00', end: '11:00' },
   ];
 }
 
@@ -35,6 +35,10 @@ export default function NewTraining() {
   const [cap, setCap] = useState('50');
   const [slots, setSlots] = useState<Slot[]>(defaultSlots);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Dropdowns rather than native date/time inputs, which render differently on
+  // every browser and are awkward on a phone.
+  const dateOptions = lagosDateOptions(45);
+  const timeOptions = lagosTimeOptions();
 
   type Row =
   | { index: number; error: string }
@@ -161,10 +165,19 @@ export default function NewTraining() {
           {slots.map((s, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <span className="ibadge" style={{ background: '#EEF1F4', color: '#1C2430' }} aria-hidden>{i + 1}</span>
-              <input type="date" value={s.date} onChange={(e) => setSlot(i, { date: e.target.value })} aria-label={`Session ${i + 1} date`} />
-              <input type="time" value={s.start} onChange={(e) => setSlot(i, { start: e.target.value })} aria-label={`Session ${i + 1} start`} />
+              <select value={s.date} onChange={(e) => setSlot(i, { date: e.target.value })} aria-label={`Session ${i + 1} date`} style={{ minWidth: 150 }}>
+                <option value="" disabled>Pick a date</option>
+                {dateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <select value={s.start} onChange={(e) => setSlot(i, { start: e.target.value })} aria-label={`Session ${i + 1} start time`}>
+                <option value="" disabled>Start</option>
+                {timeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
               <span className="muted">to</span>
-              <input type="time" value={s.end} onChange={(e) => setSlot(i, { end: e.target.value })} aria-label={`Session ${i + 1} end`} />
+              <select value={s.end} onChange={(e) => setSlot(i, { end: e.target.value })} aria-label={`Session ${i + 1} end time`}>
+                <option value="" disabled>End</option>
+                {timeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
               {slots.length > 1 && (
                 <button type="button" className="btn link" onClick={() => setSlots((prev) => prev.filter((_, x) => x !== i))}>
                   Remove
