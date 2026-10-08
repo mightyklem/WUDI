@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyWebhook } from '@/lib/livekit';
-import { isPresent, programPct } from '@learnovize/shared';
+import { isPresent } from '@learnovize/shared';
+import { awardAttendance, revokeAttendance } from '@/lib/points';
+import { computeEligibility } from '@/lib/certs';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,22 +48,26 @@ export async function POST(req: Request) {
           payload: { trainingId: session.trainingId, sessionId: session.id, present },
         },
       });
+      // Verified attendance is what earns points (FR-13). Absent, nothing.
+      if (present) {
+        await awardAttendance({ userId: evt.identity, sessionId: session.id });
+      } else {
+        await revokeAttendance({ userId: evt.identity, sessionId: session.id });
+      }
+
       const training = await prisma.training.findUnique({
         where: { id: session.trainingId },
         include: { sessions: { orderBy: { startsAtUtc: 'asc' } } },
       });
       if (training) {
-        const allLogs = await prisma.attendanceLog.findMany({
-          where: { userId: evt.identity, session: { trainingId: session.trainingId } },
-        });
-        const presentCount = allLogs.filter((l) => l.present).length;
-        const pct = programPct(presentCount, training.sessions.length);
+        // Scoped to the days this learner enrolled in, not the whole class.
+        const e = await computeEligibility(session.trainingId, evt.identity);
         const remaining = training.sessions.filter((s) => s.endsAtUtc.getTime() > Date.now()).length;
-        if (pct < training.minPct && remaining > 0) {
+        if (!e.minMet && remaining > 0 && e.total > 0) {
           await prisma.notification.create({
             data: {
               userId: evt.identity, type: 'attendance-at-risk',
-              payload: { trainingId: session.trainingId, pct, minPct: training.minPct, remaining },
+              payload: { trainingId: session.trainingId, pct: e.pct, minPct: training.minPct, remaining },
             },
           });
         }

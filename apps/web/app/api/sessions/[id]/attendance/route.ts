@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
+import { awardAttendance, revokeAttendance } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,5 +48,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       payload: { trainingId: session.trainingId, sessionId: id, present },
     },
   });
+  // A correction that flips presence must also flip the points they earned.
+  if (present) {
+    await awardAttendance({ userId, sessionId: id });
+  } else {
+    await revokeAttendance({ userId, sessionId: id });
+  }
   return NextResponse.json({ log });
 }

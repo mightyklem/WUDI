@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { prisma } from '@/lib/db';
 import { programPct, isEligible } from '@learnovize/shared';
 import { putPublic } from '@/lib/storage';
+import { awardCertificate } from '@/lib/points';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
 
@@ -180,7 +181,7 @@ export async function issueCertificate(trainingId: string, userId: string) {
   });
   const sha256 = createHash('sha256').update(pdf).digest('hex');
   const pdfUrl = await putPublic(`certs/${number}.pdf`, pdf, 'application/pdf');
-  return prisma.certificate.create({
+  const cert = await prisma.certificate.create({
     data: {
       number, trainingId, userId, pdfUrl, sha256,
       // A partial-attendance certificate must state its scope, or a one-day
@@ -191,4 +192,7 @@ export async function issueCertificate(trainingId: string, userId: string) {
       imageUrl: null, status: 'valid',
     },
   });
+  // A certificate is worth points, awarded once per learner per training.
+  await awardCertificate({ userId, trainingId });
+  return cert;
 }

@@ -54,14 +54,19 @@ model User {
 }
 
 /// One award or clawback of points. Append-only so a rank can always be re-derived.
-/// sessionId is unique: attendance points are awarded exactly once per session,
-/// which is what stops a replayed request farming points.
+///
+/// `ref` is the natural key of whatever earned the points — the session id for
+/// attendance, the training id for finishing a program or earning a certificate.
+/// Uniqueness is enforced on (userId, ref) rather than on sessionId, because a
+/// null sessionId is distinct from every other null in Postgres, so a constraint
+/// built on it would silently allow duplicate program-completion awards.
 model PointsEvent {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   points    Int
   reason    String   // session_attended|program_completed|certificate_earned|manual_adjustment
+  ref       String   // session id, or training id for program/certificate awards
   sessionId String?
   session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   trainingId String?
@@ -70,7 +75,7 @@ model PointsEvent {
   day       TrainingDay? @relation(fields: [dayId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@unique([userId, sessionId, reason])
+  @@unique([userId, ref])
   @@index([userId, createdAt])
 }
 
