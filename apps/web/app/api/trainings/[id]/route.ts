@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { validateTrainingInput } from '@/lib/trainings';
+import { billableDays, quote } from '@learnovize/shared';
+import { quoteFor } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +29,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     },
   });
   if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ training: { ...t, seatsLeft: t.cap - t.seatsTaken } });
+  return NextResponse.json({ training: { ...t, seatsLeft: t.cap - t.seatsTaken, price: quoteFor(t) } });
 }
 
 // PATCH /api/trainings/[id] — edit/reschedule (owner). Notifies registrants.
@@ -43,7 +45,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const v = validateTrainingInput(
     { title: body.title ?? t.title, description: body.description ?? t.description,
       topic: body.topic ?? t.topic, format: body.format ?? t.format,
-      certMode: body.certMode ?? t.certMode, certPriceNgn: body.certPriceNgn ?? t.certPriceNgn,
+      accessType: body.accessType ?? t.accessType,
+      tier: body.tier ?? t.tier,
+      pricePerDayNgn: body.pricePerDayNgn ?? t.pricePerDayNgn,
+      wantsCertificate: body.wantsCertificate ?? t.certMode === 'paid',
       minPct: body.minPct ?? t.minPct, cap: body.cap ?? t.cap,
       sessions: body.sessions ?? (await prisma.session.findMany({ where: { trainingId: id } }))
         .map((s) => ({ startsAtUtc: s.startsAtUtc.toISOString(), endsAtUtc: s.endsAtUtc.toISOString() })) },
@@ -53,12 +58,27 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (v.data.cap < t.seatsTaken) {
     return NextResponse.json({ error: `Cap cannot go below ${t.seatsTaken} taken seats` }, { status: 409 });
   }
+  // Changing what people owe after they registered is never allowed. Existing
+  // registrants keep the quote they were shown.
+  const activeRegs = await prisma.registration.count({ where: { trainingId: id, status: 'active' } });
+  if (activeRegs > 0) {
+    const pricingChanged =
+      v.data.accessType !== t.accessType || v.data.pricePerDayNgn !== t.pricePerDayNgn;
+    if (pricingChanged) {
+      return NextResponse.json(
+        { error: 'Price and class type are locked once participants have registered' },
+        { status: 409 },
+      );
+    }
+  }
   await prisma.$transaction(async (tx) => {
     await tx.training.update({
       where: { id },
       data: {
         title: v.data.title, description: v.data.description, topic: v.data.topic,
         format: v.data.format, minPct: v.data.minPct, cap: v.data.cap,
+        accessType: v.data.accessType, tier: v.data.tier,
+        pricePerDayNgn: v.data.pricePerDayNgn, certMode: v.data.certMode,
         status: v.data.cap <= t.seatsTaken ? 'full' : t.status === 'full' ? 'live' : t.status,
       },
     });

@@ -16,6 +16,8 @@ export async function GET(req: Request) {
   const q = searchParams.get('q') || undefined;
   const from = searchParams.get('from');
   const to = searchParams.get('to');
+  // Ads are opt-in through ?ads=1 so Explore does not become a billboard by default.
+  const adWindow = searchParams.get('ads') === '1';
 
   const token = getBearer(req);
   const me = token ? await verifyAccessToken(token) : null;
@@ -23,18 +25,23 @@ export async function GET(req: Request) {
   const posts = await prisma.feedPost.findMany({
     where: {
       status: 'live',
-      training: {
-        status: { in: ['live', 'full'] },
-        ...(topic ? { topic } : {}),
-        ...(cert === 'free' ? { certMode: 'none' } : cert === 'certified' ? { certMode: { in: ['free', 'paid'] } } : {}),
-        ...(q ? { title: { contains: q, mode: 'insensitive' } } : {}),
-        ...(from || to
-          ? { sessions: { some: { startsAtUtc: {
-              ...(from ? { gte: new Date(from) } : {}),
-              ...(to ? { lte: new Date(to) } : {}),
-            } } } }
-          : {}),
-      },
+      // Official, announcement and ad posts are not tied to a class, so the class
+      // filters only apply when the post has one. An ad also has to be in date.
+      ...(from || to || q || topic || cert !== 'any'
+        ? { training: {
+            status: { in: ['live', 'full'] },
+            ...(topic ? { topic } : {}),
+            ...(cert === 'free' ? { accessType: 'free' } : cert === 'certified' ? { certMode: 'paid' } : {}),
+            ...(q ? { title: { contains: q, mode: 'insensitive' } } : {}),
+            ...(from || to
+              ? { sessions: { some: { startsAtUtc: {
+                  ...(from ? { gte: new Date(from) } : {}),
+                  ...(to ? { lte: new Date(to) } : {}),
+                } } } }
+              : {}),
+          } }
+        : {}),
+      ...(adWindow ? {} : { isAd: false }),
     },
     include: {
       training: {
@@ -43,8 +50,10 @@ export async function GET(req: Request) {
           sessions: { orderBy: { startsAtUtc: 'asc' }, take: 1 },
         },
       },
+      author: { select: { isOfficial: true } },
+      organization: { select: { name: true, slug: true, verification: true, logoUrl: true } },
     },
-    orderBy: { training: { createdAt: 'desc' } },
+    orderBy: { createdAt: 'desc' },
     take: 50,
   });
 
@@ -59,22 +68,45 @@ export async function GET(req: Request) {
     saved = new Set(saves.map((s) => s.trainingId));
   }
   return NextResponse.json({
-    posts: await Promise.all(posts.map(async (p) => ({
-      id: p.id, type: p.type, mediaUrl: p.mediaUrl,
-      training: {
-        id: p.training.id, title: p.training.title, slug: p.training.slug,
-        trainer: p.training.trainer.displayName, topic: p.training.topic,
-        certMode: p.training.certMode, certPriceNgn: p.training.certPriceNgn,
-        status: p.training.status,
-        seatsLeft: p.training.cap - p.training.seatsTaken,
-        cap: p.training.cap,
-        seatsTaken: p.training.seatsTaken,
-        firstSession: p.training.sessions[0]?.startsAtUtc || null,
-      },
-      liked: liked.has(p.id),
-      saved: saved.has(p.training.id),
-      likeCount: await prisma.like.count({ where: { postId: p.id } }),
-    }))),
+    posts: await Promise.all(posts.map(async (p) => {
+      // A post with no training is official content, an announcement, or an ad.
+      const training = p.training
+        ? {
+            id: p.training.id, title: p.training.title, slug: p.training.slug,
+            trainer: p.training.trainer.displayName, topic: p.training.topic,
+            accessType: p.training.accessType, tier: p.training.tier,
+            pricePerDayNgn: p.training.pricePerDayNgn,
+            certMode: p.training.certMode,
+            price: p.training.pricePerDayNgn
+              ? { pricePerDayNgn: p.training.pricePerDayNgn }
+              : null,
+            status: p.training.status,
+            seatsLeft: p.training.cap - p.training.seatsTaken,
+            cap: p.training.cap,
+            seatsTaken: p.training.seatsTaken,
+            firstSession: p.training.sessions[0]?.startsAtUtc || null,
+          }
+        : null;
+      return {
+        id: p.id, type: p.type, mediaUrl: p.mediaUrl,
+        kind: p.kind,
+        title: p.title,
+        body: p.body,
+        thumbUrl: p.thumbUrl,
+        isAd: p.isAd,
+        adTargetType: p.adTargetType,
+        adTargetId: p.adTargetId,
+        // The verified badge: official Learnovize accounts and verified orgs.
+        isOfficial: p.author?.isOfficial === true || p.organization?.verification === 'verified',
+        organization: p.organization
+          ? { name: p.organization.name, slug: p.organization.slug, logoUrl: p.organization.logoUrl }
+          : null,
+        training,
+        liked: liked.has(p.id),
+        saved: p.training ? saved.has(p.training.id) : false,
+        likeCount: await prisma.like.count({ where: { postId: p.id } }),
+      };
+    })),
   });
 }
 

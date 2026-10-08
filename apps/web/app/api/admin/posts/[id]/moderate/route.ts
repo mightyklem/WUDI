@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const { action } = (await req.json().catch(() => ({}))) as { action?: string };
   const post = await prisma.feedPost.findUnique({
-    where: { id }, include: { training: true },
+    where: { id }, include: { training: true, organization: true },
   });
   if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -29,10 +29,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await prisma.auditLog.create({
     data: { actorId, action: `post.${action}`, target: `post:${id}`, reason: null },
   });
-  await notify({
-    userIds: [post.training.trainerId], type: `post-${action}`,
-    payload: { postId: id, trainingId: post.trainingId },
-    email: null,
-  });
+  // Official and organization posts have no training, so notify whoever published it.
+  const notifyId = post.training?.trainerId ?? post.authorId ?? post.organization?.ownerId;
+  if (notifyId) {
+    await notify({
+      userIds: [notifyId], type: `post-${action}`,
+      payload: { postId: id, trainingId: post.trainingId },
+      email: null,
+    });
+  }
   return NextResponse.json({ ok: true, status });
 }

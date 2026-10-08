@@ -36,6 +36,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       userId: r.userId, email: r.user.email,
       pct: e.pct, presentCount: e.presentCount, total: e.total,
       minMet: e.minMet, paidOk: e.paidOk, eligible: e.eligible,
+      // What a certificate for this learner would actually cover (FR-11).
+      scopeLabel: e.scopeLabel,
+      dayCount: e.dayIds.length,
       certificateNumber: certified.get(r.userId)?.number || null,
       certificateId: certified.get(r.userId)?.id || null,
     });

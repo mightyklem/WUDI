@@ -25,6 +25,12 @@ model User {
   passwordHash String
   isAdmin      Boolean  @default(false)
   suspended    Boolean  @default(false)
+  // Learnovize's own content team. Verified accounts can publish ecards, videos and
+  // info to Explore and are badged as official (FR-12).
+  isOfficial   Boolean  @default(false)
+  // Points and level rank. Attendance awards points on free and paid classes alike (FR-13).
+  points       Int      @default(0)
+  rank         String   @default("Newcomer")
   // Email ownership proof (ADR-002). Null hash = nothing pending; null verifiedAt = unverified.
   emailVerifiedAt   DateTime?
   emailOtpHash      String?
@@ -41,6 +47,78 @@ model User {
   auditActs      AuditLog[]      @relation("AuditActor")
   notifications  Notification[]
   pushTokens     PushToken[]
+  pointEvents    PointsEvent[]
+  orgMemberships OrgMember[]
+  ownedOrgs      Organization[]     @relation("OrgOwner")
+  authoredPosts  FeedPost[]         @relation("PostAuthor")
+}
+
+/// One award or clawback of points. Append-only so a rank can always be re-derived.
+/// sessionId is unique: attendance points are awarded exactly once per session,
+/// which is what stops a replayed request farming points.
+model PointsEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  reason    String   // session_attended|program_completed|certificate_earned|manual_adjustment
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  trainingId String?
+  training  Training? @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  dayId     String?
+  day       TrainingDay? @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, sessionId, reason])
+  @@index([userId, createdAt])
+}
+
+/// Institutions and organizations with an official verified account. They can host
+/// trainings themselves and can also sponsor individual trainer profiles (FR-12).
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  type         String   @default("organization") // institution|organization
+  about        String?
+  logoUrl      String?
+  website      String?
+  // Verification is granted by an admin, never self-declared.
+  verification String   @default("pending") // pending|verified|rejected|revoked
+  verifiedAt   DateTime?
+  verifiedById String?
+  ownerId      String
+  owner        User     @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  members    OrgMember[]
+  trainings  Training[]
+  trainers   TrainerProfile[]
+  posts      FeedPost[]
+  approvals  OrganizationApproval[]
+}
+
+model OrgMember {
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String       @default("member") // owner|admin|trainer|member
+  createdAt DateTime    @default(now())
+
+  @@id([orgId, userId])
+}
+
+model OrganizationApproval {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  docUrls        String[]
+  status         String   @default("pending") // pending|verified|rejected|revoked
+  reviewerId     String?
+  decidedAt      DateTime?
+  createdAt      DateTime @default(now())
 }
 
 model RefreshToken {
@@ -63,10 +141,13 @@ model TrainerProfile {
   topics            String[]
   logoUrl           String?
   signatureUrl      String?
-  paidCertApproved  Boolean @default(false)
+paidCertApproved  Boolean @default(false)
   approvalState     String  @default("none") // none|pending|approved|rejected|revoked
   rejectionReason   String?
   plan              String  @default("free") // free|pro|business — drives caps + commission
+  // An institution can verify and sponsor an individual trainer (FR-12).
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id])
 
   approvals TrainerApproval[]
   trainings Training[]
@@ -99,11 +180,18 @@ model Training {
   slug       String   @unique
   trainerId  String
   trainer    TrainerProfile @relation(fields: [trainerId], references: [userId])
+  // An organization can host a training directly, alongside the named trainer (FR-12).
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   title      String
   description String?
   topic      String?
   format     String   // video|audio
-  certMode   String   @default("none") // none|free|paid
+  // Free classes never issue a certificate. A certificate means paid attendance (FR-11).
+  accessType String   @default("free") // free|paid
+  tier       String?  // basic|standard|premium — required when accessType is paid
+  pricePerDayNgn Int? // whole naira, charged per billable day
+  certMode   String   @default("none") // none|paid
   certPriceNgn Int?
   minPct     Int      @default(80)
   cap        Int
@@ -113,23 +201,67 @@ model Training {
   createdAt  DateTime @default(now())
 
   sessions      Session[]
+  days          TrainingDay[]
   registrations Registration[]
   moderators    Moderator[]
   feedPosts     FeedPost[]
   certificates  Certificate[]
   payouts       Payout[]
+  pointEvents   PointsEvent[]
+
+  @@index([accessType, tier])
+}
+
+/// One billable, selectable day of a training (FR-11). A day is what learners
+/// actually buy, so price and free/paid live here rather than on the training.
+/// `topic` is the human label for the day ("Battery storage").
+model TrainingDay {
+  id         String   @id @default(cuid())
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  dayIndex   Int      // 1-based display order
+  dateUtc    String   // YYYY-MM-DD, the day this covers
+  topic      String?
+  // A trainer can open a single day of an otherwise paid class for free.
+  accessType String   @default("paid") // free|paid
+  priceNgn   Int      @default(0)
+
+  sessions   Session[]
+  enrollments DayEnrollment[]
+  pointEvents PointsEvent[]
+
+  @@unique([trainingId, dayIndex])
+  @@index([trainingId, dateUtc])
+}
+
+/// A learner's choice to attend specific days of a training. Price is snapshotted
+/// so a later trainer change cannot alter what they already owe.
+model DayEnrollment {
+  id             String   @id @default(cuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  dayId          String
+  day            TrainingDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  priceNgn       Int      @default(0)
+  paid           Boolean  @default(false)
+
+  @@unique([registrationId, dayId])
+  @@index([dayId])
 }
 
 model Session {
   id          String   @id @default(cuid())
   trainingId  String
   training    Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  dayId       String?
+  day         TrainingDay? @relation(fields: [dayId], references: [id], onDelete: SetNull)
   startsAtUtc DateTime
   endsAtUtc   DateTime
   livekitRoom String   @unique
   status      String   @default("scheduled") // scheduled|live|ended|cancelled
 
   attendanceLogs AttendanceLog[]
+  pointEvents    PointsEvent[]
 }
 
 model Registration {
@@ -139,11 +271,19 @@ model Registration {
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   certConsentPublic Boolean  @default(false)
+  // Set when the participant has paid for the class. On a paid class this covers
+  // attendance AND the certificate, so it gates certificate eligibility (FR-11).
   certPaid          Boolean  @default(false)
+  // Snapshot of the quote taken when they registered. A later price change by the
+  // trainer must not alter what this participant already owes.
+  quotedPricePerDayNgn Int?
+  quotedDays           Int?
+  quotedTotalNgn       Int?
   status            String   @default("active") // active|cancelled
   createdAt         DateTime @default(now())
 
   payments Payment[]
+  dayEnrollments DayEnrollment[]
 
   @@unique([trainingId, userId])
   @@index([trainingId, status])
@@ -173,6 +313,11 @@ model Certificate {
   training    Training @relation(fields: [trainingId], references: [id])
   userId      String
   user        User     @relation(fields: [userId], references: [id])
+  // A partial-attendance certificate must say what it covers, otherwise a
+  // one-day certificate is indistinguishable from the full program.
+  scopeLabel  String   // e.g. "Days 1–2: Battery storage" or "Full program"
+  dayIds      String[] // the days actually attended
+  pctAttended Int      @default(0)
   pdfUrl      String
   imageUrl    String?
   sha256      String
@@ -213,14 +358,32 @@ model Payout {
 
 model FeedPost {
   id            String   @id @default(cuid())
-  trainingId    String
-  training      Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  // Nullable: official ecards, videos, info and announcements are not tied to a class.
+  trainingId    String?
+  training      Training? @relation(fields: [trainingId], references: [id], onDelete: Cascade)
   type          String   // video|ecard|infographic
+  // What this post is: a trainer's class promo, an official announcement, or a paid ad.
+  kind          String   @default("training") // training|official|announcement|ad
+  // Official accounts publish here and get the verified badge.
+  authorId      String?
+  author        User?    @relation("PostAuthor", fields: [authorId], references: [id])
+  organizationId String?
+  organization  Organization? @relation(fields: [organizationId], references: [id])
+  title         String?
+  body          String?
   mediaUrl      String
   thumbUrl      String?
+  // An ad promotes a specific organization or individual trainer.
+  isAd          Boolean  @default(false)
+  adTargetType  String?  // organization|trainer
+  adTargetId    String?
+  adStartsAt    DateTime?
+  adEndsAt      DateTime?
   status        String   @default("live") // live|hidden|removed
   reportsCount  Int      @default(0)
   createdAt     DateTime @default(now())
+
+  @@index([kind, status, createdAt])
 }
 
 model Follow {

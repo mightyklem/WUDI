@@ -17,28 +17,68 @@ export function genCertNumber(): string {
 export type Eligibility = {
   presentCount: number; total: number; pct: number;
   minMet: boolean; paidOk: boolean; eligible: boolean;
+  /** The days the certificate would cover, and how to describe them. */
+  dayIds: string[];
+  scopeLabel: string;
 };
 
-/** FR-8.1: attendance % meets min AND paid when certification is paid. */
+/** "Full program" when every day was attended, otherwise the days covered. */
+export function scopeLabelFor(days: { dayIndex: number; topic: string | null }[], attended: { dayIndex: number; topic: string | null }[]) {
+  if (!days.length || !attended.length) return 'Full program';
+  if (attended.length === days.length) return 'Full program';
+  const topics = attended.map((d) => d.topic).filter(Boolean);
+  if (topics.length === attended.length) return topics.join(', ');
+  const indices = attended.map((d) => `Day ${d.dayIndex}`).join(', ');
+  return topics.length ? `${topics.join(', ')} (${indices})` : indices;
+}
+
+/**
+ * FR-8.1: attendance % meets min AND paid when certification is paid.
+ *
+ * Scoped to the days the learner actually enrolled in (FR-11). A learner who
+ * bought two days of a five-day class is measured on those two days, and their
+ * certificate records that scope rather than claiming the whole program.
+ */
 export async function computeEligibility(trainingId: string, userId: string): Promise<Eligibility> {
   const training = await prisma.training.findUnique({
     where: { id: trainingId },
-    include: { sessions: true },
+    include: {
+      days: { orderBy: { dayIndex: 'asc' }, include: { sessions: { select: { id: true } } } },
+      sessions: { select: { id: true, dayId: true } },
+    },
   });
   if (!training) throw new Error('Training not found');
-  const logs = await prisma.attendanceLog.findMany({
-    where: { userId, session: { trainingId } },
-  });
-  const presentCount = logs.filter((l) => l.present).length;
-  const pct = programPct(presentCount, training.sessions.length);
+
   const reg = await prisma.registration.findUnique({
     where: { trainingId_userId: { trainingId, userId } },
+    include: { dayEnrollments: { select: { dayId: true, priceNgn: true, paid: true } } },
   });
+
+  const chosen = new Set((reg?.dayEnrollments ?? []).map((d) => d.dayId));
+  // Registrations created before day-picking existed have no day choices, so they
+  // fall back to the whole training rather than silently measuring nothing.
+  const scopedDays = chosen.size ? training.days.filter((d) => chosen.has(d.id)) : training.days;
+  const scopedDayIds = new Set(scopedDays.map((d) => d.id));
+  // A session with no day attached predates the day model; keep it in scope.
+  const scopedSessions = training.sessions.filter((s) => !s.dayId || scopedDayIds.has(s.dayId));
+
+  const logs = await prisma.attendanceLog.findMany({
+    where: { userId, sessionId: { in: scopedSessions.map((s) => s.id) } },
+  });
+  const presentSessions = new Set(logs.filter((l) => l.present).map((l) => l.sessionId));
+  const presentCount = presentSessions.size;
+  const total = scopedSessions.length;
+  const pct = programPct(presentCount, total);
+
   const paidOk = training.certMode !== 'paid' || (reg?.certPaid ?? false);
+  const attendedDays = scopedDays.filter((d) => d.sessions.some((s) => presentSessions.has(s.id)));
+
   return {
-    presentCount, total: training.sessions.length, pct,
+    presentCount, total, pct,
     minMet: pct >= training.minPct, paidOk,
     eligible: reg?.status === 'active' && isEligible({ pct, minPct: training.minPct, certMode: training.certMode, paid: reg?.certPaid ?? false }),
+    dayIds: attendedDays.map((d) => d.id),
+    scopeLabel: scopeLabelFor(training.days, attendedDays),
   };
 }
 
@@ -143,6 +183,11 @@ export async function issueCertificate(trainingId: string, userId: string) {
   return prisma.certificate.create({
     data: {
       number, trainingId, userId, pdfUrl, sha256,
+      // A partial-attendance certificate must state its scope, or a one-day
+      // certificate is indistinguishable from the full program.
+      scopeLabel: e.scopeLabel,
+      dayIds: e.dayIds,
+      pctAttended: e.pct,
       imageUrl: null, status: 'valid',
     },
   });

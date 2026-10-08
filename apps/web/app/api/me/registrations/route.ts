@@ -16,5 +16,15 @@ export async function GET(req: Request) {
     },
     orderBy: { training: { sessions: { _count: 'asc' } } },
   });
-  return NextResponse.json({ registrations: regs });
+  return NextResponse.json({
+    registrations: regs.map((r) => ({
+      id: r.id,
+      certPaid: r.certPaid,
+      // The quote they were shown, so the amount never shifts under them.
+      quotedPricePerDayNgn: r.quotedPricePerDayNgn,
+      quotedDays: r.quotedDays,
+      quotedTotalNgn: r.quotedTotalNgn,
+      training: r.training,
+    })),
+  });
 }

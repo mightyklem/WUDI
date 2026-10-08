@@ -53,6 +53,9 @@ export async function POST(req: Request) {
       description: v.data.description,
       topic: v.data.topic,
       format: v.data.format,
+      accessType: v.data.accessType,
+      tier: v.data.tier,
+      pricePerDayNgn: v.data.pricePerDayNgn,
       certMode: v.data.certMode,
       certPriceNgn: v.data.certPriceNgn,
       minPct: v.data.minPct,
@@ -70,11 +73,23 @@ export async function POST(req: Request) {
     },
     include: { sessions: true },
   });
-  // Fix room names with real ids (rooms are per session id).
+  // Fix room names with real ids (rooms are per session id), and attach each
+  // session to the billable day that covers it. Day overrides set on the form
+  // are already folded into v.data.days.
+  await prisma.trainingDay.createMany({
+    data: v.data.days.map((d) => ({ ...d, trainingId: training.id })),
+  });
+  const days = await prisma.trainingDay.findMany({
+    where: { trainingId: training.id },
+    orderBy: { dayIndex: 'asc' },
+  });
+
   for (const s of training.sessions) {
+    const dateUtc = s.startsAtUtc.toISOString().slice(0, 10);
+    const day = days.find((d) => d.dateUtc === dateUtc);
     await prisma.session.update({
       where: { id: s.id },
-      data: { livekitRoom: `${training.id}-${s.id}` },
+      data: { livekitRoom: `${training.id}-${s.id}`, dayId: day?.id ?? null },
     });
   }
   // FR-11.2: followers hear about the new training first.
@@ -93,5 +108,8 @@ export async function POST(req: Request) {
       }),
     });
   }
-  return NextResponse.json({ training: { ...training, invitePath: `/t/${training.slug}/register` } }, { status: 201 });
+  return NextResponse.json(
+    { training: { ...training, days, invitePath: `/t/${training.slug}/register` } },
+    { status: 201 },
+  );
 }

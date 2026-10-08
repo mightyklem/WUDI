@@ -3,6 +3,7 @@ import { Prisma } from '../../../../../generated/prisma';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { emailEnabled, seatConfirmedEmail, sendEmail } from '@/lib/email';
+import { quoteFor } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,30 +17,73 @@ async function sendSeatConfirmation(userId: string, title: string) {
 
 // POST /api/trainings/[id]/register { certConsentPublic? }
 // Atomic: duplicate-check + conditional seat increment in one transaction.
-// Full or duplicate -> 409. Free trainings only in Phase 2 (paid in Phase 6).
+// On a paid class the participant reserves the seat first, then pays via
+// /checkout. The quote is snapshotted here so a later price change cannot
+// alter what this participant owes (FR-11).
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  const { certConsentPublic = false } = (await req.json().catch(() => ({}))) as {
+  const { certConsentPublic = false, dayIds = [] } = (await req.json().catch(() => ({}))) as {
     certConsentPublic?: boolean;
+    dayIds?: string[];
   };
 
-  const t = await prisma.training.findUnique({ where: { id } });
+  const t = await prisma.training.findUnique({
+    where: { id },
+    include: {
+      sessions: { select: { startsAtUtc: true } },
+      days: { orderBy: { dayIndex: 'asc' } },
+    },
+  });
   if (!t || (t.status !== 'live' && t.status !== 'full')) {
     return NextResponse.json({ error: 'Training not open' }, { status: 404 });
   }
   const me = await prisma.user.findUnique({ where: { id: userId } });
   if (!me || me.suspended) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  // Paid certification is an add-on: register free now, buy the cert before the last session ends.
+
+  // The learner picks which days they will attend (FR-11). They must choose at
+  // least one, and the quote is the sum of just those days.
+  const validDayIds = new Set(t.days.map((d) => d.id));
+  const requested = Array.isArray(dayIds) ? dayIds.filter((d): d is string => typeof d === 'string') : [];
+  const picked = requested.filter((d) => validDayIds.has(d));
+  if (requested.length !== picked.length) {
+    return NextResponse.json({ error: 'Unknown day selected' }, { status: 400 });
+  }
+  if (!picked.length) {
+    return NextResponse.json({ error: 'Choose at least one day to attend' }, { status: 400 });
+  }
+
+  const chosenDays = t.days.filter((d) => picked.includes(d.id));
+  const earliestSessionStart = t.sessions.length
+    ? Math.min(...t.sessions.map((s) => new Date(s.startsAtUtc).getTime()))
+    : undefined;
+  const price = {
+    days: chosenDays.length,
+    pricePerDayNgn: chosenDays.length ? chosenDays[0].priceNgn : null,
+    totalNgn: chosenDays.reduce((sum, d) => sum + d.priceNgn, 0),
+    lines: chosenDays.map((d) => ({ id: d.id, label: `Day ${d.dayIndex}`, topic: d.topic, accessType: d.accessType, priceNgn: d.priceNgn })),
+  };
+  if (t.certMode === 'paid' && chosenDays.some((d) => d.accessType !== 'paid')) {
+    return NextResponse.json({ error: 'A certified class needs all paid days' }, { status: 409 });
+  }
+
   try {
     const reg = await prisma.$transaction(async (tx) => {
       const dup = await tx.registration.findUnique({
         where: { trainingId_userId: { trainingId: id, userId } },
       });
       if (dup && dup.status === 'active') {
-        throw Object.assign(new Error('Already registered'), { code: 'DUP' });
+        // They may change which days they attend, but only while nothing is
+        // locked in: no session has started and no money has been taken.
+        if (dup.certPaid) {
+          throw Object.assign(new Error('Already registered and paid'), { code: 'DUP' });
+        }
+        const firstStart = earliestSessionStart ?? Infinity;
+        if (Number.isFinite(firstStart) && firstStart <= Date.now()) {
+          throw Object.assign(new Error('Already registered — the class has started'), { code: 'DUP' });
+        }
       }
       // Atomic seat claim: only increments when a seat is actually free.
       const claimed = await tx.training.updateMany({
@@ -50,11 +94,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         await tx.training.updateMany({ where: { id }, data: { status: 'full' } });
         throw Object.assign(new Error('Training is full'), { code: 'FULL' });
       }
+      const quoteFields = {
+        quotedPricePerDayNgn: price.pricePerDayNgn,
+        quotedDays: price.days,
+        quotedTotalNgn: price.totalNgn,
+      };
       const registration = dup
-        ? await tx.registration.update({ where: { id: dup.id }, data: { status: 'active', certConsentPublic: !!certConsentPublic } })
+        ? await tx.registration.update({
+            where: { id: dup.id },
+            data: { status: 'active', certPaid: false, ...quoteFields },
+          })
         : await tx.registration.create({
-            data: { trainingId: id, userId, certConsentPublic: !!certConsentPublic, status: 'active' },
+            data: {
+              trainingId: id, userId, certConsentPublic: !!certConsentPublic,
+              status: 'active', ...quoteFields,
+            },
           });
+      // Replace the day choice rather than merging, so switching days is exact.
+      await tx.dayEnrollment.deleteMany({ where: { registrationId: registration.id } });
+      await tx.dayEnrollment.createMany({
+        data: chosenDays.map((d) => ({
+          registrationId: registration.id, dayId: d.id, priceNgn: d.priceNgn,
+        })),
+      });
       const updated = await tx.training.findUnique({ where: { id } });
       if (updated && updated.seatsTaken >= updated.cap) {
         await tx.training.update({ where: { id }, data: { status: 'full' } });
@@ -66,7 +128,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
     // Outside the transaction: a slow or failed email must never roll back the seat claim.
     await sendSeatConfirmation(userId, t.title);
-    return NextResponse.json({ registration: { id: reg.id, trainingId: id } }, { status: 201 });
+    return NextResponse.json(
+      {
+        registration: { id: reg.id, trainingId: id },
+        // The UI needs to know whether to send them straight to payment.
+        requiresPayment: t.accessType === 'paid',
+        price,
+      },
+      { status: 201 },
+    );
   } catch (e: unknown) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
       return NextResponse.json({ error: 'Already registered' }, { status: 409 });
