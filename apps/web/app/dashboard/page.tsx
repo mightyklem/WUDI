@@ -97,11 +97,14 @@ export default function Dashboard() {
           </span>
           <div style={{ flex: 1, minWidth: 160 }}>
             <p style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>
-              {points.rank.label}
+              {/* Icon carries the rank on its own — the ladder is Stone, Bronze,
+                  Silver, Gold, so the picture says it without a word. */}
+              <span aria-hidden style={{ marginRight: 8 }}>{points.rank.icon}</span>
+              <span className="sr-only">{points.rank.label}</span>
+              {points.points} point{points.points === 1 ? '' : 's'}
             </p>
             <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
-              {points.points} point{points.points === 1 ? '' : 's'}
-              {points.next ? ` · ${points.next.needed} to ${points.next.label}` : ' · top rank'}
+              {points.next ? `${points.next.needed} to ${points.next.icon} ${points.next.label}` : 'Top rank'}
             </p>
           </div>
           <div
