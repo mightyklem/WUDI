@@ -17,6 +17,13 @@ type MyTraining = {
   eligible: number; issuedCount: number; pendingApproval: number;
 };
 
+type Points = {
+  points: number;
+  rank: { key: string; label: string; icon: string };
+  next: { label: string; icon: string; needed: number } | null;
+  progress: { pct: number; into: number; span: number };
+};
+
 /**
  * Post-login home. Resolves the role server-side via /api/me and renders only what that
  * person can actually do. Icon tiles over prose — the header has to be readable at a glance.
@@ -28,6 +35,7 @@ export default function Dashboard() {
   const [seats, setSeats] = useState<number | null>(null);
   const [certs, setCerts] = useState<number | null>(null);
   const [live, setLive] = useState<{ id: string; title: string } | null>(null);
+  const [points, setPoints] = useState<Points | null>(null);
 
   const authed = (path: string) =>
     fetch(path, { headers: { authorization: `Bearer ${getAccess() ?? ''}` } }).then((r) => (r.ok ? r.json() : null));
@@ -47,6 +55,7 @@ export default function Dashboard() {
     });
     authed('/api/me/registrations').then((r) => r && setSeats((r.registrations || []).length));
     authed('/api/certificates/mine').then((c) => c && setCerts((c.certificates || []).length));
+    authed('/api/me/points').then((x) => x && setPoints(x));
   }, []);
 
   if (!me) return <div className="wrap"><p className="muted" style={{ marginTop: 30 }}>Loading your dashboard…</p></div>;
@@ -73,6 +82,42 @@ export default function Dashboard() {
         {head.title}
       </h1>
       <p className="sub">{me.user.email}</p>
+
+{points && (
+        <div
+          className="card"
+          style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}
+        >
+          <span
+            className="ibadge"
+            style={{ background: '#FDF0E3', color: '#9A5B12', fontSize: 24 }}
+            aria-hidden
+          >
+            {points.rank.icon}
+          </span>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <p style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>
+              {points.rank.label}
+            </p>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+              {points.points} point{points.points === 1 ? '' : 's'}
+              {points.next ? ` · ${points.next.needed} to ${points.next.label}` : ' · top rank'}
+            </p>
+          </div>
+          <div
+            style={{
+              width: 96, height: 8, borderRadius: 999,
+              background: 'var(--line)', overflow: 'hidden',
+            }}
+            role="progressbar"
+            aria-valuenow={points.progress.pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div style={{ width: `${points.progress.pct}%`, height: '100%', background: 'var(--accent)' }} />
+          </div>
+        </div>
+      )}
 
       {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
         <div className="card" style={{ marginTop: 16, borderLeft: '4px solid #9A5B12' }}>
