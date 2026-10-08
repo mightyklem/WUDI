@@ -3,15 +3,25 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
 import { QuoteStrip } from './QuoteStrip';
+import { formatNgn } from '@learnovize/shared';
 
 type Post = {
   id: string; type: string; mediaUrl: string; likeCount: number;
   liked: boolean; saved: boolean;
+  kind: string;
+  title: string | null;
+  body: string | null;
+  isAd: boolean;
+  adTargetType: string | null;
+  isOfficial: boolean;
+  organization: { name: string; slug: string; logoUrl: string | null } | null;
+  // Null for official content, announcements and ads — those are not classes.
   training: {
     id: string; title: string; slug: string; trainer: string; topic: string | null;
-    certMode: string; certPriceNgn: number | null; status: string;
+    accessType: string; tier: string | null; pricePerDayNgn: number | null;
+    certMode: string; status: string;
     seatsLeft: number; cap: number; seatsTaken: number; firstSession: string | null;
-  };
+  } | null;
 };
 
 export default function Feed() {
@@ -118,9 +128,25 @@ export default function Feed() {
       <div style={{ marginTop: 18, display: 'grid', gap: 16 }}>
         {posts === null && <p className="muted">Loading feed…</p>}
         {posts?.map((p) => {
-          const full = p.training.status === 'full';
+          const full = p.training?.status === 'full';
           return (
           <div className="card" key={p.id} style={{ padding: 20 }}>
+            {p.isOfficial && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+                <span className="badge ok">✓ Verified</span>
+                {p.kind === 'ad' && <span className="badge">Sponsored</span>}
+                {p.organization && <b style={{ fontSize: 14 }}>{p.organization.name}</b>}
+              </div>
+            )}
+            {p.kind !== 'training' && (
+              <>
+                {p.title && <h3 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800 }}>{p.title}</h3>}
+                {p.body && <p className="muted" style={{ margin: '0 0 12px', fontSize: 14 }}>{p.body}</p>}
+              </>
+            )}
+            {/* Official and ad posts are content, not classes — no seat or price row. */}
+            {p.training && (
+              <>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <b>{p.training.trainer}</b>
               {p.training.topic && <span className="badge">{p.training.topic}</span>}
@@ -130,31 +156,36 @@ export default function Feed() {
             <p className="muted" style={{ margin: '0 0 14px', fontSize: 14 }}>
               {p.training.firstSession ? new Date(p.training.firstSession).toUTCString().slice(0, 22) : 'Date to be announced'}
               {' · '}
-              {p.training.certMode === 'paid'
-                ? `Certificate ₦${p.training.certPriceNgn?.toLocaleString('en-NG')}`
-                : p.training.certMode === 'free'
-                  ? 'Free certificate'
-                  : 'Attendance only'}
+              {p.training.accessType === 'paid'
+                ? `${formatNgn(p.training.pricePerDayNgn ?? 0)}/day`
+                : 'Free'}
               {' · '}
               {full ? 'Full' : `${p.training.seatsLeft} seat${p.training.seatsLeft === 1 ? '' : 's'} left`}
             </p>
+              </>
+            )}
             {p.type === 'video' ? (
               <video src={p.mediaUrl} controls preload="metadata" style={{ width: '100%', borderRadius: 14, maxHeight: 380 }} />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.mediaUrl} alt={p.training.title} style={{ width: '100%', borderRadius: 14 }} loading="lazy" />
+              <img src={p.mediaUrl} alt={p.title || p.training?.title || ''} style={{ width: '100%', borderRadius: 14 }} loading="lazy" />
             )}
+            {/* Save and Register only make sense for actual classes. */}
+            {p.training && (
             <div className="btnrow">
               <button className="btn" onClick={async () => { const j = await authed(`/api/posts/${p.id}/like`, { method: 'POST' }); if (j) load(); }}>
                 {p.liked ? '♥' : '♡'} {p.likeCount}
               </button>
-              <button className="btn" onClick={async () => { const j = await authed(`/api/trainings/${p.training.id}/save`, { method: 'POST' }); if (j) load(); }}>
+              <button className="btn" onClick={async () => { const j = await authed(`/api/trainings/${p.training!.id}/save`, { method: 'POST' }); if (j) load(); }}>
                 {p.saved ? '⧉ Saved' : '⧉ Save'}
               </button>
-              <button className="btn primary" disabled={full} onClick={() => register(p.training.id)}>
-                {full ? 'Full' : `Register · ${p.training.seatsLeft} left`}
+              <button className="btn primary" disabled={full} onClick={() => register(p.training!.id)}>
+                {full ? 'Full' : `Register · ${p.training!.seatsLeft} left`}
               </button>
-              <Link className="btn link" href={`/t/${p.training.slug}/register`}>Invite →</Link>
+              <Link className="btn link" href={`/t/${p.training!.slug}/register`}>Invite →</Link>
+            </div>
+            )}
+            <div className="btnrow">
               <button className="btn link" onClick={async () => {
                 const reason = prompt('Why are you reporting this post?') || '';
                 if (!reason) return;

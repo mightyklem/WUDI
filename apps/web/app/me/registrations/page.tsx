@@ -6,7 +6,9 @@ import { getAccess } from '@/lib/client-auth';
 type Reg = {
   id: string;
   certPaid: boolean;
-  training: { id: string; title: string; slug: string; certMode: string; certPriceNgn: number | null; sessions: { startsAtUtc: string }[] };
+  quotedTotalNgn: number | null;
+  quotedDays: number | null;
+  training: { id: string; title: string; slug: string; certMode: string; accessType: string; tier: string | null; pricePerDayNgn: number | null; sessions: { startsAtUtc: string }[] };
 };
 
 type Progress = {
@@ -114,10 +116,13 @@ export default function MyRegistrations() {
             </div>
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <Link className="btn" href={`/trainings/${r.training.id}`}>View</Link>
-              {r.training.certMode === 'paid' && !r.certPaid && (
-                <button className="btn primary" onClick={() => buyCert(r.id)}>Buy cert ₦{r.training.certPriceNgn}</button>
+              {r.training.accessType === 'paid' && !r.certPaid && (
+                <button className="btn primary" onClick={() => buyCert(r.id)}>
+                  Pay {r.quotedTotalNgn ? `\u20a6${r.quotedTotalNgn.toLocaleString('en-NG')}` : ''}
+                </button>
               )}
-              {r.training.certMode === 'paid' && r.certPaid && <span className="muted">✓ cert paid</span>}
+              {r.training.accessType === 'paid' && r.certPaid && <span className="muted">\u2713 paid</span>}
+              {r.training.accessType === 'free' && <span className="muted">Free</span>}
               <button className="btn" onClick={() => cancel(r.id)}>Cancel</button>
             </span>
           </div>

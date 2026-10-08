@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { saveSession } from '@/lib/client-auth';
 
 export default function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -23,6 +25,8 @@ export default function Login() {
     }
     saveSession(j.access, j.refresh);
     setMsg({ ok: true, text: 'Logged in.' });
+    // Straight into the app, on the right home for their role.
+    router.push('/dashboard');
   }
   async function resend() {
     await fetch('/api/auth/resend-verification', {

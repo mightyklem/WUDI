@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { saveSession } from '@/lib/client-auth';
 
 const STEPS = [
@@ -22,6 +23,7 @@ const STEPS = [
 ];
 
 export default function Signup() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -62,7 +64,9 @@ export default function Signup() {
       });
     }
     saveSession(j.access, j.refresh);
-    setMsg({ ok: true, text: 'Email confirmed. You are logged in.' });
+    setMsg({ ok: true, text: 'Email confirmed. Opening your dashboard…' });
+    // A brand-new account has no trainer profile, so this lands them as a participant.
+    router.push('/dashboard');
   }
 
   async function resend() {
