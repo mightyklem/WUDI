@@ -38,7 +38,10 @@ export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
 
   const participant: Tile[] = [
     { href: '/feed', icon: '◎', label: 'Explore', bg: '#E9F3F6', fg: '#156B78' },
-    { href: '/me/registrations', icon: '📚', label: 'My seats', ...MUTED_TILE, badge: seats },
+    // Browsing classes is how a learner finds something to attend; Explore alone
+    // only shows what a trainer chose to post about.
+    { href: '/classes', icon: '📚', label: 'Classes', bg: '#E9F3F6', fg: '#156B78' },
+    { href: '/me/registrations', icon: '🎟', label: 'My seats', ...MUTED_TILE, badge: seats },
     { href: '/me/certificates', icon: '🏅', label: 'Certificates', bg: '#FDF0E3', fg: '#9A5B12', badge: certs },
     { href: '/trainers', icon: '🤝', label: 'Follow', bg: '#E4F5EA', fg: '#0B5E2E' },
     { href: '/me/notifications', icon: '🔔', label: 'Alerts', ...MUTED_TILE },
@@ -47,8 +50,9 @@ export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
   // Trainers live here too, so they can still sit in on sessions.
   const trainer: Tile[] = [
     { href: '/trainings/new', icon: '＋', label: 'New training', bg: '#E9F3F6', fg: '#156B78' },
+    { href: '/classes', icon: '📚', label: 'Classes', bg: '#E9F3F6', fg: '#156B78' },
     { href: '/feed', icon: '◎', label: 'Explore', ...MUTED_TILE },
-    { href: '/me/registrations', icon: '📚', label: 'Attend', ...MUTED_TILE },
+    { href: '/me/registrations', icon: '🎟', label: 'Attend', ...MUTED_TILE },
     { href: '/me/certificates', icon: '🏅', label: 'Certificates', bg: '#FDF0E3', fg: '#9A5B12', badge: certs },
     { href: '/me/notifications', icon: '🔔', label: 'Alerts', ...MUTED_TILE },
   ];

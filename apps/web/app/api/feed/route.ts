@@ -5,6 +5,8 @@ import { renderECard } from '@/lib/ecard';
 import { putPublic } from '@/lib/storage';
 import { randomBytes } from 'crypto';
 
+import { Prisma } from '../../../generated/prisma';
+
 export const dynamic = 'force-dynamic';
 
 // GET /api/feed?topic=&cert=free|certified|any&q=&from=&to=
@@ -18,29 +20,51 @@ export async function GET(req: Request) {
   const to = searchParams.get('to');
   // Ads are opt-in through ?ads=1 so Explore does not become a billboard by default.
   const adWindow = searchParams.get('ads') === '1';
+  // ?following=1 narrows to trainers this person follows. Following used to
+  // change nothing you could see — it only triggered an email.
+  const followingOnly = searchParams.get('following') === '1';
 
   const token = getBearer(req);
   const me = token ? await verifyAccessToken(token) : null;
 
+  // ?following=1 narrows to trainers this person follows. Following used to
+  // change nothing you could see — it only triggered an email.
+  let followedTrainerIds: string[] = [];
+  if (followingOnly && me) {
+    const follows = await prisma.follow.findMany({
+      where: { followerId: me },
+      select: { trainerId: true },
+    });
+    followedTrainerIds = follows.map((f) => f.trainerId);
+  }
+
+  // Official, announcement and ad posts are not tied to a class, so the class
+  // filters only apply when the post has one. Built as a single object so the
+  // class filters and the following filter merge rather than overwrite each other.
+  const needsTraining = Boolean(from || to || q || topic || cert !== 'any' || followingOnly);
+  const trainingFilter: Prisma.FeedPostWhereInput['training'] = needsTraining
+    ? {
+        status: { in: ['live', 'full'] },
+        ...(topic ? { topic } : {}),
+        ...(cert === 'free' ? { accessType: 'free' } : cert === 'certified' ? { certMode: 'paid' } : {}),
+        ...(q ? { title: { contains: q, mode: 'insensitive' } } : {}),
+        ...(from || to
+          ? { sessions: { some: { startsAtUtc: {
+              ...(from ? { gte: new Date(from) } : {}),
+              ...(to ? { lte: new Date(to) } : {}),
+            } } } }
+          : {}),
+        // A post counts as from someone you follow when the class behind it is
+        // theirs. Official and announcement posts have no trainer, so they drop out
+        // here rather than quietly reappearing under "following".
+        ...(followingOnly ? { trainerId: { in: followedTrainerIds } } : {}),
+      }
+    : null;
+
   const posts = await prisma.feedPost.findMany({
     where: {
       status: 'live',
-      // Official, announcement and ad posts are not tied to a class, so the class
-      // filters only apply when the post has one. An ad also has to be in date.
-      ...(from || to || q || topic || cert !== 'any'
-        ? { training: {
-            status: { in: ['live', 'full'] },
-            ...(topic ? { topic } : {}),
-            ...(cert === 'free' ? { accessType: 'free' } : cert === 'certified' ? { certMode: 'paid' } : {}),
-            ...(q ? { title: { contains: q, mode: 'insensitive' } } : {}),
-            ...(from || to
-              ? { sessions: { some: { startsAtUtc: {
-                  ...(from ? { gte: new Date(from) } : {}),
-                  ...(to ? { lte: new Date(to) } : {}),
-                } } } }
-              : {}),
-          } }
-        : {}),
+      ...(trainingFilter ? { training: trainingFilter } : {}),
       ...(adWindow ? {} : { isAd: false }),
     },
     include: {
@@ -56,6 +80,11 @@ export async function GET(req: Request) {
     orderBy: { createdAt: 'desc' },
     take: 50,
   });
+
+  // An empty "following" needs to say why, not render a blank feed.
+  if (followingOnly && !posts.length) {
+    return NextResponse.json({ posts: [], followingEmpty: true, followingCount: followedTrainerIds.length });
+  }
 
   let liked: Set<string> = new Set();
   let saved: Set<string> = new Set();

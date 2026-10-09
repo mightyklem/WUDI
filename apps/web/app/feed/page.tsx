@@ -30,6 +30,9 @@ export default function Feed() {
   const [cert, setCert] = useState('any');
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  // Following used to have no view at all — it only sent an email. Now it filters.
+  const [following, setFollowing] = useState(false);
+  const [followingEmpty, setFollowingEmpty] = useState(false);
 
   function load() {
     const access = getAccess();
@@ -37,14 +40,19 @@ export default function Feed() {
     if (topic) sp.set('topic', topic);
     if (cert !== 'any') sp.set('cert', cert);
     if (q) sp.set('q', q);
+    if (following) sp.set('following', '1');
     fetch(`/api/feed?${sp.toString()}`, { headers: access ? { authorization: `Bearer ${access}` } : {} })
       .then((r) => r.json())
-      .then((j) => setPosts(j.posts || []));
+      .then((j) => {
+        setPosts(j.posts || []);
+        setFollowingEmpty(!!j.followingEmpty);
+      })
+      .catch(() => setPosts([]));
   }
-  useEffect(load, []);
+  useEffect(load, [following]);
 
   // Distinguish "your filters hid everything" from "the platform is empty".
-  const filtered = Boolean(q || topic || cert !== 'any');
+  const filtered = Boolean(q || topic || cert !== 'any' || following);
 
   async function authed(path: string, opts: RequestInit = {}) {
     const access = getAccess();
@@ -72,6 +80,17 @@ export default function Feed() {
       <QuoteStrip />
 
       <div className="card" style={{ marginTop: 16 }}>
+        <div className="btnrow" style={{ marginTop: 0, marginBottom: 12 }}>
+          <button
+            type="button"
+            className={following ? 'btn primary' : 'btn'}
+            aria-pressed={following}
+            onClick={() => setFollowing((v) => !v)}
+          >
+            {following ? '✓ Following' : 'Following'}
+          </button>
+          <Link className="btn" href="/classes">Browse classes</Link>
+        </div>
         <div className="chips" style={{ marginBottom: 12 }}>
           {[
             { v: 'any', label: 'All' },
@@ -100,19 +119,28 @@ export default function Feed() {
         // E1/E3 — a brand-new platform looks identical to "your filters hid everything".
         // Never leave a cold feed as a single dead sentence.
         <div className="card" style={{ marginTop: 16, textAlign: 'center', padding: 34 }}>
-          <div style={{ fontSize: 30, marginBottom: 8 }} aria-hidden>◎</div>
+          <div style={{ fontSize: 30, marginBottom: 8 }} aria-hidden>{followingEmpty ? '🤝' : '◎'}</div>
           <p style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>
-            {filtered ? 'Nothing matches those filters' : 'No sessions announced yet'}
+            {followingEmpty
+              ? 'You are not following anyone yet'
+              : filtered ? 'Nothing matches those filters' : 'No sessions announced yet'}
           </p>
           <p className="muted" style={{ margin: '8px auto 0', maxWidth: 460 }}>
-            {filtered
-              ? 'Try widening your search, or clear the filters to see everything that is live.'
-              : 'Trainers are being onboarded now. Follow the ones you like and you will be notified the moment they go live.'}
+            {followingEmpty
+              ? 'Following a trainer puts everything they post and every class they open in this tab. Follow someone to fill it up.'
+              : filtered
+                ? 'Try widening your search, or clear the filters to see everything that is live.'
+                : 'Trainers are being onboarded now. Follow the ones you like and you will be notified the moment they go live.'}
           </p>
           <div className="btnrow" style={{ justifyContent: 'center' }}>
-            {filtered ? (
+            {followingEmpty ? (
               <>
-                <button className="btn primary" onClick={() => { setQ(''); setTopic(''); setCert('any'); }}>Clear filters</button>
+                <Link className="btn primary" href="/trainers">Browse trainers</Link>
+                <button className="btn" onClick={() => setFollowing(false)}>See everything</button>
+              </>
+            ) : filtered ? (
+              <>
+                <button className="btn primary" onClick={() => { setQ(''); setTopic(''); setCert('any'); setFollowing(false); }}>Clear filters</button>
                 <button className="btn" onClick={load}>Try again</button>
               </>
             ) : (
