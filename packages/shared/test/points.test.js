@@ -25,9 +25,20 @@ test('the four agreed point values', () => {
 test('the rank ladder is stone, bronze, silver, gold', () => {
   assert.deepEqual(RANKS.map((r) => r.key), ['stone', 'bronze', 'silver', 'gold']);
   assert.deepEqual(RANKS.map((r) => r.label), ['Stone', 'Bronze', 'Silver', 'Gold']);
-  assert.deepEqual(RANKS.map((r) => r.min), [0, 100, 400, 1000]);
+  assert.deepEqual(RANKS.map((r) => r.min), [0, 400, 1600, 6400]);
   assert.deepEqual(RANKS.map((r) => r.icon), ['🪨', '🥉', '🥈', '🥇']);
   assert.equal(TOP_RANK.key, 'gold');
+});
+
+test('each rank costs four times the step before', () => {
+  const gaps = RANKS.slice(1).map((r, i) => r.min - RANKS[i].min);
+  assert.deepEqual(gaps, [400, 1200, 4800]);
+  // Each threshold is 4x the previous one, from Bronze upward. Stone starts at
+  // zero so the first step has no ratio to check.
+  for (let i = 2; i < RANKS.length; i++) {
+    assert.equal(RANKS[i].min / RANKS[i - 1].min, 4, RANKS[i].key);
+  }
+  assert.equal(RANKS[1].min, 400);
 });
 
 test('every rank has an icon and a label', () => {
@@ -39,12 +50,12 @@ test('every rank has an icon and a label', () => {
 
 test('rankFor resolves each boundary', () => {
   assert.equal(rankFor(0).key, 'stone');
-  assert.equal(rankFor(99).key, 'stone');
-  assert.equal(rankFor(100).key, 'bronze');
-  assert.equal(rankFor(399).key, 'bronze');
-  assert.equal(rankFor(400).key, 'silver');
-  assert.equal(rankFor(999).key, 'silver');
-  assert.equal(rankFor(1000).key, 'gold');
+  assert.equal(rankFor(399).key, 'stone');
+  assert.equal(rankFor(400).key, 'bronze');
+  assert.equal(rankFor(1599).key, 'bronze');
+  assert.equal(rankFor(1600).key, 'silver');
+  assert.equal(rankFor(6399).key, 'silver');
+  assert.equal(rankFor(6400).key, 'gold');
   assert.equal(rankFor(999999).key, 'gold');
 });
 
@@ -59,23 +70,22 @@ test('rankFor survives junk and negative totals', () => {
 
 test('next rank and points remaining', () => {
   assert.equal(nextRankFor(0).key, 'bronze');
-  assert.equal(pointsToNextRank(0), 100);
-  assert.equal(pointsToNextRank(60), 40);
-  assert.equal(nextRankFor(1000), null);
-  assert.equal(pointsToNextRank(1000), null);
-  // Already past every threshold but not a real number.
-  assert.equal(nextRankFor(5000), null);
+  assert.equal(pointsToNextRank(0), 400);
+  assert.equal(pointsToNextRank(100), 300);
+  assert.equal(nextRankFor(6400), null);
+  assert.equal(pointsToNextRank(6400), null);
+  assert.equal(nextRankFor(50000), null);
 });
 
 test('rankProgress reports movement inside a rank', () => {
-  const mid = rankProgress(50);
+  const mid = rankProgress(200);
   assert.equal(mid.current.key, 'stone');
   assert.equal(mid.next.key, 'bronze');
-  assert.equal(mid.into, 50);
-  assert.equal(mid.span, 100);
+  assert.equal(mid.into, 200);
+  assert.equal(mid.span, 400);
   assert.equal(mid.pct, 50);
 
-  const top = rankProgress(1200);
+  const top = rankProgress(6600);
   assert.equal(top.current.key, 'gold');
   assert.equal(top.next, null);
   assert.equal(top.pct, 100);
@@ -118,14 +128,17 @@ test('a full paid program totals more than casual free attendance', () => {
     + pointsForCertificate();
   assert.equal(paidProgram, 5 * 20 + 25 + 50);
   assert.equal(paidProgram, 175);
-  assert.equal(rankFor(paidProgram).key, 'bronze');
 
   // The same shape on a free class, with no certificate.
   const freeProgram = 5 * pointsForAttendanceDay({ accessType: 'free' }) + pointsForProgramCompletion();
   assert.equal(freeProgram, 75);
   assert.ok(freeProgram < paidProgram, 'a paid program must out-earn the free equivalent');
 
-  // Enough paid programs to reach the top rank.
-  const sixPrograms = paidProgram * 6;
-  assert.equal(rankFor(sixPrograms).key, 'gold');
+  // The ladder is meant to be a long road, so one program must not carry a learner far.
+  assert.ok(paidProgram < RANKS[1].min, 'one paid program should not reach Bronze');
+  assert.equal(rankFor(paidProgram).key, 'stone');
+
+  // Bronze needs roughly two paid programs; Gold is a sustained effort.
+  assert.ok(Math.ceil(RANKS[1].min / paidProgram) >= 2, 'Bronze should take more than one program');
+  assert.ok(Math.ceil(RANKS[3].min / paidProgram) >= 20, 'Gold should be a long road');
 });

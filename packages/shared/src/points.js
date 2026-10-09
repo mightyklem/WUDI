@@ -28,12 +28,16 @@ export const POINT_REASONS = Object.freeze({
 /**
  * The rank ladder, ascending. Lifetime points, no decay — a learner's history
  * should not be erased just because they stopped for a while.
+ *
+ * Each rank costs 4x the points of the rank before it, so every promotion is
+ * visibly harder than the last. Gold is deliberately a long road: a full paid
+ * program with a certificate is 175 points, so Gold is roughly 37 of them.
  */
 export const RANKS = Object.freeze([
   Object.freeze({ key: 'stone', label: 'Stone', icon: '🪨', min: 0 }),
-  Object.freeze({ key: 'bronze', label: 'Bronze', icon: '🥉', min: 100 }),
-  Object.freeze({ key: 'silver', label: 'Silver', icon: '🥈', min: 400 }),
-  Object.freeze({ key: 'gold', label: 'Gold', icon: '🥇', min: 1000 }),
+  Object.freeze({ key: 'bronze', label: 'Bronze', icon: '🥉', min: 400 }),
+  Object.freeze({ key: 'silver', label: 'Silver', icon: '🥈', min: 1600 }),
+  Object.freeze({ key: 'gold', label: 'Gold', icon: '🥇', min: 6400 }),
 ]);
 
 /** The highest rank, for copy that needs a ceiling ("you have topped out"). */
