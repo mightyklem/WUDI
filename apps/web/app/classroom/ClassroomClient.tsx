@@ -7,7 +7,7 @@ import {
 import { RoomEvent, Track } from 'livekit-client';
 import { getAccess } from '@/lib/client-auth';
 
-type Role = 'trainer' | 'moderator' | 'participant';
+type Role = 'admin' | 'trainer' | 'moderator' | 'participant';
 type ChatMsg = { key: string; from: string; who: string; text: string; at: number; reactions: Record<string, string[]> };
 type Poll = { id: string; question: string; options: string[]; open: boolean; votes: Record<number, number>; seen: Set<string> };
 type Reaction = { key: string; emoji: string; who: string; x: number };
@@ -44,6 +44,18 @@ function StageAndRound({ overlay, reactions }: { overlay?: React.ReactNode; reac
 
   const screens = useTracks([{ source: Track.Source.ScreenShare, withPlaceholder: false }]);
   const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: false }]);
+
+  // Read from participant metadata rather than a prop: an admin can be in the room while
+  // the trainer is the one looking at this screen, and either party may be on stage.
+  const adminCount = room.remoteParticipants.size;
+  const adminObserving = useMemo(
+    () => [...room.remoteParticipants.values()].some((p) => {
+      try { return JSON.parse(p.metadata || '{}').role === 'admin'; } catch { return false; }
+    }),
+    // remoteParticipants is mutated in place by LiveKit, so its size stands in for
+    // membership changes and is what makes this recompute when someone joins or leaves.
+    [room, adminCount],
+  );
 
   const share = screens[0] ?? null;
   const speaking = cameras.find((t) => t.participant.isSpeaking) ?? null;
@@ -104,6 +116,23 @@ function StageAndRound({ overlay, reactions }: { overlay?: React.ReactNode; reac
             {r.emoji}
           </span>
         ))}
+
+        {/* An admin in the room is announced on the stage, not only in the roster below.
+            A trainer should know they are being observed while it happens. */}
+        {adminObserving && (
+          <div
+            style={{
+              position: 'absolute', top: 12, right: 12, zIndex: 3,
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '5px 11px', borderRadius: 'var(--r-full)',
+              background: 'rgba(15,92,104,0.92)', color: '#fff',
+              fontSize: 12, fontWeight: 700,
+              border: '1px solid rgba(255,255,255,0.25)',
+            }}
+          >
+            🛡 Admin observing
+          </div>
+        )}
 
         {/* Controls live on the stage, so "ask to speak" is where the lesson is. */}
         {overlay && (
@@ -614,8 +643,20 @@ function RemoteRoster({ hands }: { hands: Set<string> }) {
   const room = useRoomContext();
   const remotes = [...room.remoteParticipants.values()];
   if (!remotes.length) return null;
+  // An administrator in someone's live class must be visible, not discovered later in a
+  // log. This is the trainer's classroom, and silent observation is how a safety feature
+  // turns into a complaint.
+  const admins = remotes.filter((p) => {
+    try { return JSON.parse(p.metadata || '{}').role === 'admin'; } catch { return false; }
+  });
   return (
     <div className="card" style={{ marginTop: 12 }}>
+      {admins.length > 0 && (
+        <p className="muted" style={{ fontSize: 13, margin: '0 0 8px 0' }}>
+          🛡 An administrator is observing this session
+          {admins.length > 1 ? ` (${admins.length})` : ''}.
+        </p>
+      )}
       <p className="eyebrow" style={{ marginBottom: 8 }}>
         Learners · no one is ever removed from a session
       </p>

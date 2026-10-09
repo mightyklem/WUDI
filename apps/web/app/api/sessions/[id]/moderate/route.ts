@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { roomService } from '@/lib/livekit';
+import { isAdmin } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     where: { trainingId_userId: { trainingId: session.trainingId, userId } },
   });
   const isMod = !!mod && mod.status === 'active';
-  if (!isTrainer && !isMod) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Admin moderates too, so they can settle a dispute rather than just watch it. They are
+  // not a moderator though -- the distinction is what stops them ending the class below.
+  const isStaff = await isAdmin(userId);
+  if (!isTrainer && !isMod && !isStaff) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const svc = roomService();
   if (action === 'end') {
@@ -68,11 +74,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         { status: gone ? 409 : 502 },
       );
     }
-    // Worth recording: who was allowed to speak, and when.
+    // Worth recording: who was allowed to speak, and when. Admin actions are audited
+    // under the same log as everyone else's, so an intervention in someone's class is
+    // always traceable afterwards.
     await prisma.auditLog.create({
       data: {
         actorId: userId,
-        action: canPublish ? 'participant.allow-speech' : 'participant.mute',
+        action: isStaff && !isTrainer && !isMod
+          ? `admin.${canPublish ? 'allow-speech' : 'mute'}`
+          : canPublish ? 'participant.allow-speech' : 'participant.mute',
         target: `session:${id} user:${identity}`,
         reason: canPublish ? 'raised hand' : null,
       },

@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { mintRoomToken, type RoomRole } from '@/lib/livekit';
+import { isAdmin } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
 // POST /api/sessions/[id]/token — mint a role-scoped LiveKit token (2h TTL).
 // Role is resolved server-side, never trusted from the client:
-// trainer (owns training) > active moderator > registered participant.
+// admin (staff) > trainer (owns training) > active moderator > registered participant.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
@@ -26,6 +27,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let role: RoomRole | null = null;
   if (session.training.trainerId === userId) {
     role = 'trainer';
+  } else if (await isAdmin(userId)) {
+    // Staff can enter any classroom to settle a dispute. They skip the enrolment check
+    // below, which is correct -- an admin is not a learner and has no day seat. The
+    // webhook refuses to record attendance for them, so observing costs no one a
+    // certificate.
+    role = 'admin';
   } else {
     const mod = await prisma.moderator.findUnique({
       where: { trainingId_userId: { trainingId: session.trainingId, userId } },

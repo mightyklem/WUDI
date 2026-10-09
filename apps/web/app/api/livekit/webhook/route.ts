@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { verifyWebhook } from '@/lib/livekit';
 import { isPresent } from '@learnovize/shared';
 import { awardAttendance, revokeAttendance } from '@/lib/points';
+import { isAdmin } from '@/lib/admin';
 import { computeEligibility } from '@/lib/certs';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,12 @@ export async function POST(req: Request) {
 
   const session = await prisma.session.findFirst({ where: { livekitRoom: evt.room } });
   if (!session) return NextResponse.json({ ok: true });
+
+  // Staff observe, they do not attend. An admin can now join any classroom, so their
+  // join/leave events arrive here too -- and without this they would be written into
+  // attendance_logs, awarded points, and could later earn a certificate for a class they
+  // only watched. Observing is not attending.
+  if (await isAdmin(evt.identity)) return NextResponse.json({ ok: true, skipped: 'admin' });
 
   if (evt.event === 'participant_joined') {
     // A rejoin starts a new attendance window, so the previous exit has to be

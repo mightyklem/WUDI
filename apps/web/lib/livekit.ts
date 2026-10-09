@@ -14,7 +14,7 @@ export function livekitEnv() {
   };
 }
 
-export type RoomRole = 'trainer' | 'moderator' | 'participant';
+export type RoomRole = 'admin' | 'trainer' | 'moderator' | 'participant';
 
 /** Mint a 2h room token with role-scoped grants (ADR-005). No recording path exists. */
 export async function mintRoomToken(opts: {
@@ -31,7 +31,12 @@ export async function mintRoomToken(opts: {
     ttl: '2h',
     metadata: JSON.stringify({ role: opts.role }),
   });
-  const canPublish = opts.role === 'trainer' || opts.role === 'moderator'
+  // Admin is moderator-equivalent in the room: able to mute and grant speech, because an
+  // admin who arrives to settle a dispute usually has to be able to act, not just watch.
+  // What admin deliberately does NOT get is the ability to end the session -- that stays
+  // with the trainer whose class it is. That limit is enforced server-side in the
+  // moderation route, not here.
+  const canPublish = opts.role === 'trainer' || opts.role === 'moderator' || opts.role === 'admin'
     ? true
     : (opts.canPublishOverride ?? false);
   at.addGrant({
