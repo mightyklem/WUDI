@@ -200,15 +200,18 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
   return (
     <div>
       {!mayPublish && (
-        <p className="muted" style={{ fontSize: 14, marginTop: 0 }}>
+        <p className="muted" style={{ fontSize: 14, marginTop: 0, marginBottom: 10 }}>
           You are listening. Raise your hand and the trainer will let you speak.
         </p>
       )}
       {mayPublish && role === 'participant' && (
-        <p className="muted" style={{ fontSize: 14, marginTop: 0 }}>
+        <p className="muted" style={{ fontSize: 14, marginTop: 0, marginBottom: 10 }}>
           The trainer has let you speak. Turn your mic or camera on below.
         </p>
       )}
+      {/* Controls get their own glass bar rather than floating on the video, so they
+          stay legible over any camera feed without covering anyone's face. */}
+      <div className="glass" style={{ padding: '10px 12px', marginBottom: 12, borderRadius: 'var(--r-md)' }}>
       <div className="btnrow" style={{ marginTop: 0 }}>
         <button
           className="btn"
@@ -244,8 +247,10 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
         <label style={{ fontSize: 14 }}><input type="checkbox" checked={lowData} onChange={(e) => onLowData(e.target.checked)} /> Low-data / audio-only</label>
         {role === 'trainer' && <button className="btn primary" onClick={() => moderate('end')}>⏻ End session</button>}
       </div>
+      </div>
+
       {hands.size > 0 && (
-        <p className="muted">
+        <p className="muted" style={{ fontSize: 14 }}>
           ✋ Waiting to speak: {[...hands].map((id) => nameOf(room, id)).join(', ')}
         </p>
       )}

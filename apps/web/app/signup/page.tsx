@@ -4,21 +4,30 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saveSession } from '@/lib/client-auth';
 
+// Three arguments, each carrying its own icon and colour. The point is that a
+// learner decides in about five seconds, so this is a walk-through rather than a
+// wall of copy they have to agree to before typing an email.
 const STEPS = [
   {
+    icon: '🎥',
+    tint: 'tint-accent',
     title: 'Attend live, not someday',
-    body: 'Real trainers, real time. Join a session while it is happening — no replay treadmill.',
-    points: ['Scheduled sessions you can see upfront', 'Reminders before each one starts'],
+    body: 'Real trainers, real time.',
+    points: ['Sessions you can see upfront', 'A reminder before each one'],
   },
   {
+    icon: '🪨',
+    tint: 'tint-clay',
+    title: 'Climb as you learn',
+    body: 'Every day you attend moves you up.',
+    points: ['Stone → Bronze → Silver → Gold', 'Points for free and paid days alike'],
+  },
+  {
+    icon: '🏅',
+    tint: 'tint-gold',
     title: 'Proof, not a promise',
-    body: 'Attendance is measured from the classroom itself, so the certificate you earn means something.',
-    points: ['Verified automatically when you attend', 'Anyone can check a certificate number'],
-  },
-  {
-    title: 'Learn for a purpose',
-    body: 'Trainers here teach towards an outcome. Hosts build a following as they teach.',
-    points: ['Follow trainers and get their new sessions', 'Host your own once you are ready'],
+    body: 'A certificate anyone can check.',
+    points: ['Verified from the classroom itself', 'Verifiable forever by number'],
   },
 ];
 
@@ -81,9 +90,12 @@ export default function Signup() {
   if (stage === 'verify') {
     return (
       <div className="wrap">
-        <h1>Confirm your email.</h1>
-        <p className="sub">One code, then you are in. Check spam if it has not arrived in a minute.</p>
-        <form onSubmit={verify} className="card" style={{ marginTop: 18 }}>
+        <div className="surface surface-hero pat-dots fade" style={{ marginTop: 18 }}>
+          <span className="tile-icon tint-accent" aria-hidden>✉️</span>
+          <h1 style={{ marginTop: 14 }}>Check your inbox.</h1>
+          <p className="sub">We sent a 6-digit code to <b>{email}</b>. It expires in 15 minutes.</p>
+        </div>
+        <form onSubmit={verify} className="card" style={{ marginTop: 14 }}>
           <label className="fl">6-digit code</label>
           <input
             inputMode="numeric"
@@ -93,12 +105,12 @@ export default function Signup() {
             required
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="123456"
-            style={{ letterSpacing: 6, fontSize: 20 }}
+            placeholder="••••••"
+            style={{ letterSpacing: 10, fontSize: 24, fontWeight: 700, maxWidth: 260 }}
           />
           <div className="btnrow">
-            <button className="btn primary" type="submit" disabled={busy || code.length !== 6}>
-              {busy ? 'Checking…' : 'Confirm email'}
+            <button className="btn primary lg" type="submit" disabled={busy || code.length !== 6}>
+              {busy ? 'Checking…' : 'Confirm and continue'}
             </button>
             <button className="btn link" type="button" onClick={resend}>Resend code</button>
           </div>
@@ -120,25 +132,48 @@ export default function Signup() {
     const last = step === STEPS.length - 1;
     return (
       <div className="wrap">
-        <div className="card" style={{ marginTop: 18, padding: 28 }}>
-          <p style={{ margin: 0, fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)' }}>
-            Step {step + 1} of {STEPS.length}
-          </p>
-          <h2 style={{ margin: '10px 0 8px', fontSize: 26, fontWeight: 800, lineHeight: 1.25 }}>{s.title}</h2>
-          <p className="muted" style={{ margin: '0 0 18px', fontSize: 16 }}>{s.body}</p>
-          <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--ink)', fontSize: 15, lineHeight: 1.7 }}>
-            {s.points.map((pt) => <li key={pt}>{pt}</li>)}
-          </ul>
+        <div className="surface surface-hero pat-weave rise" style={{ marginTop: 18, padding: 'var(--s-6) var(--s-5)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className={`tile-icon ${s.tint}`} aria-hidden>{s.icon}</span>
+            <span style={{ fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
+              Step {step + 1} of {STEPS.length}
+            </span>
+          </div>
+
+          <h1 key={s.title} className="rise" style={{ marginTop: 16, fontSize: 30, lineHeight: 1.15, maxWidth: 480 }}>{s.title}</h1>
+          <p className="sub" style={{ fontSize: 17, maxWidth: 460 }}>{s.body}</p>
+
+          <div style={{ display: 'grid', gap: 9, marginTop: 20 }}>
+            {s.points.map((pt, i) => (
+              <div key={pt} className={`rise rise-${i + 1}`} style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
+                <span className="tile-icon tint-neutral" aria-hidden
+                  style={{ width: 28, height: 28, borderRadius: 'var(--r-xs)', fontSize: 14 }}>✓</span>
+                <span style={{ fontSize: 15 }}>{pt}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Progress as dots rather than a bar: three short steps, no numbers needed. */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 22 }} aria-hidden>
+            {STEPS.map((_, i) => (
+              <span key={i} style={{
+                width: i === step ? 26 : 8, height: 8, borderRadius: 999,
+                background: i <= step ? 'var(--accent)' : 'var(--line)',
+                transition: 'width var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease)',
+              }} />
+            ))}
+          </div>
+
           <div className="btnrow">
-            <button className="btn primary" onClick={() => setStep(step + 1)}>
-              {last ? 'Create an account' : 'Next'}
+            <button className="btn primary lg" onClick={() => setStep(step + 1)}>
+              {last ? 'Create my account' : 'Next'}
             </button>
-            <button className="btn link" onClick={() => setStep(STEPS.length)}>Skip</button>
+            <button className="btn" onClick={() => setStep(STEPS.length)}>Skip</button>
           </div>
         </div>
         <nav className="bottomnav"><div className="in">
           <Link href="/" className="on">🏠<br />Home</Link>
-          <Link href="/feed">◎<br />Explore</Link>
+          <Link href="/classes">📚<br />Classes</Link>
           <Link href="/login">→<br />Log in</Link>
         </div></nav>
       </div>
@@ -147,19 +182,30 @@ export default function Signup() {
 
   return (
     <div className="wrap">
-      <h1>Create your account.</h1>
-      <p className="sub">Every account can attend. Complete a trainer profile to host.</p>
-      <form onSubmit={submit} className="card" style={{ marginTop: 18 }}>
+      <div className="surface surface-hero pat-arcs fade" style={{ marginTop: 18 }}>
+        <span className="tile-icon tint-leaf" aria-hidden>🙂</span>
+        <h1 style={{ marginTop: 14 }}>Create your account.</h1>
+        <p className="sub">Email and a password. That is all.</p>
+      </div>
+
+      <form onSubmit={submit} className="card rise" style={{ marginTop: 14 }}>
         <label className="fl">Email</label>
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-        <label className="fl">Password (8+ chars)</label>
+        <label className="fl">Password (8+ characters)</label>
         <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
         <div className="btnrow">
-          <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
+          <button className="btn primary lg" type="submit" disabled={busy}>
+            {busy ? 'Creating…' : 'Create account'}
+          </button>
           <button className="btn link" type="button" onClick={() => setStep(0)}>Back</button>
-          <Link className="btn link" href="/login">Have an account? Log in</Link>
         </div>
         {msg && <div className={msg.ok ? 'okmsg' : 'err'}>{msg.text}</div>}
+        <p className="muted" style={{ fontSize: 13, marginTop: 14, marginBottom: 0 }}>
+          Any account can attend. Complete a trainer profile later to host.
+        </p>
+        <div className="btnrow" style={{ marginTop: 8 }}>
+          <Link className="btn link" href="/login">Already have an account? Log in</Link>
+        </div>
       </form>
     </div>
   );

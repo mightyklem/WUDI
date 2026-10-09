@@ -42,18 +42,47 @@ export default async function Home() {
           <Link className="btn primary" href="/signup">Sign up</Link>
         </nav>
       </div>
-      <h1>{greet}.</h1>
-      {trainerCount === 0 ? (
-        // H1: cold start — no trainers yet. Say what is coming instead of counting zeroes.
-        <p className="sub">
-          Learnovize is opening its doors. Trainers are being onboarded now — join the list and you
-          will be first to know when sessions go live.
-        </p>
-      ) : (
-        <p className="sub">
-          {trainerCount} trainer{trainerCount === 1 ? '' : 's'} · {trainingCount} training{trainingCount === 1 ? '' : 's'} live on Learnovize.
-        </p>
-      )}
+      <div className="surface surface-hero pat-weave rise">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <span className="tile-icon tint-accent" aria-hidden>✨</span>
+          <span style={{ fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
+            Live classes · no replays
+          </span>
+        </div>
+        <h1 style={{ fontSize: 32, lineHeight: 1.12, maxWidth: 520 }}>{greet}.</h1>
+        {trainerCount === 0 ? (
+          <p className="sub" style={{ maxWidth: 460 }}>
+            Learnovize is opening its doors. Trainers are being onboarded now.
+          </p>
+        ) : (
+          <p className="sub" style={{ maxWidth: 460 }}>
+            {trainerCount} trainer{trainerCount === 1 ? '' : 's'} · {trainingCount} class{trainingCount === 1 ? '' : 'es'} live now.
+          </p>
+        )}
+
+        {/* Icon-led paths. Three doors, no paragraphs to read past. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginTop: 20 }}>
+          {[
+            { href: '/classes', icon: '📚', tint: 'tint-accent', label: 'Find a class', sub: 'Browse what is on' },
+            { href: '/trainers', icon: '🤝', tint: 'tint-leaf', label: 'Follow trainers', sub: 'Hear when they go live' },
+            { href: '/onboarding', icon: '🎥', tint: 'tint-gold', label: 'Teach here', sub: 'Host your own' },
+          ].map((p, i) => (
+            <Link key={p.href} href={p.href} className={`rise rise-${i + 1}`} style={{
+              display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none',
+              color: 'var(--ink)', background: 'rgba(255,255,255,.72)', border: '1px solid var(--line)',
+              borderRadius: 'var(--r-md)', padding: '13px 14px', boxShadow: 'var(--sh-1)',
+              transition: 'transform var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease)',
+            }}>
+              <span className={`tile-icon ${p.tint}`} aria-hidden
+                style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', fontSize: 19 }}>{p.icon}</span>
+              <span style={{ minWidth: 0 }}>
+                <b style={{ display: 'block', fontSize: 15 }}>{p.label}</b>
+                <span className="muted" style={{ fontSize: 12 }}>{p.sub}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
 
       {liveNow.length > 0 && (
         <section
@@ -89,8 +118,11 @@ export default async function Home() {
       )}
 
       {liveNow.length === 0 && upcoming.length > 0 && (
-        <div className="card" style={{ marginTop: 22 }}>
-          <p className="eyebrow">Next sessions</p>
+        <div className="card rise-1" style={{ marginTop: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span className="tile-icon tint-leaf" aria-hidden style={{ width: 38, height: 38, borderRadius: 'var(--r-sm)', fontSize: 18 }}>🗓</span>
+            <b style={{ fontSize: 16 }}>Next sessions</b>
+          </div>
           <div style={{ display: 'grid', gap: 10 }}>
             {upcoming.map((s) => (
               <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -98,39 +130,27 @@ export default async function Home() {
                   <div style={{ fontWeight: 700 }}>{s.training.title}</div>
                   <div className="muted" style={{ fontSize: 13 }}>{s.startsAtUtc.toUTCString().slice(0, 22)}</div>
                 </div>
-                <Link className="btn" href={`/t/${s.training.slug}/register`}>Reserve a seat</Link>
+                <Link className="btn primary" href={`/t/${s.training.slug}/register`}>Reserve a seat</Link>
               </div>
             ))}
           </div>
+          <div className="btnrow"><Link className="btn link" href="/classes">See every class →</Link></div>
         </div>
       )}
 
       {liveNow.length === 0 && upcoming.length === 0 && (
-        // H1/H3: nothing scheduled yet — route people to something that helps.
-        <div className="card" style={{ marginTop: 22 }}>
-          <p className="eyebrow">Nothing scheduled yet</p>
-          <p className="bigtitle">Be the first</p>
-          <p className="meta">
-            No sessions are announced right now. Follow a trainer to hear the moment they go live, or
-            host a training yourself.
+        <div className="surface surface-hero pat-arcs" style={{ marginTop: 18, textAlign: 'center' }}>
+          <span className="tile-icon tint-accent" aria-hidden>◈</span>
+          <p className="bigtitle" style={{ marginTop: 12 }}>Nothing scheduled yet</p>
+          <p className="sub" style={{ maxWidth: 420, margin: '6px auto 0' }}>
+            Follow a trainer to hear the moment they go live.
           </p>
-          <div className="btnrow">
-            <Link className="btn primary" href="/trainers">Browse trainers</Link>
-            <Link className="btn" href="/onboarding">Become a trainer</Link>
+          <div className="btnrow" style={{ justifyContent: 'center' }}>
+            <Link className="btn primary lg" href="/trainers">Browse trainers</Link>
+            <Link className="btn lg" href="/onboarding">Teach here</Link>
           </div>
         </div>
       )}
-
-      <div className="card" style={{ marginTop: 22 }}>
-        <p className="eyebrow">Up next · live only, no replays</p>
-        <p className="bigtitle">Find a live training</p>
-        <p className="meta">Browse trainers, follow them, and reserve your seat. Attendance is always free — only the certificate costs extra.</p>
-        <div className="btnrow">
-          <Link className="btn primary" href="/trainers">Browse trainers</Link>
-          <Link className="btn" href="/onboarding">Become a trainer</Link>
-          <Link className="btn" href="/trainings/new">Host a training</Link>
-        </div>
-      </div>
       <FirstVisitAuth />
       <nav className="bottomnav"><div className="in">
         <Link href="/" className="on">🏠<br />Home</Link>

@@ -34,23 +34,38 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
       <div className="topbar"><span className="logo">Learnovize</span>
         <nav><Link className="btn link" href="/">Home</Link></nav>
       </div>
-      <h1>{session.training.title}</h1>
-      <p className="sub">
-        {session.training.trainer.displayName}
-        {day ? ` · ${day.topic ?? `Day ${day.dayIndex}`}` : ''}
-        {' · '}
-        {new Date(session.startsAtUtc).toUTCString().slice(0, 22)} – {new Date(session.endsAtUtc).toUTCString().slice(17, 22)} UTC
-      </p>
-      <p className="sub">Live only — this session is not recorded.</p>
 
-      {now < started && (
-        <p className="muted">This session has not started yet. It opens at the time above.</p>
-      )}
-      {now > ended && (
-        <p className="muted">This session has finished. Joining now will not earn attendance.</p>
-      )}
+      <div className="surface surface-hero pat-weave" style={{ padding: 'var(--s-5)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span className="tile-icon tint-accent" aria-hidden>🎥</span>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <h1 style={{ fontSize: 24 }}>{session.training.title}</h1>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+              {session.training.trainer.displayName}
+              {day ? ` · ${day.topic ?? `Day ${day.dayIndex}`}` : ''}
+              {' · '}
+              {new Date(session.startsAtUtc).toUTCString().slice(0, 22)} – {new Date(session.endsAtUtc).toUTCString().slice(17, 22)} UTC
+            </p>
+          </div>
+          {/* Live only: stating it here means nobody joins expecting a replay. */}
+          <span className="badge free">No replay</span>
+        </div>
 
-      <ClassroomClient sessionId={sessionId} />
+        {now < started && (
+          <p className="muted" style={{ margin: '12px 0 0', fontSize: 14 }}>
+            This session has not started yet. It opens at the time above.
+          </p>
+        )}
+        {now > ended && (
+          <p className="muted" style={{ margin: '12px 0 0', fontSize: 14 }}>
+            This session has finished. Joining now will not earn attendance.
+          </p>
+        )}
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <ClassroomClient sessionId={sessionId} />
+      </div>
     </div>
   );
 }
