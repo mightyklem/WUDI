@@ -41,6 +41,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ ok: true });
   }
   if (!identity) return NextResponse.json({ error: 'identity required' }, { status: 400 });
+  // There is deliberately no "remove" action. Kicking someone out of a session they
+  // registered for and are trying to complete destroys their attendance for no good
+  // reason, and a mis-click cannot be undone from inside the room. Leaving is the
+  // participant's own decision; a moderator mutes, and can lower attendance
+  // deliberately via the trainer attendance screen instead.
   if (action === 'mute' || action === 'allowSpeak') {
     const canPublish = action === 'allowSpeak';
     try {
@@ -75,8 +80,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ ok: true, canPublish });
   }
   if (action === 'remove') {
-    await svc.removeParticipant(session.livekitRoom, identity);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(
+      { error: 'Participants leave a session themselves. Use mute, or correct attendance deliberately.' },
+      { status: 400 },
+    );
   }
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
 }

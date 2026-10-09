@@ -196,10 +196,12 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
         // both read better with a name, but the id is what the trainer acts on.
         const who = displayName(participant);
         if (topic === 'chat' && m.text) {
-          setChat((c) => [...c.slice(-99), {
-            key: `${from}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            from, who, text: String(m.text).slice(0, 500), at: Date.now(), reactions: {},
-          }]);
+          setChat((c) => {
+            // The sender carries the key, so a reaction points at the same message
+            // in everyone's view instead of a second copy.
+            const key = typeof m.key === 'string' ? m.key : `${from}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            return [...c.slice(-99), { key, from, who, text: String(m.text).slice(0, 500), at: Date.now(), reactions: {} }];
+          });
         }
         // A reaction on a message, keyed by its own id so everyone sees the same bubble.
         if (topic === 'react' && m.msgKey && m.emoji) {
@@ -240,9 +242,51 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
     await room.localParticipant.publishData(enc.encode(JSON.stringify(obj)), { reliable: true, topic });
   }, [room]);
 
+  /**
+   * LiveKit delivers data messages to everyone EXCEPT the sender. Without an
+   * explicit local echo, a person types a message, it reaches everyone else, and
+   * it never appears in their own chat — which reads as the room being broken.
+   * Everything sent is therefore also applied locally at once.
+   */
+  const say = useCallback(async (text: string) => {
+    const clean = text.trim().slice(0, 500);
+    if (!clean) return;
+    const key = `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setChat((c) => [...c.slice(-99), { key, from: myId, who: displayName({ identity: myId, name: myId }), text: clean, at: Date.now(), reactions: {} }]);
+    await send('chat', { text: clean, key });
+  }, [myId, send]);
+
+  /** Add a reaction to a message locally, then broadcast it. */
+  const reactTo = useCallback(async (msgKey: string, emoji: string) => {
+    const me = displayName({ identity: myId, name: myId });
+    setChat((c) => c.map((x) => {
+      if (x.key !== msgKey) return x;
+      const mine = x.reactions[emoji] || [];
+      if (mine.includes(me)) return x;
+      return { ...x, reactions: { ...x.reactions, [emoji]: [...mine, me] } };
+    }));
+    await send('react', { msgKey, emoji });
+  }, [myId, send]);
+
+  /** Float a reaction on the stage locally, then broadcast it. */
+  const popReaction = useCallback(async (emoji: string) => {
+    const key = `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const push = () => {
+      setReactions((r) => [...r.slice(-19), { key, emoji, who: myId, x: 12 + Math.random() * 76 }]);
+      setTimeout(() => setReactions((r) => r.filter((x) => x.key !== key)), 2600);
+    };
+    push();
+    await send('reaction', { emoji });
+  }, [myId, send]);
+
   const totalVotes = useMemo(() => Object.values(poll?.votes || {}).reduce((a, b) => a + b, 0), [poll]);
   const canMod = role === 'trainer' || role === 'moderator';
   const mayPublish = role !== 'participant' || canSpeak;
+  // Hands that have not yet been granted speech, in the order they were raised.
+  const waiting = useMemo(
+    () => [...hands].filter((id) => !room.getParticipantByIdentity(id)?.permissions?.canPublish),
+    [hands, room],
+  );
 
   async function moderate(action: 'mute' | 'allowSpeak' | 'remove' | 'end', identity?: string) {
     const access = getAccess();
@@ -303,13 +347,21 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
               </button>
               {!mayPublish && (
                 <button className="btn paid" style={{ minHeight: 0, padding: '8px 16px', fontSize: 14 }}
-                  onClick={() => send('hand', { up: true })}>
+                  onClick={async () => {
+                    // Local echo too, or your own hand never appears in the queue.
+                    setHands((h) => new Set(h).add(myId));
+                    await send('hand', { up: true });
+                  }}>
                   ✋ Ask to speak
                 </button>
               )}
               {mayPublish && (
                 <button className="btn" style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
-                  onClick={() => send('hand', { up: !hands.has(myId) })}>
+                  onClick={async () => {
+                    const up = !hands.has(myId);
+                    setHands((h) => { const n = new Set(h); if (up) n.add(myId); else n.delete(myId); return n; });
+                    await send('hand', { up });
+                  }}>
                   ✋ {hands.has(myId) ? 'Lower hand' : 'Raise hand'}
                 </button>
               )}
@@ -318,7 +370,7 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
               {REACTION_CHOICES.map((e) => (
                 <button key={e} className="btn" aria-label={`React ${e}`}
                   style={{ minHeight: 0, padding: '6px 9px', fontSize: 16, borderRadius: 'var(--r-full)' }}
-                  onClick={() => send('reaction', { emoji: e })}>
+                  onClick={() => popReaction(e)}>
                   {e}
                 </button>
               ))}
@@ -333,6 +385,35 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
           }
         />
       </div>
+
+      {/* Raised hands surface on the stage, not down the page. A trainer acting on a
+          question has to be looking at the lesson, not scrolling to find a button. */}
+      {canMod && waiting.length > 0 && (
+        <div
+          className="rise"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            marginTop: 12, padding: '10px 14px', borderRadius: 'var(--r-md)',
+            background: 'var(--gold-soft)', border: '1px solid #EBD9B4',
+            boxShadow: 'var(--sh-1)',
+          }}
+        >
+          <span className="tile-icon tint-gold" aria-hidden
+            style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', fontSize: 17 }}>✋</span>
+          <b style={{ fontSize: 14 }}>
+            {waiting.length} waiting to speak
+          </b>
+          {waiting.map((id) => (
+            <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 13 }}>{nameOf(room, id)}</span>
+              <button className="btn primary" style={{ minHeight: 0, padding: '5px 12px', fontSize: 13 }}
+                onClick={() => moderate('allowSpeak', id)}>
+                Allow
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {hands.size > 0 && (
         <p className="muted" style={{ fontSize: 14 }}>
@@ -375,7 +456,7 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
                       key={emoji}
                       className="btn"
                       aria-label={`${emoji} ${who.length}`}
-                      onClick={() => send('react', { msgKey: c.key, emoji })}
+                      onClick={() => reactTo(c.key, emoji)}
                       style={{
                         minHeight: 0, padding: '2px 8px', fontSize: 12, borderRadius: 999,
                         background: who.includes(displayName({ identity: c.from, name: c.from })) ? 'var(--accent-soft)' : '#fff',
@@ -389,7 +470,7 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
                       key={'add-' + e}
                       className="btn link"
                       aria-label={`React ${e}`}
-                      onClick={() => send('react', { msgKey: c.key, emoji: e })}
+                      onClick={() => reactTo(c.key, e)}
                       style={{ minHeight: 0, padding: '2px 6px', fontSize: 12 }}
                     >
                       {e}
@@ -407,18 +488,12 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && draft.trim()) {
-                send('chat', { text: draft.trim() });
-                setDraft('');
-              }
+              if (e.key === 'Enter') { say(draft); setDraft(''); }
             }}
             placeholder="Message everyone…"
             style={{ maxWidth: 320 }}
           />
-          <button
-            className="btn primary"
-            onClick={() => { if (draft.trim()) { send('chat', { text: draft.trim() }); setDraft(''); } }}
-          >
+          <button className="btn primary" onClick={() => { say(draft); setDraft(''); }}>
             Send
           </button>
         </div>
@@ -465,29 +540,25 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
           hands={hands}
           onAllow={(id) => moderate('allowSpeak', id)}
           onMute={(id) => moderate('mute', id)}
-          onRemove={(id) => moderate('remove', id)}
         />
       )}
     </div>
   );
 }
 
-function RemoteRoster({
-  hands,
-  onAllow,
-  onMute,
-  onRemove,
-}: {
+function RemoteRoster({ hands, onAllow, onMute }: {
   hands: Set<string>;
   onAllow: (id: string) => void;
   onMute: (id: string) => void;
-  onRemove: (id: string) => void;
 }) {
   const room = useRoomContext();
   const remotes = [...room.remoteParticipants.values()];
   if (!remotes.length) return null;
   return (
     <div className="card" style={{ marginTop: 12 }}>
+      <p className="eyebrow" style={{ marginBottom: 8 }}>
+        Learners · no one is ever removed from a session
+      </p>
       {remotes.map((p) => {
         const speaking = !!p.permissions?.canPublish;
         const raised = hands.has(p.identity);
@@ -503,7 +574,6 @@ function RemoteRoster({
             ) : (
               <button className="btn" onClick={() => onMute(p.identity)}>Mute</button>
             )}
-            <button className="btn" onClick={() => onRemove(p.identity)}>Remove</button>
           </div>
         );
       })}
