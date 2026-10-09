@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import RegisterButton from '../RegisterButton';
 import ModeratorInvite from '../ModeratorInvite';
+import CopyInviteLink from '../CopyInviteLink';
 import AttendanceSection from '../AttendanceSection';
 import IssueCertificates from '../IssueCertificates';
 import PostComposer from '../PostComposer';
@@ -36,11 +37,20 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
 if (!t) return notFound();
   const price = quoteFor(t);
   const left = t.cap - t.seatsTaken;
+  // Absolute, not a path. The whole point of the copy button is that the trainer can
+  // paste this straight into a message, and a relative /t/... is useless to whoever
+  // receives it. NEXT_PUBLIC_APP_URL is the deployed origin.
+  const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3100').replace(/\/$/, '');
+  const inviteUrl = `${appOrigin}/t/${t.slug}/register`;
   const full = left <= 0 || t.status === 'full';
   return (
     <div className="wrap">
       <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href={`/t/${t.slug}/register`}>Invite link</Link></nav>
+        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/dashboard">Dashboard</Link></nav>
+      </div>
+      <div className="card" style={{ marginTop: 12 }}>
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
+        <CopyInviteLink url={inviteUrl} />
       </div>
       <p className="eyebrow">{t.topic || 'Training'} · {t.format === 'audio' ? 'Audio-only' : 'Video + audio'} · {t.trainer.displayName}{t.accessType === 'paid' ? ` · ${tierLabel(t.tier)} class` : ' · Free class'}</p>
       <h1 style={{ color: 'var(--ink)' }}>{t.title}</h1>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
+import { emailEnabled, moderatorInvitedEmail, sendEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +9,11 @@ async function ownerTraining(req: Request, trainingId: string) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
   if (!userId) return null;
-  const t = await prisma.training.findUnique({ where: { id: trainingId } });
+  // The trainer's name goes into the invitation email, so the relation has to be loaded.
+const t = await prisma.training.findUnique({
+    where: { id: trainingId },
+    include: { trainer: { select: { displayName: true } } },
+  });
   return t && t.trainerId === userId ? t : null;
 }
 
@@ -30,7 +35,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await prisma.notification.create({
     data: { userId: user.id, type: 'moderator-invited', payload: { trainingId: id, title: t.title } },
   });
-  return NextResponse.json({ moderator: mod }, { status: 201 });
+
+  // The invite created a row and an in-app notification but sent no mail, so the
+  // moderator heard nothing unless they happened to open the app. Report honestly
+  // whether the email actually went out, rather than claiming success either way.
+  const mail = moderatorInvitedEmail({
+    trainerName: t.trainer.displayName,
+    title: t.title,
+    trainingPath: `/trainings/${id}`,
+  });
+  const emailSent = await sendEmail({ ...mail, to: user.email });
+
+  return NextResponse.json(
+    { moderator: mod, emailSent, emailConfigured: emailEnabled() },
+    { status: 201 },
+  );
 }
 
 // GET /api/trainings/[id]/moderators — roster (owner sees all, others see actives)

@@ -15,7 +15,16 @@ export default function ModeratorInvite({ trainingId }: { trainingId: string }) 
       body: JSON.stringify({ email }),
     });
     const j = await r.json();
-    setMsg(r.ok ? `Invited ${email} as moderator.` : (j.error || 'Invite failed'));
+    if (!r.ok) return setMsg(j.error || 'Invite failed');
+    // The invite record is always saved. The email is not guaranteed, so say which
+    // happened -- claiming "Invited" when nothing was sent is what made this look broken.
+    if (j.emailSent) {
+      setMsg(`Invited ${email} as moderator — invitation emailed.`);
+    } else if (j.emailConfigured === false) {
+      setMsg(`Invite saved for ${email}, but no email was sent: Resend is not configured on this environment. Ask them to accept it from their dashboard.`);
+    } else {
+      setMsg(`Invite saved for ${email}, but the email provider rejected it. Ask them to accept it from their dashboard.`);
+    }
   }
   async function accept() {
     const access = getAccess();

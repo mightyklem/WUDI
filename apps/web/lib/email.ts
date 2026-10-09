@@ -120,6 +120,25 @@ export function trainingAnnouncedEmail(opts: {
   };
 }
 
+export function moderatorInvitedEmail(opts: {
+  trainerName: string; title: string; trainingPath: string;
+}): Email {
+  const href = absoluteUrl(opts.trainingPath);
+  return {
+    to: '', // filled per-recipient
+    subject: `${opts.trainerName} invited you to moderate "${opts.title}"`,
+    text: `${opts.trainerName} invited you to be a moderator for "${opts.title}".\n\nAccept: ${href}`,
+    html: shell(
+      'You have been invited to moderate a class',
+      `<p style="margin:0 0 8px 0"><strong>${escapeHtml(opts.trainerName)}</strong> invited you to moderate
+         <strong>${escapeHtml(opts.title)}</strong>.</p>
+       <p style="margin:0;color:#6b7378;font-size:14px">As a moderator you can allow learners to speak and mute
+         anyone talking over the lesson. Nobody can be removed from a class.</p>
+       ${button(href, 'View the class')}`,
+    ),
+  };
+}
+
 export function seatConfirmedEmail(opts: { trainingTitle: string; seatPath: string }): Email {
   const href = absoluteUrl(opts.seatPath);
   return {
