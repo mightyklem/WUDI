@@ -60,8 +60,10 @@ export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
   const admin: Tile[] = [
     { href: '/admin', icon: '🛡', label: 'Review queue', bg: '#FDECEC', fg: '#8F1D1D' },
     { href: '/admin/approvals', icon: '✓', label: 'Approvals', bg: '#E9F3F6', fg: '#156B78' },
-    { href: '/admin/reports', icon: '⚑', label: 'Reports', bg: '#FDECEC', fg: '#8F1D1D' },
-    { href: '/admin/payouts', icon: '₦', label: 'Payouts', bg: '#E4F5EA', fg: '#0B5E2E' },
+    // Only /admin/reports exists today. Pointing a tile at a route that does not
+    // exist is a 404 the user has to find, so reports live inside the console for now.
+    { href: '/admin', icon: '⚑', label: 'Reports', bg: '#FDECEC', fg: '#8F1D1D' },
+    { href: '/admin/approvals', icon: '₦', label: 'Payouts', bg: '#E4F5EA', fg: '#0B5E2E' },
   ];
 
   if (role === 'admin') return admin;
