@@ -8,19 +8,28 @@ function env(name: string, fallback = ''): string {
 }
 
 /**
- * Local disk storage, used when no S3 endpoint is configured outside production.
+ * Local disk storage, opt-in via STORAGE_LOCAL=true (ADR-004).
  *
- * Without this, an unconfigured dev machine builds a real AWS S3 client with dummy
- * credentials ("test"), so every upload fails with an opaque 500 -- a trainer cannot
- * post an e-card and gets told nothing useful. Files land in .local-storage/ and are
- * served by /api/files/[...key]. Production never takes this path: it requires
- * S3_ENDPOINT (R2 or S3) so a missing bucket config fails loudly instead of silently
- * writing to a disk that serves nobody.
+ * ADR-004 specifies S3-compatible storage: s3mock in `docker compose up` locally,
+ * R2/S3 in the cloud. That remains the default path.
+ *
+ * Disk exists only because this machine has no S3 endpoint and Docker is not running,
+ * which made every upload fail with an opaque 500. It is deliberately opt-in rather than
+ * automatic, so a missing S3_ENDPOINT surfaces as a real error instead of quietly
+ * writing uploads to a disk that serves nobody. Production rejects it outright.
  */
 const LOCAL_ROOT = path.join(process.cwd(), '.local-storage');
 
 export function isLocalStorage(): boolean {
-  return !env('S3_ENDPOINT') && process.env.NODE_ENV !== 'production';
+  const optedIn = (process.env.STORAGE_LOCAL || '').toLowerCase() === 'true';
+  if (!optedIn) return false;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('STORAGE_LOCAL must not be enabled in production: uploads need R2/S3.');
+  }
+  if (env('S3_ENDPOINT')) {
+    throw new Error('STORAGE_LOCAL=true conflicts with S3_ENDPOINT. Unset one of them.');
+  }
+  return true;
 }
 
 /** S3-compatible client: local disk in dev, R2/S3 in cloud. */

@@ -27,31 +27,32 @@ test('an absolute key is refused, not resolved against the filesystem root', () 
   assert.equal(localPathFor('/windows/win.ini'), null);
 });
 
-test('local mode is chosen when no S3 endpoint is configured outside production', () => {
-  const prevEndpoint = process.env.S3_ENDPOINT;
-  const prevNodeEnv = process.env.NODE_ENV;
+test('local disk storage is opt-in, not automatic', () => {
+  const saved = { ...process.env };
   delete process.env.S3_ENDPOINT;
+  delete process.env.STORAGE_LOCAL;
   process.env.NODE_ENV = 'development';
-  assert.equal(isLocalStorage(), true, 'dev with no endpoint uses local disk');
+  assert.equal(isLocalStorage(), false, 'no implicit fallback when S3 is unconfigured');
 
-  // Production must never silently write to disk.
-  process.env.NODE_ENV = 'production';
-  assert.equal(isLocalStorage(), false, 'production requires real storage config');
+  process.env.STORAGE_LOCAL = 'true';
+  assert.equal(isLocalStorage(), true, 'opted in explicitly');
+
+  // Opting in while a real endpoint exists is a config mistake, not a silent choice.
   process.env.S3_ENDPOINT = 'https://example.r2.cloudflarestorage.com';
-  assert.equal(isLocalStorage(), false, 'configured endpoint uses S3');
+  assert.throws(() => isLocalStorage(), /conflicts with S3_ENDPOINT/);
 
-  if (prevEndpoint === undefined) delete process.env.S3_ENDPOINT;
-  else process.env.S3_ENDPOINT = prevEndpoint;
-  process.env.NODE_ENV = prevNodeEnv;
+  delete process.env.S3_ENDPOINT;
+  process.env.NODE_ENV = 'production';
+  assert.throws(() => isLocalStorage(), /must not be enabled in production/);
+
+  process.env = saved;
 });
 
 test('a local public URL points at the file route, not at S3', () => {
-  const prevEndpoint = process.env.S3_ENDPOINT;
-  const prevNodeEnv = process.env.NODE_ENV;
+  const saved = { ...process.env };
   delete process.env.S3_ENDPOINT;
+  process.env.STORAGE_LOCAL = 'true';
   process.env.NODE_ENV = 'development';
   assert.equal(publicUrl('ecards/a.svg'), '/api/files/ecards/a.svg');
-  if (prevEndpoint === undefined) delete process.env.S3_ENDPOINT;
-  else process.env.S3_ENDPOINT = prevEndpoint;
-  process.env.NODE_ENV = prevNodeEnv;
+  process.env = saved;
 });
