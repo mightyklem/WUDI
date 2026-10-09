@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import FirstRunGuide from './FirstRunGuide';
+import FirstVisitAuth from './FirstVisitAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,7 +131,7 @@ export default async function Home() {
           <Link className="btn" href="/trainings/new">Host a training</Link>
         </div>
       </div>
-      <FirstRunGuide />
+      <FirstVisitAuth />
       <nav className="bottomnav"><div className="in">
         <Link href="/" className="on">🏠<br />Home</Link>
         <Link href="/trainers">📚<br />Trainers</Link>

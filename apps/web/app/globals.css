@@ -64,14 +64,7 @@ h2.sec{font-size:20px;color:var(--ink);margin:34px 0 12px;font-weight:800}
 .bigtitle{font-size:26px;font-weight:800;margin:0 0 8px}
 .meta{font-size:15px;margin:0 0 18px}
 .btnrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
-.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;
-  padding:12px 22px;font-weight:600;font-size:15px;cursor:pointer;min-height:48px;text-decoration:none;
-  display:inline-flex;align-items:center;gap:8px;box-shadow:var(--sh-1);transition:transform .08s ease,box-shadow .15s ease}
-.btn:hover{box-shadow:var(--sh-2)}
-.btn:active{transform:translateY(1px)}
-.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
-.btn.link{border:0;background:transparent;box-shadow:none;color:var(--accent-ink);padding:12px 4px;min-height:0}
-.btn.link:hover{box-shadow:none}
+/* .btn and its variants are defined once, in the Phase 2 block further down. */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media(max-width:640px){.grid2{grid-template-columns:1fr}}
 .course{border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-height:150px;
@@ -98,7 +91,7 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 .chip{border:1px solid var(--line);background:#fff;color:var(--mut);border-radius:999px;
   padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:var(--sh-1);
   min-height:0;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip.on{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;border-color:transparent;box-shadow:var(--sh-tint)}
 
 /* Circular icon badge used on cards and stat tiles. */
 .ibadge{width:44px;height:44px;border-radius:14px;display:inline-flex;align-items:center;
@@ -124,6 +117,71 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 .topbar{display:flex;align-items:center;gap:12px;padding:14px 0}
 .topbar .logo{font-weight:900;font-size:20px}
 .topbar nav{margin-left:auto;display:flex;gap:8px}
+
+/* ---- Motion -----------------------------------------------------------
+   A rule for the whole product: if it moves, something changed. Nothing loops
+   and nothing bounces. Durations are short so the interface feels responsive
+   rather than decorative. */
+:root{
+  --dur-1:120ms; --dur-2:200ms; --dur-3:320ms;
+  --ease:cubic-bezier(.2,.7,.3,1);
+  --lift:-2px;
+}
+/* Someone who has asked their system for less motion gets none of it. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important}
+}
+
+/* ---- Buttons (Phase 2) -----------------------------------------------
+   Fills carry a glow of their own colour so an action looks like itself.
+   Amber is reserved for anything involving money. */
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:var(--r-sm);
+  padding:12px 22px;font-weight:700;font-size:15px;cursor:pointer;min-height:48px;text-decoration:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:var(--sh-1);
+  transition:transform var(--dur-1) var(--ease),box-shadow var(--dur-2) var(--ease),
+    background-color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease)}
+.btn:hover{transform:translateY(var(--lift));box-shadow:var(--sh-2)}
+.btn:active{transform:translateY(0)}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn[disabled],.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* Teal lead: a gradient rather than a flat fill, so it has some depth. */
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  color:#fff;border-color:transparent;box-shadow:var(--sh-tint)}
+.btn.primary:hover{box-shadow:0 12px 30px rgba(20,97,110,.34)}
+
+/* Money actions are amber. Nothing else may use this. */
+.btn.paid{background:linear-gradient(135deg,#B5741A,var(--gold-ink));color:#fff;
+  border-color:transparent;box-shadow:var(--sh-gold)}
+.btn.paid:hover{box-shadow:0 12px 30px rgba(154,98,18,.32)}
+
+/* Ghost is for anything that floats over content. */
+.btn.ghost{background:rgba(255,255,255,.72);backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);border-color:rgba(255,255,255,.6);box-shadow:var(--sh-2)}
+.btn.ghost:hover{background:rgba(255,255,255,.9)}
+
+.btn.link{border:0;background:transparent;box-shadow:none;color:var(--accent-ink);
+  padding:12px 4px;min-height:0;font-weight:700}
+.btn.link:hover{box-shadow:none;transform:none;color:var(--accent-deep);text-decoration:underline}
+.btn.lg{font-size:17px;padding:15px 28px;min-height:56px;border-radius:var(--r-md)}
+
+/* ---- Surfaces (Phase 2) ----------------------------------------------
+   Glass is reserved for things that sit above content. A card in the page flow
+   should be a card, not a pane of frosted glass. */
+.glass{background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.2);
+  -webkit-backdrop-filter:blur(16px) saturate(1.2);border:1px solid rgba(255,255,255,.7);
+  border-radius:var(--r-lg);box-shadow:var(--sh-3)}
+
+/* ---- Entrance (Phase 2) ----------------------------------------------
+   Used once, when something appears. Never looped. */
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.rise{animation:rise var(--dur-3) var(--ease) both}
+.fade{animation:fade var(--dur-2) var(--ease) both}
+/* Staggered by index so a list arrives as a sequence, not a slab. */
+.rise-1{animation-delay:40ms}.rise-2{animation-delay:80ms}
+.rise-3{animation-delay:120ms}.rise-4{animation-delay:160ms}
 
 /* ---- Patterned surfaces (Phase 1) ---------------------------------------
    A pattern sits under a soft wash so it stays atmospheric rather than busy.
