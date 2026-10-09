@@ -1,10 +1,14 @@
 'use client';
 import { useState } from 'react';
 import { getAccess } from '@/lib/client-auth';
+import CertConsent from './CertConsent';
 
 export default function RegisterButton({ trainingId, full, label }: { trainingId: string; full: boolean; label?: string }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Default false on purpose. Registration works either way; publishing does not happen
+  // by accident.
+  const [certConsentPublic, setCertConsentPublic] = useState(false);
 
   async function go() {
     const access = getAccess();
@@ -15,7 +19,7 @@ export default function RegisterButton({ trainingId, full, label }: { trainingId
       const r = await fetch(`/api/trainings/${trainingId}/register`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-        body: JSON.stringify({ certConsentPublic: true }),
+        body: JSON.stringify({ certConsentPublic }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -52,7 +56,8 @@ export default function RegisterButton({ trainingId, full, label }: { trainingId
 
   return (
     <span>
-      <button className="btn primary" disabled={full || busy} onClick={go}>
+      <CertConsent checked={certConsentPublic} onChange={setCertConsentPublic} id={`cert-${trainingId}`} />
+      <button className="btn primary" disabled={full || busy} onClick={go} style={{ marginTop: 10 }}>
         {full ? 'Full' : busy ? 'Working…' : label || 'Reserve seat'}
       </button>
       {msg && <p className="muted">{msg}</p>}

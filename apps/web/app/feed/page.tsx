@@ -63,12 +63,8 @@ export default function Feed() {
     return r.ok ? r.json().catch(() => ({})) : null;
   }
 
-  async function register(trainingId: string) {
-    const j = await authed(`/api/trainings/${trainingId}/register`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ certConsentPublic: true }),
-    });
-    if (j) { setMsg('Seat reserved!'); load(); }
-  }
+  // Registration moved to /t/[slug]/register, which carries the consent checkbox.
+// Nothing on the feed registers directly any more.
 
   return (
     <div className="wrap">
@@ -208,10 +204,14 @@ export default function Feed() {
               <button className="btn" onClick={async () => { const j = await authed(`/api/trainings/${p.training!.id}/save`, { method: 'POST' }); if (j) load(); }}>
                 {p.saved ? '⧉ Saved' : '⧉ Save'}
               </button>
-              <button className="btn primary" disabled={full} onClick={() => register(p.training!.id)}>
+              {/* Sends to the registration page rather than registering inline. This button used
+                  to POST certConsentPublic:true straight from the feed, publishing
+                  everyone who tapped it with no consent shown. The register page
+                  carries the day picker, the price and the consent checkbox. */}
+              <Link className="btn primary" href={`/t/${p.training!.slug}/register`}>
                 {full ? 'Full' : `Register · ${p.training!.seatsLeft} left`}
-              </button>
-              <Link className="btn link" href={`/t/${p.training!.slug}/register`}>Invite →</Link>
+              </Link>
+              <Link className="btn link" href={`/t/${p.training!.slug}/register`}>Details →</Link>
             </div>
             )}
             <div className="btnrow">

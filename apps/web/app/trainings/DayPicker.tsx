@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { getAccess } from '@/lib/client-auth';
 import { formatNgn } from '@learnovize/shared';
+import CertConsent from './CertConsent';
 
 export type PickerDay = {
   id: string;
@@ -30,6 +31,8 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
   const [picked, setPicked] = useState<string[]>(days.map((d) => d.id));
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Unticked by default. See CertConsent — publishing must be an affirmative choice.
+  const [certConsentPublic, setCertConsentPublic] = useState(false);
   const access = typeof window !== 'undefined' ? getAccess() : null;
 
   const chosen = days.filter((d) => picked.includes(d.id));
@@ -49,7 +52,7 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
       const r = await fetch(`/api/trainings/${trainingId}/register`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-        body: JSON.stringify({ certConsentPublic: true, dayIds: picked }),
+        body: JSON.stringify({ certConsentPublic, dayIds: picked }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -111,6 +114,16 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
           );
         })}
       </div>
+
+      {/* Consent is only meaningful where a certificate exists at all, so it is not
+          shown for classes that issue none. */}
+      {certMode !== 'none' && (
+        <CertConsent
+          checked={certConsentPublic}
+          onChange={setCertConsentPublic}
+          id={`cert-day-${trainingId}`}
+        />
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
         <p style={{ margin: 0, fontWeight: 800 }}>
