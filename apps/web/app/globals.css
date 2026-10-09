@@ -1,16 +1,52 @@
 :root{
-  /* Canvas is a soft tint so white cards lift off it, as in the reference screens. */
-  --bg:#F4F5F9; --card:#FFFFFF;
-  --ink:#1C2430; --mut:#6B7785;          /* 4.56:1 on white — AA for body text */
-  --line:#E7EAEF;          /* hairline, not a heavy outline */
-  /* --accent paints fills; --accent-ink is the text-safe variant (6.17:1 on white). */
-  --accent:#1B7E8D; --accent-ink:#156B78; --accent-deep:#0F5C68;
-  --pill:#F1F4F5;
-  --radius:20px;
-  /* Elevation carries the depth now that borders are hairline. */
-  --sh-1:0 1px 2px rgba(20,32,45,.05);
-  --sh-2:0 2px 10px rgba(20,32,45,.06);
-  --sh-3:0 12px 30px rgba(20,32,45,.10);
+  /* ---- Warm canvas -------------------------------------------------------
+     A warm neutral base rather than blue-grey. White cards lift off it because
+     the tint is a temperature rather than a colour, which keeps long sessions
+     comfortable to read. */
+  --bg:#FBF6EE; --card:#FFFFFF;
+  --ink:#241C15; --mut:#7A6A5C;          /* 4.9:1 on white — AA for body text */
+  --line:#ECE1D3;          /* warm hairline, not a heavy outline */
+  --pill:#F5EDE2;
+
+  /* ---- Semantic colour ---------------------------------------------------
+     Teal leads. Amber means money and is reserved for paid things. Green means
+     earned or confirmed and is reserved for achievement. Clay is the warm
+     secondary. Colour is a signal here, not decoration, so these are not
+     interchangeable. */
+  --accent:#1B7E8D; --accent-ink:#14616E; --accent-deep:#0E4A55;
+  --gold:#9A6212;  --gold-ink:#7E4F0C;  --gold-soft:#FBF0DC;
+  --leaf:#2F6B41;  --leaf-ink:#235334;  --leaf-soft:#E6F2E9;
+  --clay:#B4552F;  --clay-ink:#93421F;  --clay-soft:#FBEBE3;
+
+  /* ---- Shape -------------------------------------------------------------
+     One radius scale. Components pick a step rather than inventing one, which
+     is what makes unrelated screens feel like the same product. */
+  --r-xs:10px; --r-sm:14px; --r-md:20px; --r-lg:28px; --r-full:999px;
+
+  /* ---- Space -------------------------------------------------------------
+     A four-pixel rhythm. Arbitrary spacing is what makes a codebase drift. */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:22px; --s-6:30px; --s-7:44px;
+
+  /* ---- Elevation ---------------------------------------------------------
+     Shadows are tinted with the warm base rather than neutral grey, so depth
+     reads as light falling on paper instead of a grey smudge. */
+  --sh-1:0 1px 2px rgba(58,40,25,.06);
+  --sh-2:0 2px 10px rgba(58,40,25,.07);
+  --sh-3:0 12px 30px rgba(58,40,25,.10);
+  --sh-tint:0 8px 24px rgba(20,97,110,.26);   /* teal glow, primary actions */
+  --sh-gold:0 8px 24px rgba(154,98,18,.24);   /* amber glow, paid actions */
+
+  --radius:var(--r-md);
+}
+
+/* ---- Patterns ---------------------------------------------------------
+   Four abstract repeats for surfaces. Used sparingly — on a hero or a section
+   break — so they read as a place with character rather than wallpaper. */
+:root{
+  --pat-weave:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M0 48L48 0M-12 12L12 -12M36 60L60 36' stroke='%2314616E' stroke-opacity='.09' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  --pat-arcs:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cpath d='M0 64a64 64 0 0 1 64-64' stroke='%23B4552F' stroke-opacity='.10' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  --pat-dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='2' cy='2' r='1.6' fill='%232F6B41' fill-opacity='.11'/%3E%3C/svg%3E");
+  --pat-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='24' viewBox='0 0 40 24'%3E%3Cpath d='M0 12l10-10 10 10 10-10 10 10' stroke='%239A6212' stroke-opacity='.12' stroke-width='2' fill='none'/%3E%3C/svg%3E");
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);
@@ -73,10 +109,14 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 .bottomnav .in{max-width:960px;margin:0 auto;display:flex;padding:10px 0 14px}
 .bottomnav a{flex:1;text-align:center;text-decoration:none;color:var(--mut);font-size:12px;font-weight:600}
 .bottomnav a.on{color:var(--accent-ink);font-weight:800}
-.err{background:#FDECEC;border:1px solid #F3C9C9;border-radius:14px;padding:12px 16px;margin-top:12px;color:#8F1D1D}
-.okmsg{background:#E4F5EA;border:1px solid #C6E7D2;border-radius:14px;padding:12px 16px;margin-top:12px;color:#0B1F14}
-.badge{display:inline-block;background:var(--pill);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:800}
-.badge.ok{background:#E4F5EA;color:#0B1F14}.badge.rev{background:#FDECEC;color:#8F1D1D}
+.err{background:var(--clay-soft);border:1px solid #F0D3C5;border-radius:var(--r-sm);padding:12px 16px;margin-top:12px;color:var(--clay-ink)}
+.okmsg{background:var(--leaf-soft);border:1px solid #C6E0CF;border-radius:var(--r-sm);padding:12px 16px;margin-top:12px;color:var(--leaf-ink)}
+.badge{display:inline-block;background:var(--pill);border-radius:var(--r-full);padding:6px 14px;font-size:13px;font-weight:800}
+.badge.ok{background:var(--leaf-soft);color:var(--leaf-ink)}
+.badge.rev{background:var(--clay-soft);color:var(--clay-ink)}
+/* Paid is amber everywhere, so price and payment read the same wherever they appear. */
+.badge.paid{background:var(--gold-soft);color:var(--gold-ink)}
+.badge.free{background:var(--pill);color:var(--mut)}
 .muted{color:var(--mut)}
 /* Visible to screen readers only. Rank is shown as an icon alone, so the name
    still has to reach assistive tech. */
@@ -84,3 +124,31 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 .topbar{display:flex;align-items:center;gap:12px;padding:14px 0}
 .topbar .logo{font-weight:900;font-size:20px}
 .topbar nav{margin-left:auto;display:flex;gap:8px}
+
+/* ---- Patterned surfaces (Phase 1) ---------------------------------------
+   A pattern sits under a soft wash so it stays atmospheric rather than busy.
+   Reserve these for a hero or a section break, never behind body text. */
+.pat-weave{background-image:var(--pat-weave)}
+.pat-arcs{background-image:var(--pat-arcs)}
+.pat-dots{background-image:var(--pat-dots)}
+.pat-chevron{background-image:var(--pat-chevron)}
+
+.surface{position:relative;overflow:hidden;background-repeat:repeat}
+.surface::before{content:'';position:absolute;inset:0;pointer-events:none}
+.surface::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(251,246,238,.72),rgba(251,246,238,.94))}
+.surface>*{position:relative;z-index:1}
+
+/* Hero: the warm canvas, a pattern behind it, and a hairline to sit it on. */
+.surface-hero{border-radius:var(--r-lg);padding:var(--s-6) var(--s-5);
+  background-color:var(--bg);border:1px solid var(--line);box-shadow:var(--sh-2)}
+
+/* Tinted icon tile — the coloured-shadow version of the old grey badge. */
+.tile-icon{width:52px;height:52px;border-radius:var(--r-sm);display:inline-flex;
+  align-items:center;justify-content:center;font-size:24px;flex:0 0 auto;
+  box-shadow:0 6px 16px rgba(58,40,25,.10)}
+.tile-icon.tint-accent{background:#E4F1F3;box-shadow:0 6px 16px rgba(20,97,110,.20)}
+.tile-icon.tint-gold{background:var(--gold-soft);box-shadow:0 6px 16px rgba(154,98,18,.20)}
+.tile-icon.tint-leaf{background:var(--leaf-soft);box-shadow:0 6px 16px rgba(47,107,65,.20)}
+.tile-icon.tint-clay{background:var(--clay-soft);box-shadow:0 6px 16px rgba(180,85,47,.20)}
+.tile-icon.tint-neutral{background:var(--pill);box-shadow:0 6px 16px rgba(58,40,25,.10)}
