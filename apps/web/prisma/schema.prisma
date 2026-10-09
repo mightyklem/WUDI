@@ -167,6 +167,12 @@ model TrainerApproval {
   trainer           TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
   idDocUrls         String[] // private bucket only, never public
   expertiseEvidence String?
+  // When the trainer agreed to us storing their identity document, and which wording
+  // they agreed to. Without this there is no artifact proving consent was ever
+  // obtained -- the form collected no checkbox and nothing was recorded. Versioned so
+  // a change to the wording later can be shown to have been consented to separately.
+  consentAt         DateTime?
+  consentVersion    String?
   status            String   @default("pending") // pending|approved|rejected|revoked
   reviewerId        String?
   decidedAt         DateTime?
