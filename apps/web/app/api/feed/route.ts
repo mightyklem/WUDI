@@ -191,7 +191,9 @@ export async function POST(req: Request) {
   }
 
   const post = await prisma.feedPost.create({
-    data: { trainingId, type, mediaUrl, status: 'live' },
+    // authorId was left null, so every post read as unattributed and the verified-badge
+    // check had nothing to evaluate. A trainer's post belongs to that trainer.
+    data: { trainingId, type, mediaUrl, authorId: userId, kind: 'training', status: 'live' },
   });
   return NextResponse.json({ post }, { status: 201 });
 }
