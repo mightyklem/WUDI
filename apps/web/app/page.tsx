@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import FirstRunGuide from './FirstRunGuide';
 
 export const dynamic = 'force-dynamic';
 
@@ -130,13 +131,7 @@ export default async function Home() {
           <Link className="btn" href="/trainings/new">Host a training</Link>
         </div>
       </div>
-      <h2 className="sec">How it works</h2>
-      <div className="grid2">
-        <div className="course"><span className="status">Step 1</span><span className="ctitle">Register free</span><span className="cmeta">One invite link. Seats close automatically at the cap.</span></div>
-        <div className="course"><span className="status">Step 2</span><span className="ctitle">Attend live</span><span className="cmeta">Present means staying 75%+ of the session. Progress shown live.</span></div>
-        <div className="course"><span className="status">Step 3</span><span className="ctitle">Earn a certificate</span><span className="cmeta">Meet the minimum, get approved, verify online with a unique number.</span></div>
-        <div className="course"><span className="status">Trust</span><span className="ctitle">Verifiable forever</span><span className="cmeta">Employers check any number — revoked certs show as revoked.</span></div>
-      </div>
+      <FirstRunGuide />
       <nav className="bottomnav"><div className="in">
         <Link href="/" className="on">🏠<br />Home</Link>
         <Link href="/trainers">📚<br />Trainers</Link>
