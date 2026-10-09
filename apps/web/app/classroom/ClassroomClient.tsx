@@ -283,10 +283,47 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
   const canMod = role === 'trainer' || role === 'moderator';
   const mayPublish = role !== 'participant' || canSpeak;
   // Hands that have not yet been granted speech, in the order they were raised.
-  const waiting = useMemo(
-    () => [...hands].filter((id) => !room.getParticipantByIdentity(id)?.permissions?.canPublish),
-    [hands, room],
-  );
+// Bumped whenever a participant's permissions change. Without it the memo below never
+// re-runs after an Allow, so a learner kept showing as "waiting" after being granted
+// speech -- the queue disagreed with the room.
+const [permVersion, setPermVersion] = useState(0);
+useEffect(() => {
+  const bump = () => setPermVersion((v) => v + 1);
+  room.on(RoomEvent.ParticipantPermissionsChanged, bump);
+  return () => { room.off(RoomEvent.ParticipantPermissionsChanged, bump); };
+}, [room]);
+
+// Only count a hand from someone actually in the room. An identity that has left has no
+// participant record, so it cannot be resolved and would sit in the queue forever.
+const waiting = useMemo(
+  () => [...hands].filter((id) => {
+    const p = room.getParticipantByIdentity(id);
+    return !!p && !p.permissions?.canPublish;
+  }),
+  [hands, room, permVersion],
+);
+
+  // People currently holding speech. Mute has to act on these, not on the waiting queue:
+  // a learner who has not been granted speech cannot publish, so muting them is a no-op.
+  const [speakable, setSpeakable] = useState<string[]>([]);
+  useEffect(() => {
+    const refresh = () => {
+      const ids: string[] = [];
+      room.remoteParticipants.forEach((p) => {
+        if (p.permissions?.canPublish) ids.push(p.identity);
+      });
+      setSpeakable(ids);
+    };
+    refresh();
+    room.on(RoomEvent.ParticipantPermissionsChanged, refresh);
+    room.on(RoomEvent.TrackMuted, refresh);
+    room.on(RoomEvent.TrackUnmuted, refresh);
+    return () => {
+      room.off(RoomEvent.ParticipantPermissionsChanged, refresh);
+      room.off(RoomEvent.TrackMuted, refresh);
+      room.off(RoomEvent.TrackUnmuted, refresh);
+    };
+  }, [room]);
 
   async function moderate(action: 'mute' | 'allowSpeak' | 'remove' | 'end', identity?: string) {
     const access = getAccess();
@@ -415,6 +452,39 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
         </div>
       )}
 
+      {/* Mute lives beside Allow rather than in a roster at the foot of the page. It only
+          appears for someone who has actually been granted speech, because muting a learner
+          who cannot publish yet would do nothing and read as a broken button. */}
+      {canMod && speakable.length > 0 && (
+        <div
+          className="rise"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            marginTop: 12, padding: '10px 14px', borderRadius: 'var(--r-md)',
+            background: 'var(--surface-2, #F7F4EF)', border: '1px solid var(--line-2, #E7E0D5)',
+          }}
+        >
+          <span className="tile-icon tint-accent" aria-hidden
+            style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', fontSize: 17 }}>🎙</span>
+          <b style={{ fontSize: 14 }}>Can speak</b>
+          {speakable.map((id) => (
+            <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 13 }}>{nameOf(room, id)}</span>
+              <button className="btn" style={{ minHeight: 0, padding: '5px 12px', fontSize: 13 }}
+                onClick={() => moderate('mute', id)}>
+                Mute
+              </button>
+              {hands.has(id) && (
+                <button className="btn" style={{ minHeight: 0, padding: '5px 12px', fontSize: 13 }}
+                  onClick={() => moderate('allowSpeak', id)}>
+                  Allow again
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
       {hands.size > 0 && (
         <p className="muted" style={{ fontSize: 14 }}>
           ✋ Waiting to speak: {[...hands].map((id) => nameOf(room, id)).join(', ')}
@@ -535,22 +605,12 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
       </div>
       {msg && <div className="okmsg">{msg}</div>}
       {canMod && <p className="muted" style={{ fontSize: 13 }}>A learner can only speak once you allow it. Everyone else is listen-only.</p>}
-      {canMod && (
-        <RemoteRoster
-          hands={hands}
-          onAllow={(id) => moderate('allowSpeak', id)}
-          onMute={(id) => moderate('mute', id)}
-        />
-      )}
+      {canMod && <RemoteRoster hands={hands} />}
     </div>
   );
 }
 
-function RemoteRoster({ hands, onAllow, onMute }: {
-  hands: Set<string>;
-  onAllow: (id: string) => void;
-  onMute: (id: string) => void;
-}) {
+function RemoteRoster({ hands }: { hands: Set<string> }) {
   const room = useRoomContext();
   const remotes = [...room.remoteParticipants.values()];
   if (!remotes.length) return null;
@@ -559,6 +619,9 @@ function RemoteRoster({ hands, onAllow, onMute }: {
       <p className="eyebrow" style={{ marginBottom: 8 }}>
         Learners · no one is ever removed from a session
       </p>
+      {/* Read-only on purpose. Allow and Mute both live under the stage now, where the
+          trainer is already looking; a second copy down here meant two buttons for the
+          same action, and the wrong one being pressed looked like it did nothing. */}
       {remotes.map((p) => {
         const speaking = !!p.permissions?.canPublish;
         const raised = hands.has(p.identity);
@@ -569,11 +632,6 @@ function RemoteRoster({ hands, onAllow, onMute }: {
               {raised && !speaking ? ' ✋' : ''}
               {speaking ? ' 🎙' : ''}
             </span>
-            {!speaking ? (
-              <button className="btn primary" onClick={() => onAllow(p.identity)}>Allow speech</button>
-            ) : (
-              <button className="btn" onClick={() => onMute(p.identity)}>Mute</button>
-            )}
           </div>
         );
       })}
