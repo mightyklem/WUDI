@@ -8,6 +8,22 @@ const REFRESH_DAYS = 30;
 function secret(): Uint8Array {
   const s = process.env.JWT_SECRET;
   if (!s) throw new Error('JWT_SECRET is not set (see apps/web/.env.example)');
+  // Every other secret in this codebase fails loudly in production -- storage refuses to
+  // fall back to disk, payments refuses to fall back to mock. This one did not, so a
+  // deploy that copied .env.example and changed nothing else signed tokens with a string
+  // published in the repository. Anyone could mint an admin token, and admin reaches ID
+  // documents and payouts. A missing length check is the whole hole.
+  if (process.env.NODE_ENV === 'production') {
+    if (s.length < 32) {
+      throw new Error(`JWT_SECRET must be at least 32 characters in production (got ${s.length}).`);
+    }
+    if (s === 'dev-only-change-me-in-production-min-32-chars') {
+      throw new Error('JWT_SECRET is still the example value. Generate a real secret before deploying.');
+    }
+    if (!/[a-zA-Z]/.test(s) || !/[0-9]/.test(s)) {
+      throw new Error('JWT_SECRET in production must mix letters and numbers.');
+    }
+  }
   return new TextEncoder().encode(s);
 }
 

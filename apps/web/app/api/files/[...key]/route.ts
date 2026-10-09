@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
-import { localPathFor } from '@/lib/storage';
+import { isLocalStorage, localPathFor } from '@/lib/storage';
+import { getBearer, verifyAccessToken } from '@/lib/auth';
+import { isAdmin } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,24 +23,48 @@ const TYPES: Record<string, string> = {
  * Serves files written by the local disk storage driver (.local-storage/), so
  * uploads work on a dev machine with no S3/R2 credentials.
  *
- * /api/files/<key>              -> .local-storage/public/<key>   (feed media)
- * /api/files/private/<key>      -> .local-storage/private/<key>  (ID documents)
+ * /api/files/<key>         -> .local-storage/public/<key>   (feed media, public)
+ * /api/files/private/<key> -> .local-storage/private/<key>  (ID documents)
  *
- * Private is served here too so a dev trainer can actually open what they uploaded.
- * It carries no authorisation: that is acceptable only because this route is reachable
- * when isLocalStorage() is true, which is by definition not production. Cloud deployments
- * never touch disk and keep signed, time-limited URLs.
+ * The private branch holds trainer identity documents, so it is authenticated: the owner
+ * of the upload, or an admin reviewing an approval. It used to carry no authorisation at
+ * all on the argument that this route is only reachable when local storage is on. That
+ * argument does not hold -- the guard is an env-var convention, and a deploy with R2
+ * configured and STORAGE_LOCAL unset still mounts the route and still serves private
+ * files to anyone who can guess a key. So the check is enforced here regardless, and the
+ * whole route 404s when local storage is off, because cloud objects are served by signed
+ * URLs from the bucket, never through the app.
  */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ key: string[] }> },
 ) {
+  // Not the local driver: nothing here should be reachable at all. Public media and ID
+  // documents are served by signed URLs straight from R2/S3.
+  if (!isLocalStorage()) return new NextResponse('Not found', { status: 404 });
+
   const { key: segments } = await params;
   if (!segments?.length) return new NextResponse('Not found', { status: 404 });
 
   const privateArea = segments[0] === 'private';
   const rest = privateArea ? segments.slice(1) : segments;
   if (!rest.length) return new NextResponse('Not found', { status: 404 });
+
+  if (privateArea) {
+    // Identity documents. Require a real session, then only the person who uploaded the
+    // file or an admin reviewing an approval may read it.
+    const token = getBearer(req);
+    const userId = token ? await verifyAccessToken(token) : null;
+    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+
+    // Uploads are namespaced id/<userId>/... so ownership is checkable from the key.
+    // Anything else in the private bucket is refused to everyone, admin included -- an
+    // admin has no reason to fetch a document whose owner it cannot establish.
+    const owner = /^id\/([^/]+)\//.exec(rest.join('/'))?.[1];
+    if (!owner || owner !== userId) {
+      if (!(await isAdmin(userId))) return new NextResponse('Forbidden', { status: 403 });
+    }
+  }
 
   const bucket = privateArea ? 'private' : 'public';
   // Rejects any key that resolves outside the storage root, so `../` in a URL cannot

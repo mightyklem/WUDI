@@ -3,8 +3,32 @@ import { trainerNet } from '@learnovize/shared';
 
 export type Provider = 'mock' | 'paystack';
 
+/**
+ * Resolve the payment provider, failing loudly rather than quietly.
+ *
+ * This used to be `PAYMENTS_PROVIDER === 'paystack' ? 'paystack' : 'mock'`, which made
+ * mock the silent fallback for anything else -- including a typo, an unset variable, or
+ * a deploy that simply forgot to set it. That is not a harmless default in production:
+ * mock settles a registration, creates a trainer payout and unlocks a certificate with
+ * no money ever charged. One misspelled env var would make every class free, and nothing
+ * in the logs would say so.
+ *
+ * So: production must name a real provider and anything unrecognised is an error. Mirrors
+ * the storage guard in lib/storage.ts, for the same reason.
+ */
 export function provider(): Provider {
-  return process.env.PAYMENTS_PROVIDER === 'paystack' ? 'paystack' : 'mock';
+  const raw = (process.env.PAYMENTS_PROVIDER || '').trim().toLowerCase();
+  if (raw === 'paystack') return 'paystack';
+  if (raw === '' || raw === 'mock') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'PAYMENTS_PROVIDER must be "paystack" in production. Mock settles registrations, ' +
+        'payouts and certificates without charging anyone.',
+      );
+    }
+    return 'mock';
+  }
+  throw new Error(`Unknown PAYMENTS_PROVIDER "${raw}". Use "paystack" or "mock".`);
 }
 
 export function payoutHoldDays(): number {
