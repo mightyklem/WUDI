@@ -36,10 +36,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const reg = await prisma.registration.findUnique({
         where: { trainingId_userId: { trainingId: session.trainingId, userId } },
       });
-      if (reg && reg.status === 'active') role = 'participant';
+      // A registration for the class is not enough. Learners pick specific days, and
+      // a seat on Day 1 must not admit them to Day 3 — otherwise attendance and
+      // certificates are measured against days they never paid for or chose.
+      // Registering for free days still counts: the choice was theirs.
+      if (reg && reg.status === 'active') {
+        if (session.dayId) {
+          const enrolled = await prisma.dayEnrollment.findUnique({
+            where: { registrationId_dayId: { registrationId: reg.id, dayId: session.dayId } },
+          });
+          role = enrolled ? 'participant' : null;
+        } else {
+          // Session predates the day model, so fall back to the class registration.
+          role = 'participant';
+        }
+      }
     }
   }
-  if (!role) return NextResponse.json({ error: 'Not on the roster' }, { status: 403 });
+  if (!role) {
+    return NextResponse.json(
+      { error: 'You did not register for this day of the class' },
+      { status: 403 },
+    );
+  }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.suspended) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

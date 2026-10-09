@@ -8,8 +8,10 @@ import { RoomEvent, Track } from 'livekit-client';
 import { getAccess } from '@/lib/client-auth';
 
 type Role = 'trainer' | 'moderator' | 'participant';
-type ChatMsg = { from: string; who: string; text: string; at: number };
+type ChatMsg = { key: string; from: string; who: string; text: string; at: number; reactions: Record<string, string[]> };
 type Poll = { id: string; question: string; options: string[]; open: boolean; votes: Record<number, number>; seen: Set<string> };
+type Reaction = { key: string; emoji: string; who: string; x: number };
+const REACTION_CHOICES = ['👏', '❤️', '😂', '💡', '🙋'];
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -31,8 +33,12 @@ function displayName(p?: { identity: string; name?: string }): string {
  * A screen share always takes the stage when someone is sharing. Otherwise the
  * stage goes to whoever is speaking, falling back to the first camera. The round
  * keeps every camera visible without the duplicate feeds the grid used to produce.
+ *
+ * The controls and reactions ride on the stage itself rather than sitting below
+ * it, so the person speaking can see a raised hand without looking away from the
+ * lesson, and the presenter can act on it in one place.
  */
-function StageAndRound() {
+function StageAndRound({ overlay, reactions }: { overlay?: React.ReactNode; reactions: Reaction[] }) {
   const room = useRoomContext();
   const [big, setBig] = useState(false);
 
@@ -45,46 +51,79 @@ function StageAndRound() {
   // Everyone not already on the stage, so nobody appears twice.
   const round = cameras.filter((t) => t !== stage);
 
-  if (!stage) {
-    return (
-      <div style={{ border: '1.5px solid var(--line)', borderRadius: 14, minHeight: 260, background: '#0B1F14', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p className="muted" style={{ color: '#fff' }}>Waiting for the trainer to start…</p>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ position: big ? 'fixed' : 'relative', inset: big ? 0 : undefined, zIndex: big ? 50 : undefined, background: big ? '#000' : undefined, borderRadius: big ? 0 : 14 }}>
+    <div style={{ position: big ? 'fixed' : 'relative', inset: big ? 0 : undefined, zIndex: big ? 50 : undefined }}>
       <div
         style={{
           position: 'relative',
           background: '#0B1F14',
-          borderRadius: big ? 0 : 14,
+          borderRadius: big ? 0 : 'var(--r-md)',
           overflow: 'hidden',
           border: '1.5px solid var(--line)',
+          // Landscape by default. A portrait stage wastes most of the frame and makes
+          // a shared slide impossible to read.
+          aspectRatio: '16 / 9',
+          width: '100%',
         }}
       >
-        <VideoTrack trackRef={stage as never} style={{ width: '100%', maxHeight: big ? '100vh' : 460, display: 'block' }} />
+        {stage ? (
+          <VideoTrack
+            trackRef={stage as never}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p className="muted" style={{ color: '#fff' }}>Waiting for the trainer to start…</p>
+          </div>
+        )}
+
         <span style={{ position: 'absolute', left: 10, top: 10, background: 'rgba(0,0,0,.65)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: 13 }}>
-          {share ? `🖥 ${displayName(stage.participant)} is presenting` : displayName(stage.participant)}
+          {share ? `🖥 ${displayName(stage.participant)} is presenting` : stage ? displayName(stage.participant) : ''}
         </span>
+
         <button
           type="button"
-          className="btn"
+          className="btn ghost"
           onClick={() => setBig((v) => !v)}
-          style={{ position: 'absolute', right: 10, top: 10 }}
+          style={{ position: 'absolute', right: 10, top: 10, minHeight: 0, padding: '7px 13px', fontSize: 13 }}
         >
           {big ? '⤡ Exit full screen' : '⤢ Full screen'}
         </button>
+
+        {/* Reactions float up across the stage so they read as part of the lesson. */}
+        {reactions.map((r) => (
+          <span
+            key={r.key}
+            aria-hidden
+            style={{
+              position: 'absolute', left: `${r.x}%`, bottom: '18%',
+              fontSize: 30, pointerEvents: 'none',
+              animation: `floatUp 2.4s var(--ease) forwards`,
+            }}
+          >
+            {r.emoji}
+          </span>
+        ))}
+
+        {/* Controls live on the stage, so "ask to speak" is where the lesson is. */}
+        {overlay && (
+          <div
+            className="glass"
+            style={{
+              position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: 12,
+              padding: '7px 9px', borderRadius: 'var(--r-full)', maxWidth: 'calc(100% - 20px)',
+              overflowX: 'auto', background: 'rgba(255,255,255,.86)',
+            }}
+          >
+            {overlay}
+          </div>
+        )}
       </div>
 
       {round.length > 0 && (
         <div
           style={{
-            display: 'flex',
-            gap: 10,
-            flexWrap: 'wrap',
-            marginTop: 10,
+            display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10,
             ...(big ? { position: 'fixed', right: 16, bottom: 16, zIndex: 51, marginTop: 0 } : {}),
           }}
         >
@@ -94,8 +133,7 @@ function StageAndRound() {
               style={{
                 width: 96, height: 96, borderRadius: '50%', overflow: 'hidden',
                 border: `2px solid ${t.participant.isSpeaking ? 'var(--accent)' : 'var(--line)'}`,
-                background: '#0B1F14',
-                position: 'relative',
+                background: '#0B1F14', position: 'relative',
               }}
             >
               <VideoTrack trackRef={t as never} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -131,6 +169,7 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
   const [pq, setPq] = useState('Which topic next?');
   const [popts, setPopts] = useState('Pricing, Wiring, Safety');
   const [hands, setHands] = useState<Set<string>>(new Set());
+  const [reactions, setReactions] = useState<Reaction[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   // Learners are minted listen-only. This flips true only when the server grants
   // publish rights, which arrives as a real permission event rather than a
@@ -156,7 +195,27 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
         // Keep the display name alongside the id: chat lines and the hand list
         // both read better with a name, but the id is what the trainer acts on.
         const who = displayName(participant);
-        if (topic === 'chat' && m.text) setChat((c) => [...c.slice(-99), { from, who, text: String(m.text).slice(0, 500), at: Date.now() }]);
+        if (topic === 'chat' && m.text) {
+          setChat((c) => [...c.slice(-99), {
+            key: `${from}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            from, who, text: String(m.text).slice(0, 500), at: Date.now(), reactions: {},
+          }]);
+        }
+        // A reaction on a message, keyed by its own id so everyone sees the same bubble.
+        if (topic === 'react' && m.msgKey && m.emoji) {
+          setChat((c) => c.map((x) => {
+            if (x.key !== m.msgKey) return x;
+            const mine = x.reactions[m.emoji] || [];
+            if (mine.includes(who)) return x; // one reaction per person per emoji
+            return { ...x, reactions: { ...x.reactions, [m.emoji]: [...mine, who] } };
+          }));
+        }
+        // A free-floating reaction, shown on the stage so the speaker notices.
+        if (topic === 'reaction' && m.emoji) {
+          const key = `${from}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          setReactions((r) => [...r.slice(-19), { key, emoji: String(m.emoji).slice(0, 4), who, x: 12 + Math.random() * 76 }]);
+          setTimeout(() => setReactions((r) => r.filter((x) => x.key !== key)), 2600);
+        }
         if (topic === 'poll') {
           if (m.kind === 'open') setPoll({ id: m.id, question: m.question, options: m.options, open: true, votes: {}, seen: new Set() });
           if (m.kind === 'close') setPoll((p) => (p && p.id === m.id ? { ...p, open: false } : p));
@@ -209,44 +268,70 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
           The trainer has let you speak. Turn your mic or camera on below.
         </p>
       )}
-      {/* Controls get their own glass bar rather than floating on the video, so they
-          stay legible over any camera feed without covering anyone's face. */}
-      <div className="glass" style={{ padding: '10px 12px', marginBottom: 12, borderRadius: 'var(--r-md)' }}>
-      <div className="btnrow" style={{ marginTop: 0 }}>
-        <button
-          className="btn"
-          disabled={!mayPublish}
-          onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
-        >
-          {localParticipant.isMicrophoneEnabled ? '🎙 Mute me' : '🎙 Unmute'}
-        </button>
-        {!lowData && (
-          <button
-            className="btn"
-            disabled={!mayPublish}
-            onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
-          >
-            {localParticipant.isCameraEnabled ? '📷 Cam off' : '📷 Cam on'}
-          </button>
-        )}
-        <button
-          className="btn"
-          disabled={!mayPublish}
-          onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
-        >
-          🖥 Share
-        </button>
-        {!mayPublish && (
-          <button className="btn" onClick={() => send('hand', { up: true })}>✋ Ask to speak</button>
-        )}
-        {mayPublish && (
-          <button className="btn" onClick={() => send('hand', { up: !hands.has(myId) })}>
-            ✋ {hands.has(myId) ? 'Lower hand' : 'Raise hand'}
-          </button>
-        )}
-        <label style={{ fontSize: 14 }}><input type="checkbox" checked={lowData} onChange={(e) => onLowData(e.target.checked)} /> Low-data / audio-only</label>
-        {role === 'trainer' && <button className="btn primary" onClick={() => moderate('end')}>⏻ End session</button>}
-      </div>
+      {/* Controls render onto the stage itself, so "ask to speak" sits where the
+          lesson is rather than in a bar the speaker has to look away from. */}
+      <div style={{ marginTop: 12 }}>
+        <StageAndRound
+          reactions={reactions}
+          overlay={
+            <>
+              <button
+                className="btn"
+                disabled={!mayPublish}
+                style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
+                onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
+              >
+                {localParticipant.isMicrophoneEnabled ? '🎙 Mute' : '🎙 Unmute'}
+              </button>
+              {!lowData && (
+                <button
+                  className="btn"
+                  disabled={!mayPublish}
+                  style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
+                  onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
+                >
+                  {localParticipant.isCameraEnabled ? '📷 Cam off' : '📷 Cam on'}
+                </button>
+              )}
+              <button
+                className="btn"
+                disabled={!mayPublish}
+                style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
+                onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
+              >
+                🖥 Share
+              </button>
+              {!mayPublish && (
+                <button className="btn paid" style={{ minHeight: 0, padding: '8px 16px', fontSize: 14 }}
+                  onClick={() => send('hand', { up: true })}>
+                  ✋ Ask to speak
+                </button>
+              )}
+              {mayPublish && (
+                <button className="btn" style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
+                  onClick={() => send('hand', { up: !hands.has(myId) })}>
+                  ✋ {hands.has(myId) ? 'Lower hand' : 'Raise hand'}
+                </button>
+              )}
+              {/* Free-floating reactions: they surface on the stage so a speaker
+                  notices an answer without watching the chat. */}
+              {REACTION_CHOICES.map((e) => (
+                <button key={e} className="btn" aria-label={`React ${e}`}
+                  style={{ minHeight: 0, padding: '6px 9px', fontSize: 16, borderRadius: 'var(--r-full)' }}
+                  onClick={() => send('reaction', { emoji: e })}>
+                  {e}
+                </button>
+              ))}
+              <label style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={lowData} onChange={(e) => onLowData(e.target.checked)} /> Low-data
+              </label>
+              {role === 'trainer' && (
+                <button className="btn primary" style={{ minHeight: 0, padding: '8px 16px', fontSize: 14 }}
+                  onClick={() => moderate('end')}>⏻ End</button>
+              )}
+            </>
+          }
+        />
       </div>
 
       {hands.size > 0 && (
@@ -254,17 +339,88 @@ function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: st
           ✋ Waiting to speak: {[...hands].map((id) => nameOf(room, id)).join(', ')}
         </p>
       )}
-      <div style={{ marginTop: 14 }}><StageAndRound /></div>
-
       <h2 className="sec">Chat</h2>
+      {/* Chat reads as a conversation: who said it, which side it sat on, and what
+          people thought of it. Your own messages sit apart so you can follow the thread. */}
       <div className="card">
-        <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 10 }}>
-          {chat.length === 0 && <p className="muted">No messages yet — works on 2G (data channel).</p>}
-          {chat.map((c, i) => <p key={i} style={{ margin: '4px 0' }}><b>{c.who}</b>: {c.text}</p>)}
+        <div style={{ maxHeight: 320, overflowY: 'auto', marginBottom: 10, display: 'grid', gap: 10 }}>
+          {chat.length === 0 && (
+            <p className="muted" style={{ margin: 0 }}>No messages yet — this runs on the data channel, so it works on 2G.</p>
+          )}
+          {chat.map((c) => {
+            const mine = c.from === myId;
+            const total = Object.values(c.reactions).reduce((n, v) => n + v.length, 0);
+            return (
+              <div key={c.key} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+                {!mine && (
+                  <span className="muted" style={{ fontSize: 12, marginBottom: 3 }}>{c.who}</span>
+                )}
+                <div
+                  style={{
+                    background: mine ? 'var(--accent)' : 'var(--pill)',
+                    color: mine ? '#fff' : 'var(--ink)',
+                    padding: '9px 13px',
+                    borderRadius: mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                    maxWidth: '82%',
+                    fontSize: 15,
+                    boxShadow: 'var(--sh-1)',
+                  }}
+                >
+                  {c.text}
+                </div>
+                <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
+                  {/* Reactions already on this message, counted per person. */}
+                  {Object.entries(c.reactions).map(([emoji, who]) => (
+                    <button
+                      key={emoji}
+                      className="btn"
+                      aria-label={`${emoji} ${who.length}`}
+                      onClick={() => send('react', { msgKey: c.key, emoji })}
+                      style={{
+                        minHeight: 0, padding: '2px 8px', fontSize: 12, borderRadius: 999,
+                        background: who.includes(displayName({ identity: c.from, name: c.from })) ? 'var(--accent-soft)' : '#fff',
+                      }}
+                    >
+                      {emoji} {who.length}
+                    </button>
+                  ))}
+                  {['👏', '❤️', '💡'].map((e) => (
+                    <button
+                      key={'add-' + e}
+                      className="btn link"
+                      aria-label={`React ${e}`}
+                      onClick={() => send('react', { msgKey: c.key, emoji: e })}
+                      style={{ minHeight: 0, padding: '2px 6px', fontSize: 12 }}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                  {total > 0 && <span className="muted" style={{ fontSize: 11, alignSelf: 'center' }}>{total}</span>}
+                </div>
+              </div>
+            );
+          })}
         </div>
         <div className="btnrow" style={{ marginTop: 0 }}>
-          <input type="text" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Message everyone…" style={{ maxWidth: 320 }} />
-          <button className="btn primary" onClick={() => { if (draft.trim()) { send('chat', { text: draft.trim() }); setDraft(''); } }}>Send</button>
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && draft.trim()) {
+                send('chat', { text: draft.trim() });
+                setDraft('');
+              }
+            }}
+            placeholder="Message everyone…"
+            style={{ maxWidth: 320 }}
+          />
+          <button
+            className="btn primary"
+            onClick={() => { if (draft.trim()) { send('chat', { text: draft.trim() }); setDraft(''); } }}
+          >
+            Send
+          </button>
         </div>
       </div>
 

@@ -13,7 +13,7 @@
      earned or confirmed and is reserved for achievement. Clay is the warm
      secondary. Colour is a signal here, not decoration, so these are not
      interchangeable. */
-  --accent:#1B7E8D; --accent-ink:#14616E; --accent-deep:#0E4A55;
+  --accent:#1B7E8D; --accent-ink:#14616E; --accent-deep:#0E4A55; --accent-soft:#E4F1F3;
   --gold:#9A6212;  --gold-ink:#7E4F0C;  --gold-soft:#FBF0DC;
   --leaf:#2F6B41;  --leaf-ink:#235334;  --leaf-soft:#E6F2E9;
   --clay:#B4552F;  --clay-ink:#93421F;  --clay-soft:#FBEBE3;
@@ -176,6 +176,12 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 /* ---- Entrance (Phase 2) ----------------------------------------------
    Used once, when something appears. Never looped. */
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* A reaction drifting up across the stage. One-shot, then it is gone. */
+@keyframes floatUp{
+  0%{opacity:0;transform:translateY(24px) scale(.7)}
+  18%{opacity:1;transform:translateY(0) scale(1.1)}
+  100%{opacity:0;transform:translateY(-120px) scale(1)}
+}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .rise{animation:rise var(--dur-3) var(--ease) both}
 .fade{animation:fade var(--dur-2) var(--ease) both}
