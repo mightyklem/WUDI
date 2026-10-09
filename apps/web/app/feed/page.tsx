@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
 import { QuoteStrip } from './QuoteStrip';
 import { formatNgn } from '@learnovize/shared';
+import { lagosWhenLabel } from '@/lib/lagos';
 
 type Post = {
   id: string; type: string; mediaUrl: string; likeCount: number;
@@ -182,7 +183,7 @@ export default function Feed() {
             </div>
             <h3 style={{ margin: '10px 0 4px', fontSize: 20, fontWeight: 800 }}>{p.training.title}</h3>
             <p className="muted" style={{ margin: '0 0 14px', fontSize: 14 }}>
-              {p.training.firstSession ? new Date(p.training.firstSession).toUTCString().slice(0, 22) : 'Date to be announced'}
+              {p.training.firstSession ? lagosWhenLabel(p.training.firstSession) : 'Date to be announced'}
               {' · '}
               {p.training.accessType === 'paid'
                 ? `${formatNgn(p.training.pricePerDayNgn ?? 0)}/day`

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import ClassroomClient from '../ClassroomClient';
 import { formatNgn } from '@learnovize/shared';
+import { lagosSpanLabel } from '@/lib/lagos';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,7 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
               {session.training.trainer.displayName}
               {day ? ` · ${day.topic ?? `Day ${day.dayIndex}`}` : ''}
               {' · '}
-              {new Date(session.startsAtUtc).toUTCString().slice(0, 22)} – {new Date(session.endsAtUtc).toUTCString().slice(17, 22)} UTC
+              {lagosSpanLabel(session.startsAtUtc, session.endsAtUtc)}
             </p>
           </div>
           {/* Live only: stating it here means nobody joins expecting a replay. */}

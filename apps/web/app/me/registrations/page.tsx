@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import { lagosWhenLabel } from '@/lib/lagos';
 
 type Reg = {
   id: string;
@@ -105,7 +106,7 @@ export default function MyRegistrations() {
           <div className="rowitem" key={r.id} style={{ borderRadius: 16, marginBottom: 12 }}>
             <div>
               <p className="rtitle" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{r.training.title}</p>
-              <p className="muted" style={{ margin: '2px 0 0' }}>{r.training.sessions[0] ? new Date(r.training.sessions[0].startsAtUtc).toUTCString() : ''}</p>
+              <p className="muted" style={{ margin: '2px 0 0' }}>{r.training.sessions[0] ? lagosWhenLabel(r.training.sessions[0].startsAtUtc) : ''}</p>
               {p && (
                 <p style={{ margin: '6px 0 0', fontSize: 14 }}>
                   {p.presentCount} of {p.training.total} sessions · {p.pct}% — need {p.training.minPct}%

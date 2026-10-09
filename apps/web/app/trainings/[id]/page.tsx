@@ -9,6 +9,7 @@ import PostComposer from '../PostComposer';
 import DayPricingEditor from '../DayPricingEditor';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import { quoteFor } from '@/lib/pricing';
+import { lagosSpanLabel } from '@/lib/lagos';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ if (!t) return notFound();
       <div className="card" style={{ marginTop: 18 }}>
         <p className="eyebrow">{t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} · {left} / {t.cap} seats left {full && '(FULL)'}</p>
         {t.sessions.map((s) => (
-          <p key={s.id} className="meta">🗓 {s.startsAtUtc.toUTCString()} → {s.endsAtUtc.toUTCString()} <Link className="btn link" href={`/classroom/${s.id}`}>Join classroom →</Link></p>
+          <p key={s.id} className="meta">🗓 {lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)} <Link className="btn link" href={`/classroom/${s.id}`}>Join classroom →</Link></p>
         ))}
         <div className="btnrow"><RegisterButton trainingId={t.id} full={full || t.status !== 'live'} /></div>
       </div>

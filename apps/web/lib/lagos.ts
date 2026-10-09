@@ -58,6 +58,56 @@ export function lagosToday(): string {
   return utcToLagosParts(new Date()).date;
 }
 
+/**
+ * Learner-facing time, in West Africa Time.
+ *
+ * Times used to be shown in UTC, which nobody scheduling a 9pm class thinks in. A
+ * trainer entering "20:00" and a learner reading the room both mean Lagos time, so
+ * that is what gets displayed -- and it is labelled WAT, because a bare clock time
+ * with no zone invites someone to read it as their own.
+ */
+const TZ_LABEL = 'WAT';
+
+function fmtClock(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const suffix = h < 12 ? 'am' : 'pm';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`;
+}
+
+function fmtDay(date: string): string {
+  const d = new Date(date + 'T00:00:00Z');
+  return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+/** "Thu 9 Oct" in Lagos. */
+export function lagosDayLabel(iso: string | Date): string {
+  const { date } = utcToLagosParts(iso);
+  return date ? fmtDay(date) : '';
+}
+
+/** "Thu 9 Oct, 12:13pm WAT" in Lagos. */
+export function lagosWhenLabel(iso: string | Date): string {
+  const { date, time } = utcToLagosParts(iso);
+  return date ? `${fmtDay(date)}, ${fmtClock(time)} ${TZ_LABEL}` : '';
+}
+
+/**
+ * A session's span in Lagos, collapsing the repeated date when it starts and ends on
+ * the same day -- which is nearly always, and repeating it only adds noise.
+ */
+export function lagosSpanLabel(startIso: string | Date, endIso: string | Date): string {
+  const s = utcToLagosParts(startIso);
+  const e = utcToLagosParts(endIso);
+  if (!s.date || !e.date) return '';
+  if (s.date === e.date) {
+    return `${fmtDay(s.date)}, ${fmtClock(s.time)} – ${fmtClock(e.time)} ${TZ_LABEL}`;
+  }
+  // Runs past midnight: name both days, otherwise the end time looks like it is
+  // earlier than the start.
+  return `${fmtDay(s.date)} ${fmtClock(s.time)} – ${fmtDay(e.date)} ${fmtClock(e.time)} ${TZ_LABEL}`;
+}
+
 /** Add whole days to a YYYY-MM-DD string, staying on calendar dates. */
 export function addDays(date: string, days: number): string {
   const d = new Date(date + 'T00:00:00Z');

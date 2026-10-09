@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import FirstVisitAuth from './FirstVisitAuth';
+import { lagosWhenLabel } from '@/lib/lagos';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,7 +106,7 @@ export default async function Home() {
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontWeight: 800, fontSize: 17 }}>{s.training.title}</div>
                   <div style={{ fontSize: 13, opacity: .88 }}>
-                    {s.training.trainer.displayName} · ends {s.endsAtUtc.toUTCString().slice(17, 22)} UTC
+                    {s.training.trainer.displayName} · ends {lagosWhenLabel(s.endsAtUtc)}
                   </div>
                 </div>
                 <Link className="btn" href={`/classroom/${s.id}`} style={{ background: '#fff', color: '#0F5C68', borderColor: '#fff' }}>
@@ -128,7 +129,7 @@ export default async function Home() {
               <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontWeight: 700 }}>{s.training.title}</div>
-                  <div className="muted" style={{ fontSize: 13 }}>{s.startsAtUtc.toUTCString().slice(0, 22)}</div>
+                  <div className="muted" style={{ fontSize: 13 }}>{lagosWhenLabel(s.startsAtUtc)}</div>
                 </div>
                 <Link className="btn primary" href={`/t/${s.training.slug}/register`}>Reserve a seat</Link>
               </div>

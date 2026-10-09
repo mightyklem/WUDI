@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
+import { lagosWhenLabel } from '@/lib/lagos';
 
 type Me = {
   user: { id: string; email: string; role: 'admin' | 'trainer' | 'participant'; verified: boolean };
@@ -157,7 +158,7 @@ export default function Dashboard() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>{nextUp.title}</p>
               <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
-                {nextUp.nextSessionAt ? new Date(nextUp.nextSessionAt).toUTCString().slice(0, 22) : ''}
+                {nextUp.nextSessionAt ? lagosWhenLabel(nextUp.nextSessionAt) : ''}
               </p>
             </div>
             {nextUp.nextSession && (
