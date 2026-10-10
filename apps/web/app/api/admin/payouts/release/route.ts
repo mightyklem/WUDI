@@ -2,29 +2,41 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { isAdmin } from '@/lib/admin';
+import { releasePayout } from '@/lib/payout-release';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/admin/payouts/release — pay out held funds whose hold period passed (FR-9.4).
-// (A scheduler calls this in production; manual trigger suffices for Phase 6.)
+/**
+ * POST /api/admin/payouts/release { payoutId }
+ *
+ * One payout at a time, and only when that payout is actually releasable.
+ *
+ * This replaced a bulk route that marked every due payout 'paid' in a loop with a
+ * comment where the transfer should go. It told trainers they had been paid and sent
+ * nothing. Nothing about that was recoverable, because nothing was ever attempted.
+ */
 export async function POST(req: Request) {
   const token = getBearer(req);
   const actorId = token ? await verifyAccessToken(token) : null;
   if (!actorId || !(await isAdmin(actorId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const due = await prisma.payout.findMany({
-    where: { status: 'held', holdUntil: { lte: new Date() } },
-  });
-  for (const p of due) {
-    // Real transfer happens here (Paystack Transfers) once live keys exist.
-    await prisma.payout.update({ where: { id: p.id }, data: { status: 'paid' } });
-    await prisma.notification.create({
-      data: { userId: p.trainerId, type: 'payout-paid', payload: { trainingId: p.trainingId, amountNet: p.amountNet } },
-    });
+
+  const { payoutId } = (await req.json().catch(() => ({}))) as { payoutId?: string };
+  if (!payoutId) return NextResponse.json({ error: 'payoutId required' }, { status: 400 });
+
+  const result = await releasePayout(payoutId, actorId);
+  if (!result.ok) {
+    // 409 for "we won't do this yet", 502 for "the provider said no". Different problems
+    // deserve different handling by whoever is looking at the screen.
+    const status = ['not-found', 'already-paid'].includes(result.code)
+      ? 404
+      : result.code === 'transfer-failed'
+        ? 502
+        : 409;
+    return NextResponse.json({ error: result.message, code: result.code }, { status });
   }
-  await prisma.auditLog.create({
-    data: { actorId, action: 'payout.release', target: `count:${due.length}`, reason: null },
-  });
-  return NextResponse.json({ released: due.map((p) => ({ id: p.id, amountNet: p.amountNet })) });
+
+  // `ok` comes from the result itself, so do not also put it in the spread.
+  return NextResponse.json({ ...result, ok: true });
 }

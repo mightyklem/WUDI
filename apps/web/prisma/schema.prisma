@@ -395,6 +395,15 @@ model Payout {
   status     String   @default("pending") // pending|held|paid|failed
   holdUntil  DateTime?
   createdAt  DateTime @default(now())
+  // Who released it, and when. Payouts are admin-approved, so the person who decided to
+  // send real money is part of the record -- without it, "paid" is unfalsifiable.
+  approvedById String?
+  approvedAt   DateTime?
+  // Paystack's transfer reference and numeric id, so a status can be reconciled against
+  // the provider rather than inferred from our own optimistic update.
+  transferRef   String?
+  transferId    String?
+  failureReason String?
 }
 
 /// Where a trainer's money actually goes.

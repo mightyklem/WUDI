@@ -3,6 +3,7 @@ import type { Prisma } from '@/generated/prisma';
 import { prisma } from '@/lib/db';
 import { provider, validPaystackSignature, verifyPaystack } from '@/lib/payments';
 import { settlePaidPayment } from '@/lib/settle';
+import { reconcileReversal } from '@/lib/payout-release';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,27 @@ export async function POST(req: Request) {
   if (!validPaystackSignature(raw, signature)) {
     return NextResponse.json({ error: 'Bad signature' }, { status: 401 });
   }
-  const evt = JSON.parse(raw) as { event?: string; data?: { reference?: string; status?: string } };
+  const evt = JSON.parse(raw) as {
+    event?: string;
+    data?: { reference?: string; status?: string; reason?: string; transfer_code?: string };
+  };
   const webhookJson = JSON.parse(raw) as Record<string, unknown>; // stored verbatim as dispute evidence
+
+  // Transfer lifecycle. A transfer we accepted can still be reversed by Paystack later,
+  // and without this a trainer stays marked paid for money that was clawed back.
+  if (evt.event?.startsWith('transfer.')) {
+    const reference = evt.data?.reference;
+    if (reference && ['transfer.failed', 'transfer.reversed'].includes(evt.event)) {
+      const reason = evt.data?.reason || evt.event;
+      await reconcileReversal(reference, reason);
+      await prisma.payment.updateMany({
+        where: { providerRef: reference },
+        data: { rawWebhook: webhookJson as Prisma.InputJsonValue },
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   if (evt.event !== 'charge.success' || !evt.data?.reference) {
     return NextResponse.json({ ok: true, ignored: true });
   }
