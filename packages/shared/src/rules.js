@@ -11,7 +11,29 @@ export const MIN_PCT_FLOOR = 60;
 export const MIN_PCT_CEIL = 100;
 
 export const PLAN_CAPS = Object.freeze({ free: 50, pro: 200, business: 500 });
-export const PLAN_COMMISSION = Object.freeze({ free: 0.05, pro: 0.03, business: 0.01 });
+
+/**
+ * Learnovize's commission: a flat 25%.
+ *
+ * Where this number comes from. Live-class marketplaces charge roughly 18-33% for
+ * bringing the student: Wyzant 25%, Outschool 30%, italki 30% on group classes, Preply
+ * 33% at entry. Self-serve creator platforms charge 0-3%, but only because the trainer
+ * brings their own traffic. 25% sits with the marketplaces because that is what a
+ * learner-facing platform is actually doing.
+ *
+ * At the real volume this is priced for -- 50 seats on a N1,500 class is N75,000 gross
+ * -- the trainer still nets about N55,000, or N1,101 per learner, for a day of
+ * teaching. The platform keeps ~N20,000 per class, which is the first number in this
+ * file that actually covers LiveKit, storage and the time spent reviewing trainers.
+ *
+ * The free/pro/business tiers were designed to cut this to 3% and 1%, but nothing in
+ * the product ever sold them, so every trainer sat on 'free' regardless. Splitting by
+ * plan now would advertise a discount nobody can buy.
+ */
+export const COMMISSION_RATE = 0.25;
+
+/** Retained so callers can keep passing a plan; the rate no longer varies by one. */
+export const PLAN_COMMISSION = Object.freeze({ free: COMMISSION_RATE, pro: COMMISSION_RATE, business: COMMISSION_RATE });
 
 /** Clamp trainer-set minimum attendance % to 60–100 (FR-3.6). */
 export function clampMinPct(raw, fallback = DEFAULT_MIN_PCT) {
@@ -50,10 +72,11 @@ export function isEligible({ pct, minPct = DEFAULT_MIN_PCT, certMode = 'none', p
  * Amounts are whole naira; result rounded to nearest naira.
  */
 export function commission(plan, amountNgn) {
-  const rate = PLAN_COMMISSION[plan];
-  if (rate === undefined) throw new RangeError(`Unknown plan: ${plan}`);
   if (!Number.isFinite(amountNgn) || amountNgn < 0) throw new RangeError('amount must be >= 0');
-  return Math.round(amountNgn * rate);
+  if (plan !== 'free' && plan !== 'pro' && plan !== 'business') {
+    throw new RangeError(`Unknown plan: ${plan}`);
+  }
+  return Math.round(amountNgn * COMMISSION_RATE);
 }
 
 /** FR-9.3: trainer net = amount − provider fee − commission. */

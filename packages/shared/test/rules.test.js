@@ -44,14 +44,20 @@ describe('certificates (FR-8)', () => {
 });
 
 describe('money (FR-9)', () => {
-  it('commission by plan', () => {
-    assert.equal(commission('free', 10000), 500);
-    assert.equal(commission('pro', 10000), 300);
-    assert.equal(commission('business', 10000), 100);
+  it('commission is a flat 25% whatever the plan', () => {
+    // The free/pro/business split never shipped -- nothing ever sold an upgrade, so
+    // every trainer sat on 'free' anyway. A per-plan rate now would advertise a
+    // discount that cannot be bought.
+    assert.equal(commission('free', 10000), 2500);
+    assert.equal(commission('pro', 10000), 2500);
+    assert.equal(commission('business', 10000), 2500);
+  });
+  it('an unknown plan is still rejected', () => {
+    assert.throws(() => commission('enterprise', 10000), RangeError);
   });
   it('trainer net split', () => {
     assert.deepEqual(trainerNet({ amountNgn: 10000, providerFeeNgn: 200, plan: 'pro' }),
-      { providerFeeNgn: 200, commissionNgn: 300, netNgn: 9500 });
+      { providerFeeNgn: 200, commissionNgn: 2500, netNgn: 7300 });
   });
   it('refunds', () => {
     assert.equal(refundDecision({ cancelledBy: 'trainer' }).refund, true);
