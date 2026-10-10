@@ -9,3 +9,5 @@ apps/web/generated/
 # Local disk storage driver: uploaded media and rendered e-cards. Real uploads live in
 # R2/S3, so nothing here belongs in version control.
 .local-storage/
+# tsc incremental build info
+tsconfig.tsbuildinfo

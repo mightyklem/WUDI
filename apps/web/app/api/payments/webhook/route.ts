@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { provider, validPaystackSignature, verifyPaystack } from '@/lib/payments';
 import { settlePaidPayment } from '@/lib/settle';
 import { reconcileReversal } from '@/lib/payout-release';
+import { VERIFICATION_PREFIX, settleVerificationFromWebhook } from '@/lib/verification-settle';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,14 @@ export async function POST(req: Request) {
 
   if (evt.event !== 'charge.success' || !evt.data?.reference) {
     return NextResponse.json({ ok: true, ignored: true });
+  }
+
+  // Verification fees are not registration payments. Route them by reference prefix
+  // before the registration settler sees them, and never let a paid badge fall
+  // through to the registration path -- it would try to match a nonexistent seat.
+  if (evt.data.reference.startsWith(VERIFICATION_PREFIX)) {
+    const outcome = await settleVerificationFromWebhook(evt.data.reference);
+    return NextResponse.json({ ok: true, verification: outcome });
   }
   // Trust-but-verify: confirm with Paystack before crediting.
   const v = await verifyPaystack(evt.data.reference);

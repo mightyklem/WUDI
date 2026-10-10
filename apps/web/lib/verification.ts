@@ -37,11 +37,25 @@ export function badgeExpiry(from = new Date()) {
  * out of step with the review that justified it, and an expired badge would keep being
  * displayed forever. Only a verified review, inside its validity window, counts.
  */
-export function badgeState(app, now = new Date()) {
+export function badgeState(
+  app:
+    | {
+        status: string;
+        finalRating?: string | null;
+        badgeExpiresAt?: Date | string | null;
+      }
+    | null
+    | undefined,
+  now = new Date(),
+) {
   if (!app) return { verified: false, label: null, reason: 'not-applied' };
   if (app.status !== 'verified') {
     return { verified: false, label: null, reason: app.status };
   }
+  // Status is only ever set by a reviewer, never by a payment, so reaching here means a
+  // person vouched for this trainer. A null expiry therefore reads as "does not lapse"
+  // rather than "not verified" -- losing an expiry row should not silently strip a
+  // legitimately verified trainer of their badge.
   if (app.badgeExpiresAt && new Date(app.badgeExpiresAt) <= now) {
     // Lapsed, but still a verified person -- distinguish from never-verified so the
     // UI can say "needs renewing" rather than "not verified".
@@ -66,14 +80,14 @@ export function badgeState(app, now = new Date()) {
  * service, and it is the fastest way to make the badge meaningless to the people it is
  * meant to reassure.
  */
-export function refundDecisionForReview({ approved, paidNgn }) {
+export function refundDecisionForReview({ approved, paidNgn }: { approved: boolean; paidNgn: number }) {
   if (approved) return { refund: false, reason: 'approved' };
   if (!paidNgn || paidNgn <= 0) return { refund: false, reason: 'nothing-paid' };
   return { refund: true, reason: 'review-rejected', amountNgn: paidNgn };
 }
 
 /** One purchase per application. A second payment for the same application is refused. */
-export function canPurchaseBadge(app) {
+export function canPurchaseBadge(app?: { paidAt?: Date | string | null; refundedAt?: Date | string | null; status?: string } | null) {
   if (!app) return { ok: true, reason: 'new' };
   if (app.paidAt && !app.refundedAt && app.status !== 'rejected') {
     return { ok: false, reason: 'already-paid' };
