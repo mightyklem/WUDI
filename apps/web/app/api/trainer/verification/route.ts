@@ -17,6 +17,9 @@ export async function GET(req: Request) {
     application: app
       ? {
           status: app.status,
+          // The applicant gets their own answers back so a half-finished form is not
+          // lost. These are their own words, so there is nothing sensitive to withhold.
+          answers: app.answers,
           formSubtotal: app.formSubtotal,
           totalScore: app.totalScore,
           band: app.band,
