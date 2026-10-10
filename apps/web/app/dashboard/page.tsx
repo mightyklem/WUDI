@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import PaymentDueBanner from './PaymentDueBanner';
 import { getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel } from '@/lib/lagos';
@@ -83,6 +84,9 @@ export default function Dashboard() {
         {head.title}
       </h1>
       <p className="sub">{me.user.email}</p>
+
+      {/* Anything unpaid, before anything else on the page. */}
+      <PaymentDueBanner />
 
 {points && (
         <div
