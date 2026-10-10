@@ -21,6 +21,8 @@ export type Eligibility = {
   /** The days the certificate would cover, and how to describe them. */
   dayIds: string[];
   scopeLabel: string;
+  /** Attended days that were free, so the UI can say why they are not on the certificate. */
+  excludedFreeDays: string[];
 };
 
 /** "Full program" when every day was attended, otherwise the days covered. */
@@ -39,6 +41,13 @@ export function scopeLabelFor(days: { dayIndex: number; topic: string | null }[]
  * Scoped to the days the learner actually enrolled in (FR-11). A learner who
  * bought two days of a five-day class is measured on those two days, and their
  * certificate records that scope rather than claiming the whole program.
+ *
+ * On a paid-certificate class the scope is further narrowed to the days actually
+ * PAID for. A trainer can open some days free, and a free day is outside the
+ * certificate entirely: it does not appear on it, and it does not count towards
+ * the attendance percentage either. Letting it dilute completion would fail a
+ * learner who turned up to everything they bought; letting it inflate completion
+ * would mean buying one day of a five-day programme counts as 100% of it.
  */
 export async function computeEligibility(trainingId: string, userId: string): Promise<Eligibility> {
   const training = await prisma.training.findUnique({
@@ -56,23 +65,47 @@ export async function computeEligibility(trainingId: string, userId: string): Pr
   });
 
   const chosen = new Set((reg?.dayEnrollments ?? []).map((d) => d.dayId));
+  // Days the learner actually paid for. A free day is not part of a paid certificate.
+  const paidDayIds = new Set(
+    (reg?.dayEnrollments ?? []).filter((d) => d.paid && d.priceNgn > 0).map((d) => d.dayId),
+  );
+
   // Registrations created before day-picking existed have no day choices, so they
   // fall back to the whole training rather than silently measuring nothing.
-  const scopedDays = chosen.size ? training.days.filter((d) => chosen.has(d.id)) : training.days;
+  let scopedDays = chosen.size ? training.days.filter((d) => chosen.has(d.id)) : training.days;
+  // Only narrow to paid days on a paid-certificate class where we can actually tell
+  // which were paid. Otherwise leave the scope alone -- a free class has no
+  // certificate to narrow, and an unpaid pending registration must still be measurable.
+  if (training.certMode === 'paid' && paidDayIds.size) {
+    scopedDays = scopedDays.filter((d) => paidDayIds.has(d.id));
+  }
+
   const scopedDayIds = new Set(scopedDays.map((d) => d.id));
   // A session with no day attached predates the day model; keep it in scope.
-  const scopedSessions = training.sessions.filter((s) => !s.dayId || scopedDayIds.has(s.dayId));
-
+  // Attendance is read across every day the learner chose, not just the certificate
+  // scope: the scope decides what counts towards completion, but we still need to know
+  // whether a free day was attended in order to explain its absence from the certificate.
+  const chosenSessions = training.sessions.filter((s) => !s.dayId || chosen.size === 0 || chosen.has(s.dayId));
   const logs = await prisma.attendanceLog.findMany({
-    where: { userId, sessionId: { in: scopedSessions.map((s) => s.id) } },
+    where: { userId, sessionId: { in: chosenSessions.map((s) => s.id) } },
   });
   const presentSessions = new Set(logs.filter((l) => l.present).map((l) => l.sessionId));
-  const presentCount = presentSessions.size;
+
+  // Narrow to the certificate scope only after reading attendance.
+  const scopedSessions = chosenSessions.filter((s) => !s.dayId || scopedDayIds.has(s.dayId));
+  const presentCount = scopedSessions.filter((s) => presentSessions.has(s.id)).length;
   const total = scopedSessions.length;
   const pct = programPct(presentCount, total);
 
   const paidOk = training.certMode !== 'paid' || (reg?.certPaid ?? false);
   const attendedDays = scopedDays.filter((d) => d.sessions.some((s) => presentSessions.has(s.id)));
+  // Free days the learner did attend, so the UI can explain their absence rather than
+  // leaving a certificate that quietly covers less than the person expected.
+  const excludedFreeDays = training.days
+    .filter((d) => d.accessType !== 'paid' && (chosen.size === 0 || chosen.has(d.id)))
+    .filter((d) => !paidDayIds.has(d.id))
+    .filter((d) => d.sessions.some((s) => presentSessions.has(s.id)))
+    .map((d) => `Day ${d.dayIndex}`);
 
   return {
     presentCount, total, pct,
@@ -80,6 +113,7 @@ export async function computeEligibility(trainingId: string, userId: string): Pr
     eligible: reg?.status === 'active' && isEligible({ pct, minPct: training.minPct, certMode: training.certMode, paid: reg?.certPaid ?? false }),
     dayIds: attendedDays.map((d) => d.id),
     scopeLabel: scopeLabelFor(training.days, attendedDays),
+    excludedFreeDays,
   };
 }
 

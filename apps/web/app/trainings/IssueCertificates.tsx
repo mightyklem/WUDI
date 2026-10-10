@@ -6,6 +6,7 @@ type Row = {
   userId: string; email: string; pct: number; presentCount: number; total: number;
   minMet: boolean; paidOk: boolean; eligible: boolean;
   certificateNumber: string | null; certificateId: string | null;
+  scopeLabel?: string; dayCount?: number; excludedFreeDays?: string[];
 };
 
 export default function IssueCertificates({ trainingId }: { trainingId: string }) {
@@ -65,6 +66,18 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
             ) : r.eligible ? (
               <> · <button className="btn link" style={{ minHeight: 0, padding: 0 }} onClick={() => issue([r.userId])}>Issue</button></>
             ) : ' · ineligible'}
+            {/* Say what the certificate covers, and what it will not. A trainer issuing a
+                certificate that quietly omits a day the learner attended is how a
+                "completed" programme ends up being smaller than advertised. */}
+            {r.eligible && (
+              <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+                Covers {r.dayCount} paid day{r.dayCount === 1 ? '' : 's'}
+                {r.scopeLabel && r.scopeLabel !== 'Full program' ? ` · ${r.scopeLabel}` : ''}
+                {r.excludedFreeDays?.length
+                  ? ` · excludes ${r.excludedFreeDays.join(', ')} (free)`
+                  : ''}
+              </div>
+            )}
           </div>
         ))}
         {eligible.length > 1 && (

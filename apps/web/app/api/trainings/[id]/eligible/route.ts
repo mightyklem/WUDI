@@ -39,6 +39,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       // What a certificate for this learner would actually cover (FR-11).
       scopeLabel: e.scopeLabel,
       dayCount: e.dayIds.length,
+      // Free days they attended but which are not on the certificate, so a trainer can
+      // explain the gap instead of the learner discovering it on the PDF.
+      excludedFreeDays: e.excludedFreeDays,
       certificateNumber: certified.get(r.userId)?.number || null,
       certificateId: certified.get(r.userId)?.id || null,
     });
