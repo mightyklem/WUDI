@@ -5,6 +5,48 @@ import { eraseAccount, erasureBlockers } from '@/lib/erasure';
 
 export const dynamic = 'force-dynamic';
 
+
+// GET /api/me — identity + role, so the app can route each person to the right home.
+//
+// This handler was destroyed once already: adding DELETE below was done by rewriting the
+// whole file, which silently removed GET and made every signed-in dashboard redirect back
+// to /login with a 405. Restored alongside DELETE.
+export async function GET(req: Request) {
+  const token = getBearer(req);
+  const userId = token ? await verifyAccessToken(token) : null;
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { trainerProfile: true },
+  });
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // An erased account keeps its row for the financial ledger, but must be unreachable.
+  if (user.deletedAt) return NextResponse.json({ error: 'This account has been deleted' }, { status: 410 });
+
+  // Three roles. Admin wins, then trainer, then participant.
+  const role = user.isAdmin ? 'admin' : user.trainerProfile ? 'trainer' : 'participant';
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      role,
+      isTrainer: !!user.trainerProfile,
+      isAdmin: user.isAdmin,
+      verified: !!user.emailVerifiedAt,
+    },
+    trainer: user.trainerProfile
+      ? {
+          displayName: user.trainerProfile.displayName,
+          approvalState: user.trainerProfile.approvalState,
+          // Free trainings are allowed immediately; paid certificates need platform approval.
+          canOfferPaidCert: user.trainerProfile.paidCertApproved,
+          plan: user.trainerProfile.plan,
+        }
+      : null,
+  });
+}
+
 /**
  * DELETE /api/me { password }
  *
