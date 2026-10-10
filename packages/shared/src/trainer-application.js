@@ -51,13 +51,28 @@ export const BEST_SKILL = [
   { value: 'something_else', label: 'Something else' },
 ];
 
-/** 10 of the 30 skill points. On-the-job, school and a mentor all count as structured. */
+/**
+ * 10 of the 30 skill points.
+ *
+ * Weighted toward having *done* the work rather than having studied it. The original
+ * brief had on-the-job, school and a mentor tied at 10; that treats a fresh sociology
+ * graduate as level with someone eight years into a trade, which is not what this is
+ * for. The point is people who are actually in the profession, so:
+ *
+ *   on the job      10  doing it, not studying it
+ *   a mentor         8  taught by someone doing it
+ *   taught myself    6  self-directed and practical
+ *   school           5  structured theory, less applied
+ *   just practice    3  experience without structure or anyone checking it
+ *
+ * Same 10-point ceiling, so the total is unchanged and the bands still mean the same.
+ */
 export const HOW_LEARNED = [
   { value: 'on_the_job', label: 'On the job', points: 10 },
-  { value: 'school', label: 'School or university', points: 10 },
-  { value: 'mentor', label: 'A mentor', points: 10 },
+  { value: 'mentor', label: 'A mentor', points: 8 },
   { value: 'taught_myself', label: 'Teaching myself online', points: 6 },
-  { value: 'just_practice', label: 'Just practice', points: 4 },
+  { value: 'school', label: 'School or university', points: 5 },
+  { value: 'just_practice', label: 'Just practice', points: 3 },
 ];
 
 /** 20 of the 30 skill points. */
