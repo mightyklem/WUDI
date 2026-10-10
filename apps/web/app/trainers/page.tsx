@@ -3,8 +3,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
 import SiteNav from '../components/SiteNav';
+import VerifiedBadge from '../components/VerifiedBadge';
 
-type Trainer = { userId: string; displayName: string; bio: string | null; topics: string[] };
+type Trainer = {
+  userId: string; displayName: string; bio: string | null; topics: string[];
+  badge: { verified: boolean; expired?: boolean; label: string | null; rating?: string | null };
+};
 
 export default function Trainers() {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -40,7 +44,7 @@ export default function Trainers() {
         {trainers.map((t) => (
           <div className="course" key={t.userId}>
             <span className="status">{t.topics.join(' · ') || 'Trainer'}</span>
-            <span className="ctitle">{t.displayName}</span>
+            <span className="ctitle">{t.displayName} <VerifiedBadge state={t.badge} size="sm" /></span>
             <span className="cmeta">{t.bio || 'Live classes only.'}</span>
             <span className="cfoot">
               {following.has(t.userId) ? '✓ Following' : (
