@@ -65,9 +65,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     totalNgn: chosenDays.reduce((sum, d) => sum + d.priceNgn, 0),
     lines: chosenDays.map((d) => ({ id: d.id, label: `Day ${d.dayIndex}`, topic: d.topic, accessType: d.accessType, priceNgn: d.priceNgn })),
   };
-  if (t.certMode === 'paid' && chosenDays.some((d) => d.accessType !== 'paid')) {
-    return NextResponse.json({ error: 'A certified class needs all paid days' }, { status: 409 });
-  }
+  // A trainer may open some days of a paid class for free. That used to be refused
+  // outright -- "A certified class needs all paid days" -- so a learner picking a free
+  // preview day alongside paid ones could not register at all. That is not a rule worth
+  // enforcing: free days cost nothing, and refusing the seat teaches nobody anything.
+  // The learner now registers for whichever days they chose and pays for exactly those;
+  // certificate eligibility already depends on payment, not on the day mix.
+  const freeDays = chosenDays.filter((d) => d.accessType !== 'paid');
+  const hasFreeDay = freeDays.length > 0;
 
   try {
     const reg = await prisma.$transaction(async (tx) => {
@@ -134,6 +139,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         // The UI needs to know whether to send them straight to payment.
         requiresPayment: t.accessType === 'paid',
         price,
+        // So the learner is told plainly what a free day means rather than finding out at
+        // certificate time: the seat is theirs, but this day does not count towards a
+        // paid certificate.
+        hasFreeDay,
+        freeDayNote: hasFreeDay
+          ? `Day${freeDays.length === 1 ? '' : 's'} ${freeDays.map((d) => d.dayIndex).join(', ')} ${freeDays.length === 1 ? 'is' : 'are'} free — you can attend, but free days do not count towards a paid certificate.`
+          : null,
       },
       { status: 201 },
     );

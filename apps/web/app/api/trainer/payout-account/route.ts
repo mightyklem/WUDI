@@ -47,11 +47,11 @@ export async function POST(req: Request) {
   }
 
   const resolved = await resolveAccount((accountNumber || '').replace(/\s/g, ''), bankCode);
-  if (!resolved) {
-    return NextResponse.json(
-      { error: 'Paystack could not match that account number to that bank. Check both and try again.' },
-      { status: 422 },
-    );
+  if ('error' in resolved) {
+    // Pass Paystack's own words through. They name the actual cause — a test-mode daily
+    // cap, or the bank code test mode expects — which is the only way someone can act on
+    // it. A generic "check both and try again" makes them retype a number that was right.
+    return NextResponse.json({ error: resolved.error }, { status: 422 });
   }
 
   await savePayoutAccount(userId, {

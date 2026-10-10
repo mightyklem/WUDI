@@ -43,18 +43,25 @@ export async function nigeriaBanks(): Promise<Bank[]> {
 
 /**
  * Ask Paystack who owns this account number.
- * Returns null when the combination does not resolve to a real account.
+ *
+ * Returns the refusal reason rather than a bare null. Paystack's own messages are the
+ * useful part -- "test mode daily limit exceeded", "use bank code 001" -- and replacing
+ * them with a generic "check both and try again" leaves someone retyping a correct
+ * account number because we threw away the only clue.
  */
 export async function resolveAccount(
   accountNumber: string,
   bankCode: string,
-): Promise<{ accountName: string } | null> {
+): Promise<{ accountName: string } | { error: string }> {
   const res = await paystackGet<{
     data?: { account_name?: string };
     status?: boolean;
+    message?: string;
   }>(`/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`);
+
   const name = res.data?.account_name;
-  return name ? { accountName: name } : null;
+  if (name) return { accountName: name };
+  return { error: res.message || 'Paystack could not match that account number to that bank.' };
 }
 
 /**
