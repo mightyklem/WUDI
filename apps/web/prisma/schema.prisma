@@ -185,6 +185,7 @@ paidCertApproved  Boolean @default(false)
 
   approvals TrainerApproval[]
   trainings Training[]
+  payoutAccounts PayoutAccount[]
 }
 
 model TrainerApproval {
@@ -394,6 +395,37 @@ model Payout {
   status     String   @default("pending") // pending|held|paid|failed
   holdUntil  DateTime?
   createdAt  DateTime @default(now())
+}
+
+/// Where a trainer's money actually goes.
+///
+/// The account number is encrypted at rest, never stored in the clear. It is a real
+/// person's bank account number: a plaintext copy in this table turns any database leak,
+/// any admin dump, and any careless log line into a direct route to someone's bank.
+///
+/// verifiedAt records that Paystack resolved the number to a real account name. A payout
+/// is refused without it, because a transfer to a mistyped account is not reversible.
+///
+/// accountNumberLast4 exists so the settings screen can show which account is on file
+/// without decrypting anything.
+model PayoutAccount {
+  id                   String   @id @default(cuid())
+  trainerId            String
+  trainer              TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  bankCode             String
+  bankName             String
+  accountNumberEnc     String
+  accountNumberLast4   String
+  accountName          String
+  // Paystack's reusable handle for this account. Creating it is what makes a later
+  // transfer a two-line call rather than re-resolving every time.
+  recipientCode        String?
+  verifiedAt           DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([trainerId, bankCode, accountNumberLast4])
+  @@index([trainerId])
 }
 
 model FeedPost {

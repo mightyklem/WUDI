@@ -59,7 +59,7 @@ export type InitResult = { reference: string; payUrl: string | null; accessCode:
  * Only loopback hosts are accepted. A deployed instance can never be pointed at a remote
  * host, so a stray or leaked env var cannot redirect live payments.
  */
-function paystackApi(): string {
+export function paystackApi(): string {
   const base = (process.env.PAYSTACK_API_BASE || 'https://api.paystack.co').replace(/\/$/, '');
   if (base === 'https://api.paystack.co') return base;
   let host: string;
@@ -72,6 +72,41 @@ function paystackApi(): string {
     throw new Error('PAYSTACK_API_BASE may only point at localhost');
   }
   return base;
+}
+
+/**
+ * The single place that talks to Paystack with the secret key. Bank lists, account
+ * resolution, refunds and transfers all go through here rather than each building their
+ * own client, so there is one place to look when auth or the API base changes.
+ *
+ * Never throws on a Paystack-level failure — those come back as { status:false, message }
+ * with an HTTP status, because a failed resolve is a normal outcome to handle, not an
+ * exception to crash on.
+ */
+export async function paystackGet<T>(path: string): Promise<T> {
+  const r = await fetch(`${paystackApi()}${path}`, {
+    headers: { authorization: `Bearer ${mustSecretKey()}` },
+  });
+  return (await r.json().catch(() => ({}))) as T;
+}
+
+export async function paystackPost<T>(path: string, body: unknown): Promise<T> {
+  const r = await fetch(`${paystackApi()}${path}`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${mustSecretKey()}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  return (await r.json().catch(() => ({}))) as T;
+}
+
+/** Fails loudly rather than sending an unauthenticated request that looks like success. */
+function mustSecretKey(): string {
+  const k = process.env.PAYSTACK_SECRET_KEY;
+  if (!k) throw new Error('PAYSTACK_SECRET_KEY is not set (see apps/web/.env.example)');
+  return k;
 }
 
 /** Initialize a checkout. Mock returns a local simulator; Paystack returns its hosted URL. */
