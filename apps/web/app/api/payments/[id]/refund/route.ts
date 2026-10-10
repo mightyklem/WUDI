@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
+import { refundPaystack } from '@/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!ok) {
     return NextResponse.json({ error: 'No refund: inside 24h window and training holds' }, { status: 409 });
   }
+
+  // Move the money FIRST. The previous version marked the payment refunded in the
+  // database without ever calling Paystack, so a participant could be told their money
+  // was returned when it never left. If this fails we say so and change nothing.
+  const result = await refundPaystack(payment.providerRef, refundNgn);
+  if (!result.ok) {
+    await prisma.auditLog.create({
+      data: {
+        actorId: userId,
+        action: 'payment.refund.failed',
+        target: `payment:${payment.providerRef}`,
+        reason: result.message.slice(0, 300),
+      },
+    });
+    return NextResponse.json(
+      { error: `Refund could not be completed: ${result.message}` },
+      { status: 502 },
+    );
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.payment.update({ where: { id }, data: { status: 'refunded' } });
     await tx.registration.update({ where: { id: reg.id }, data: { certPaid: false } });
@@ -62,5 +83,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       data: { userId: reg.userId, type: 'payment-refunded', payload: { trainingId: training.id, refundNgn } },
     });
   });
-  return NextResponse.json({ ok: true, refundNgn });
+  return NextResponse.json({ ok: true, refundNgn, refundId: result.refundId });
 }

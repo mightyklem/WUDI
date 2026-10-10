@@ -109,6 +109,37 @@ function mustSecretKey(): string {
   return k;
 }
 
+/**
+ * Refund a transaction through Paystack.
+ *
+ * Returns the outcome rather than throwing, because "Paystack declined this" is a normal
+ * result the caller has to render. Most importantly it never reports success on its own:
+ * only a truthy `status` from Paystack counts as refunded. The previous refund route
+ * marked payments refunded locally with no call here at all, so a customer could be told
+ * their money was back when it never had left.
+ */
+export async function refundPaystack(
+  providerRef: string,
+  amountNgn?: number,
+): Promise<{ ok: true; refundId: string } | { ok: false; message: string }> {
+  // Paystack takes kobo; a partial refund must be in kobo too or it reads as 100x too small.
+  const payload: Record<string, unknown> = { reference: providerRef };
+  if (typeof amountNgn === 'number' && amountNgn > 0) payload.amount = toKobo(amountNgn);
+
+  const res = await paystackPost<{
+    status?: boolean;
+    message?: string;
+    data?: { id?: number | string; reference?: string };
+  }>('/refund', payload);
+
+  if (res.status && res.data) {
+    return { ok: true, refundId: String(res.data.reference || res.data.id || providerRef) };
+  }
+  // The most common real-world refusal: the transaction has not settled yet, and Paystack
+  // will not refund money it has not received.
+  return { ok: false, message: res.message || 'Paystack declined the refund.' };
+}
+
 /** Initialize a checkout. Mock returns a local simulator; Paystack returns its hosted URL. */
 export async function initCheckout(opts: { email: string; amountNgn: number; reference: string }): Promise<InitResult> {
   if (provider() === 'paystack') {
