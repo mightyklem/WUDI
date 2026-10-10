@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../../components/SiteNav';
 
 export default function Approval() {
   const [state, setState] = useState<{ approvalState: string; paidCertApproved: boolean; rejectionReason: string | null } | null>(null);
@@ -53,9 +54,7 @@ export default function Approval() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/trainer/earnings">Earnings</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Paid approval.</h1>
       <p className="sub">Free trainings need no approval. Paid certification does — ID + proof of expertise, reviewed by staff.</p>
       {state && (

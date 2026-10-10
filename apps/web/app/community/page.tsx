@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import SiteNav from '../components/SiteNav';
 
 export const dynamic = 'force-static';
 
@@ -14,9 +15,7 @@ const rules = [
 export default function Community() {
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/terms">Terms</Link><Link className="btn link" href="/privacy">Privacy</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Community rules.</h1>
       <p className="sub">Short version: teach for real, keep it clean, keep certificates honest.</p>
       <div className="card" style={{ marginTop: 18 }}>

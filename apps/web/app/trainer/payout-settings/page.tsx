@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../../components/SiteNav';
 
 type Bank = { code: string; name: string };
 type Account = {
@@ -67,13 +68,7 @@ export default function PayoutSettings() {
 
   return (
     <div className="wrap">
-      <div className="topbar">
-        <span className="logo">Learnovize</span>
-        <nav>
-          <Link className="btn link" href="/">Home</Link>
-          <Link className="btn link" href="/trainer/earnings">Earnings</Link>
-        </nav>
-      </div>
+      <SiteNav />
 
       <h1>Where to get paid.</h1>
       <p className="sub">

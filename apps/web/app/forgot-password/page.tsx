@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import SiteNav from '../components/SiteNav';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -32,10 +33,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="wrap">
-      <div className="topbar">
-        <span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/login">Back to login</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Forgot your password?</h1>
       <p className="sub">We will email you a link to set a new one.</p>
 

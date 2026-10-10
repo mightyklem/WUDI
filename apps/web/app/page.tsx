@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import FirstVisitAuth from './FirstVisitAuth';
+import SiteNav from './components/SiteNav';
 import { lagosWhenLabel } from '@/lib/lagos';
 
 export const dynamic = 'force-dynamic';
@@ -33,16 +34,7 @@ export default async function Home() {
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   return (
     <div className="wrap">
-      <div className="topbar">
-        <span className="logo">Learnovize</span>
-        <nav>
-          <Link className="btn link" href="/feed">Explore</Link>
-          <Link className="btn link" href="/trainers">Trainers</Link>
-          <Link className="btn link" href="/me/registrations">My seats</Link>
-          <Link className="btn link" href="/login">Log in</Link>
-          <Link className="btn primary" href="/signup">Sign up</Link>
-        </nav>
-      </div>
+      <SiteNav />
       <div className="surface surface-hero pat-weave rise">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <span className="tile-icon tint-accent" aria-hidden>✨</span>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../../components/SiteNav';
 
 type Row = {
   trainingId: string; title: string; plan: string; sales: number;
@@ -38,9 +39,7 @@ export default function Earnings() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/trainer/approval">Approval</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Earnings.</h1>
       <p className="sub">Plan: <b>{plan}</b> (Free 5% · Pro 3% · Business 1%) — provider fees shown separately.</p>
       <div className="btnrow">

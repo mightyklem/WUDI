@@ -11,6 +11,7 @@ import DayPricingEditor from '../DayPricingEditor';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import { quoteFor } from '@/lib/pricing';
 import { lagosSpanLabel } from '@/lib/lagos';
+import SiteNav from '../../components/SiteNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,9 +46,7 @@ if (!t) return notFound();
   const full = left <= 0 || t.status === 'full';
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/dashboard">Dashboard</Link></nav>
-      </div>
+      <SiteNav />
       <div className="card" style={{ marginTop: 12 }}>
         <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
         <CopyInviteLink url={inviteUrl} />

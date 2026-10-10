@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import SiteNav from '../../components/SiteNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,9 +41,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ number:
   const v = await lookup(number.toUpperCase());
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Verify.</h1>
       <p className="sub">Enter any certificate number — no account needed.</p>
       <div className="card" style={{ marginTop: 18 }}>

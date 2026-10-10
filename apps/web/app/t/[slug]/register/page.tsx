@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import DayPicker from '../../../trainings/DayPicker';
 import RegisterButton from '../../../trainings/RegisterButton';
 import { formatNgn, tierLabel } from '@learnovize/shared';
+import SiteNav from '../../../components/SiteNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,7 @@ export default async function InvitePage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span></div>
+      <SiteNav />
       <div className="card" style={{ marginTop: 8 }}>
         <p className="eyebrow">You&apos;re invited · {t.trainer.displayName}</p>
         <p className="bigtitle">{t.title}</p>

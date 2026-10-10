@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import SiteNav from '../components/SiteNav';
 
 export const metadata: Metadata = { title: 'Design system — Learnovize' };
 
@@ -58,9 +59,7 @@ const PATTERNS = [
 export default function DesignSystem() {
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link></nav>
-      </div>
+      <SiteNav />
 
       <h1>Design system</h1>
       <p className="sub">Phase 1 · warm base, shape, space, elevation, pattern. Review surface.</p>

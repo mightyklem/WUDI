@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../../components/SiteNav';
 
 type Item = {
   id: string; trainerId: string; idDocUrls: string[]; expertiseEvidence: string | null;
@@ -38,9 +39,7 @@ export default function AdminApprovals() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Approval queue.</h1>
       <p className="sub">{items.length} pending · oldest first.</p>
       {msg && <div className="okmsg">{msg}</div>}

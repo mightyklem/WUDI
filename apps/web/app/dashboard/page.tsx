@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PaymentDueBanner from './PaymentDueBanner';
+import SiteNav from '../components/SiteNav';
 import { getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel } from '@/lib/lagos';
@@ -71,13 +72,7 @@ export default function Dashboard() {
 
   return (
     <div className="wrap">
-      <div className="topbar">
-        <span className="logo">Learnovize</span>
-        <nav>
-          <Link className="btn link" href="/feed">Explore</Link>
-          <button className="btn link" onClick={() => { localStorage.removeItem('learnovize_access'); localStorage.removeItem('learnovize_refresh'); router.push('/'); }}>Log out</button>
-        </nav>
-      </div>
+      <SiteNav />
 
       <h1 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span aria-hidden style={{ fontSize: 30 }}>{head.icon}</span>

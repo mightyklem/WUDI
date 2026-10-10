@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import { lagosRangeLabel } from '@/lib/lagos';
+import SiteNav from '../components/SiteNav';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Classes — Learnovize' };
@@ -86,9 +87,7 @@ export default async function ClassesPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/feed">Explore</Link><Link className="btn link" href="/dashboard">Dashboard</Link></nav>
-      </div>
+      <SiteNav />
 
       <h1>Classes</h1>
       <p className="sub">Browse what is on and reserve a seat. Pick the days you will attend.</p>

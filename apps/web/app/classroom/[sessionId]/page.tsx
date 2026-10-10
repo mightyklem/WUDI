@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import ClassroomClient from '../ClassroomClient';
 import { formatNgn } from '@learnovize/shared';
 import { lagosSpanLabel } from '@/lib/lagos';
+import SiteNav from '../../components/SiteNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,9 +33,7 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link></nav>
-      </div>
+      <SiteNav />
 
       <div className="surface surface-hero pat-weave" style={{ padding: 'var(--s-5)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

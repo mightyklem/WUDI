@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
 import { lagosWhenLabel } from '@/lib/lagos';
+import SiteNav from '../../components/SiteNav';
 
 type Reg = {
   id: string;
@@ -71,9 +72,7 @@ export default function MyRegistrations() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link></nav>
-      </div>
+      <SiteNav />
       <h1>My seats.</h1>
       <p className="sub">Free cancel until the first session starts.</p>
       {msg && <div className="okmsg">{msg}</div>}

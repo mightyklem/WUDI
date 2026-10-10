@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../../components/SiteNav';
 
 type Blocker = { code: string; message: string };
 type Row = {
@@ -56,13 +57,7 @@ export default function AdminPayouts() {
 
   return (
     <div className="wrap">
-      <div className="topbar">
-        <span className="logo">Learnovize</span>
-        <nav>
-          <Link className="btn link" href="/">Home</Link>
-          <Link className="btn link" href="/admin">Admin</Link>
-        </nav>
-      </div>
+      <SiteNav />
 
       <h1>Payouts.</h1>
       <p className="sub">

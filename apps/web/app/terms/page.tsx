@@ -1,13 +1,12 @@
 import Link from 'next/link';
+import SiteNav from '../components/SiteNav';
 
 export const dynamic = 'force-static';
 
 export default function Terms() {
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/community">Rules</Link><Link className="btn link" href="/privacy">Privacy</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Terms (draft).</h1>
       <p className="sub">Plain-words summary — final wording confirmed with a Nigerian lawyer before launch (§12.10).</p>
       <div className="card" style={{ marginTop: 18, fontSize: 15 }}>

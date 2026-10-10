@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../../components/SiteNav';
 
 type Note = {
   id: string;
@@ -76,10 +77,7 @@ export default function Notifications() {
 
   return (
     <div className="wrap">
-      <div className="topbar">
-        <span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/dashboard">Dashboard</Link></nav>
-      </div>
+      <SiteNav />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <h1>Alerts</h1>

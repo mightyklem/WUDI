@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../components/SiteNav';
 
 type Trainer = { userId: string; displayName: string; bio: string | null; topics: string[] };
 
@@ -26,9 +27,7 @@ export default function Trainers() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/onboarding">Teach</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Trainers.</h1>
       <p className="sub">Follow trainers to hear about new trainings first.</p>
       {msg && <div className="err">{msg}</div>}

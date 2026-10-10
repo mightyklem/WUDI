@@ -2,6 +2,7 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import SiteNav from '../components/SiteNav';
 
 // useSearchParams needs a Suspense boundary during prerender.
 function ResetForm() {
@@ -79,10 +80,7 @@ function ResetForm() {
 export default function ResetPassword() {
   return (
     <div className="wrap">
-      <div className="topbar">
-        <span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/login">Back to login</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Choose a new password.</h1>
       <p className="sub">This signs you out on every device, in case someone else had access.</p>
       <Suspense fallback={<p className="muted">Loading…</p>}>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../components/SiteNav';
 
 type Metrics = {
   users: number; trainers: number; trainings: number; trainingsLive: number;
@@ -50,9 +51,7 @@ export default function AdminConsole() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/admin/approvals">Approvals</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Admin.</h1>
       <p className="sub">Activity, review queue, and audit trail.</p>
       {msg && <div className="okmsg">{msg}</div>}

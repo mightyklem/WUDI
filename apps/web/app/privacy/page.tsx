@@ -1,13 +1,12 @@
 import Link from 'next/link';
+import SiteNav from '../components/SiteNav';
 
 export const dynamic = 'force-static';
 
 export default function Privacy() {
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/community">Rules</Link><Link className="btn link" href="/terms">Terms</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Privacy (draft).</h1>
       <p className="sub">Plain-words summary under the Nigeria Data Protection Act 2023 — final wording confirmed with counsel before launch.</p>
       <div className="card" style={{ marginTop: 18, fontSize: 15 }}>

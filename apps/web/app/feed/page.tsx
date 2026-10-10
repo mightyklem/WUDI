@@ -5,6 +5,7 @@ import { getAccess } from '@/lib/client-auth';
 import { QuoteStrip } from './QuoteStrip';
 import { formatNgn } from '@learnovize/shared';
 import { lagosWhenLabel } from '@/lib/lagos';
+import SiteNav from '../components/SiteNav';
 
 type Post = {
   id: string; type: string; mediaUrl: string; likeCount: number;
@@ -68,9 +69,7 @@ export default function Feed() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/me/registrations">My seats</Link></nav>
-      </div>
+      <SiteNav />
       <h1>Explore.</h1>
       <p className="sub">Upcoming live trainings — watch, follow, save, register.</p>
 

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import SiteNav from '../../components/SiteNav';
 
 type Cert = {
   id: string; number: string; pdfUrl: string; createdAt: string;
@@ -28,9 +29,7 @@ export default function MyCertificates() {
 
   return (
     <div className="wrap">
-      <div className="topbar"><span className="logo">Learnovize</span>
-        <nav><Link className="btn link" href="/">Home</Link><Link className="btn link" href="/me/registrations">My seats</Link></nav>
-      </div>
+      <SiteNav />
       <h1>My certificates.</h1>
       <p className="sub">Download and share anywhere — each number verifies online.</p>
       <div style={{ marginTop: 18, display: 'grid', gap: 0 }}>
