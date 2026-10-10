@@ -60,6 +60,7 @@ model User {
   orgMemberships OrgMember[]
   ownedOrgs      Organization[]     @relation("OrgOwner")
   authoredPosts  FeedPost[]         @relation("PostAuthor")
+  reviewsWritten TrainerReview[]   @relation("ReviewAuthor")
 }
 
 /// One award or clawback of points. Append-only so a rank can always be re-derived.
@@ -166,6 +167,68 @@ model PasswordResetToken {
   @@index([expiresAt])
 }
 
+model TrainerApplication {
+  id         String @id @default(cuid())
+  trainerId  String
+  trainer    TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  /// The sixteen questionnaire answers, as data rather than markup so the scoring in
+  /// packages/shared is the same arithmetic everywhere.
+  answers    Json
+  /// Skill depth + teaching experience + reach. Proof is NOT included: that is graded
+  /// by a person, so the form alone can never reach the 70-point strong boundary.
+  formSubtotal Int @default(0)
+  /// none | weak | clear — set by a reviewer looking at the applicant's evidence.
+  proofGrade   String?
+  totalScore   Int?
+  band         String?      // strong | promising | general
+  /// A | B | C — the human judgement after verification.
+  finalRating  String?
+  reviewNotes  String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  status       String  @default("draft") // draft|submitted|in_review|verified|rejected
+
+  // Paid badge. Paying buys entry to review; passing the bar earns the badge. The
+  // two are deliberately separate fields so a purchase can never stand in for a
+  // judgement that was never made.
+  amountPaidNgn  Int?
+  paymentRef     String?
+  paidAt         DateTime?
+  /// Paid but not yet decided. Held so it can be refunded if review says no.
+  refundPending  Boolean  @default(false)
+  refundedAt     DateTime?
+  badgeExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([trainerId])
+  @@index([status])
+}
+
+/// A learner's rating of a trainer, worth points to that trainer.
+///
+/// Gated on the reviewer actually having attended the session -- see the API route.
+/// An ungated review can be written by anyone with an account, which makes the whole
+/// number meaningless and the points worth farming.
+model TrainerReview {
+  id         String   @id @default(cuid())
+  trainerId  String
+  trainer    TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  authorId   String
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  /// The session whose attendance qualified the author to review.
+  sessionId  String
+  rating     Int
+  body       String?
+  createdAt  DateTime @default(now())
+
+  /// One review per person per session. Without this a single attendee can rate the
+  /// same trainer repeatedly and manufacture a reputation.
+  @@unique([sessionId, authorId])
+  @@index([trainerId])
+}
+
 model TrainerProfile {
   userId            String  @id
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -186,6 +249,8 @@ paidCertApproved  Boolean @default(false)
   approvals TrainerApproval[]
   trainings Training[]
   payoutAccounts PayoutAccount[]
+  application    TrainerApplication?
+  reviewsReceived TrainerReview[]
 }
 
 model TrainerApproval {
