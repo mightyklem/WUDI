@@ -39,6 +39,11 @@ model User {
   emailOtpHash      String?
   emailOtpExpiresAt DateTime?
   emailOtpAttempts  Int       @default(0)
+  // Set when the person exercised their NDPA erasure right. The row is kept rather
+  // than deleted because payment and payout records have a statutory retention period
+  // and must not vanish with the identity. Everything that identifies a human is
+  // replaced; what remains is a pseudonymous counterparty in the ledger.
+  deletedAt    DateTime?
   createdAt    DateTime @default(now())
 
   trainerProfile TrainerProfile?

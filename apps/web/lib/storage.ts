@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
@@ -121,4 +121,29 @@ export async function putPublic(key: string, body: Uint8Array, contentType: stri
     new PutObjectCommand({ Bucket: publicBucket(), Key: key, Body: body, ContentType: contentType }),
   );
   return publicUrl(key);
+}
+
+/**
+ * Destroy an object. Used when someone withdraws consent or deletes their account:
+ * the ID consent text promises the document can be deleted, and dropping the database
+ * row alone would leave the file itself sitting in the bucket forever.
+ *
+ * Best-effort and never throws — a storage outage must not block an erasure, because a
+ * half-finished erasure is worse than one that logs what it could not delete.
+ */
+export async function removeObject(bucket: 'public' | 'private', key: string): Promise<boolean> {
+  try {
+    if (isLocalStorage()) {
+      const target = localPathFor(path.posix.join(bucket, key));
+      if (!target) return false;
+      const { unlink } = await import('fs/promises');
+      await unlink(target);
+      return true;
+    }
+    const name = bucket === 'public' ? publicBucket() : privateBucket();
+    await storage().send(new DeleteObjectCommand({ Bucket: name, Key: key }));
+    return true;
+  } catch {
+    return false;
+  }
 }
