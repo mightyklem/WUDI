@@ -110,6 +110,10 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 /* Paid is amber everywhere, so price and payment read the same wherever they appear. */
 .badge.paid{background:var(--gold-soft);color:var(--gold-ink)}
 .badge.free{background:var(--pill);color:var(--mut)}
+  /* Staff tools live one level down from the main bar, so learners never see them. */
+  .subnav{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0 0}
+  .subnav a{padding:6px 12px;border-radius:var(--r-full);font-size:13px;font-weight:700;text-decoration:none;color:var(--mut);background:var(--pill)}
+  .subnav a.on{background:var(--accent-soft,#E7F2F3);color:var(--accent,#0F5C68)}
 .muted{color:var(--mut)}
 /* Visible to screen readers only. Rank is shown as an icon alone, so the name
    still has to reach assistive tech. */

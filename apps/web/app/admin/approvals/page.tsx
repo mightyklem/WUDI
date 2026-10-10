@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
-import SiteNav from '../../components/SiteNav';
+import AdminNav from '../../components/AdminNav';
 
 type Item = {
   id: string; trainerId: string; idDocUrls: string[]; expertiseEvidence: string | null;
@@ -21,7 +21,7 @@ export default function AdminApprovals() {
       .then((j) => j && setItems(j.queue));
   }
   useEffect(load, []);
-  if (items === null) return <div className="wrap"><p className="muted">Staff only.</p></div>;
+  if (items === null) return <div className="wrap"><AdminNav /><p className="muted">Staff only.</p></div>;
 
   async function decide(id: string, decision: string) {
     const reason = decision === 'approve' ? '' : (prompt('Reason (required, shown to trainer):') || '');
@@ -39,7 +39,7 @@ export default function AdminApprovals() {
 
   return (
     <div className="wrap">
-      <SiteNav />
+      <AdminNav />
       <h1>Approval queue.</h1>
       <p className="sub">{items.length} pending · oldest first.</p>
       {msg && <div className="okmsg">{msg}</div>}

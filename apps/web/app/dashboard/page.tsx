@@ -248,6 +248,13 @@ export default function Dashboard() {
         </div>
       )}
 
+{role === 'trainer' && (
+        <p style={{ marginTop: 22 }}>
+          Want learners to know you were checked?{' '}
+          <Link className="btn link" href="/trainer/verification">Get verified →</Link>
+        </p>
+      )}
+
       {role === 'participant' && (
         <p style={{ marginTop: 22 }}>
           Want to teach? <Link className="btn link" href="/onboarding">Become a trainer →</Link>

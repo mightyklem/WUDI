@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { getAccess } from '@/lib/client-auth';
-import SiteNav from '../../components/SiteNav';
+import AdminNav from '../../components/AdminNav';
 
 type Item = {
   id: string; name: string; email: string; status: string;
@@ -74,13 +74,15 @@ export default function AdminVerification() {
     }
   }
 
-  if (items === null) return <div className="wrap"><p className="muted">Staff only.</p></div>;
+  // Nav stays mounted while the queue loads. Hiding it until the fetch resolves leaves a
+// staff member with no way onward if the request fails.
+if (items === null) return <div className="wrap"><AdminNav /><p className="muted">Staff only.</p></div>;
 
   const owed = items.filter((i) => i.refundPending).length;
 
   return (
     <div className="wrap">
-      <SiteNav />
+      <AdminNav />
       <h1>Verification reviews.</h1>
       <p className="sub">
         {items.length} awaiting · oldest first. A rejection refunds the fee automatically.
