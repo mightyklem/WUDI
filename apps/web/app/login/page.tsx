@@ -44,6 +44,8 @@ export default function Login() {
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <label className="fl">Password</label>
         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        {/* Without this, forgetting a password meant being locked out permanently. */}
+        <div style={{ marginTop: 6 }}><Link className="btn link" href="/forgot-password">Forgot password?</Link></div>
         <div className="btnrow"><button className="btn primary" type="submit">Log in</button>
         <Link className="btn link" href="/signup">New here? Sign up</Link></div>
         {msg && <div className={msg.ok ? 'okmsg' : 'err'}>{msg.text}{msg.ok && msg.text === 'Logged in.' && <> <Link href="/">Go home →</Link></>}</div>}

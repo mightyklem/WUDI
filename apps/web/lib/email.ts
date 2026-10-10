@@ -120,6 +120,22 @@ export function trainingAnnouncedEmail(opts: {
   };
 }
 
+export function passwordResetEmail(opts: { resetPath: string }): Email {
+  const href = absoluteUrl(opts.resetPath);
+  return {
+    to: '', // filled per-recipient
+    subject: 'Reset your Learnovize password',
+    text: `Someone asked to reset the password on this account.\n\nReset it here: ${href}\n\nThe link works once and expires in 30 minutes. If this wasn't you, ignore this email — your password has not changed.`,
+    html: shell(
+      'Reset your password',
+      `<p style="margin:0 0 8px 0">Someone asked to reset the password for this account.</p>
+       <p style="margin:0 0 8px 0;color:#6b7378;font-size:14px">The link works once and expires in 30 minutes.</p>
+       ${button(href, 'Choose a new password')}
+       <p style="margin:14px 0 0 0;font-size:13px;color:#6b7378">If this wasn't you, ignore this email — nothing has changed.</p>`,
+    ),
+  };
+}
+
 export function moderatorInvitedEmail(opts: {
   trainerName: string; title: string; trainingPath: string;
 }): Email {

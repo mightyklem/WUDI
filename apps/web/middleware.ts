@@ -16,6 +16,12 @@ const LIMITS: { prefix: string; max: number; windowMs: number }[] = [
   // per-account attempt cap inside the route.
   { prefix: '/api/auth/verify-email', max: 10, windowMs: 60_000 },
   { prefix: '/api/auth/resend-verification', max: 5, windowMs: 60_000 },
+  // ADR-002 promises 5/hr/IP and 3/hr/account for password reset. Per-IP sits here;
+  // per-account is enforced in the route, because it needs the resolved userId.
+  // Ordering matters: these are checked before the generic /api/auth/ bucket, so the
+  // stricter reset limit wins rather than the 20/min one.
+  { prefix: '/api/auth/forgot-password', max: 5, windowMs: 3_600_000 },
+  { prefix: '/api/auth/reset-password', max: 10, windowMs: 3_600_000 },
 ];
 
 function clientIp(req: NextRequest): string {
@@ -25,8 +31,16 @@ function clientIp(req: NextRequest): string {
 }
 
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const rule = LIMITS.find((l) => pathname.startsWith(l.prefix) || pathname.endsWith(l.prefix));
+  const path = req.nextUrl.pathname;
+  // Most specific prefix wins, not the first one listed. `/api/auth/forgot-password`
+  // also matches `/api/auth/`, so with a plain find() the looser 20/min rule would
+  // always shadow the stricter per-route limits below and they would never apply.
+  let rule: (typeof LIMITS)[number] | undefined;
+  for (const l of LIMITS) {
+    if (path.startsWith(l.prefix) || path.endsWith(l.prefix)) {
+      if (!rule || l.prefix.length > rule.prefix.length) rule = l;
+    }
+  }
   if (!rule) return NextResponse.next();
   const key = `${rule.prefix}:${clientIp(req)}`;
   const now = Date.now();

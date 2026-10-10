@@ -43,6 +43,7 @@ model User {
 
   trainerProfile TrainerProfile?
   refreshTokens  RefreshToken[]
+  passwordResets PasswordResetToken[]
   registrations  Registration[]
   attendanceLogs AttendanceLog[]
   certificates   Certificate[]
@@ -138,6 +139,26 @@ model RefreshToken {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+/// A single-use password reset, requested by someone who can no longer log in.
+///
+/// This exists because there was no reset route at all: anyone who forgot their
+/// password was permanently locked out, despite the architecture decision promising
+/// "password reset via OTP". Only the SHA-256 of the token is stored, so a database
+/// leak does not hand out account takeovers. A used row is retained rather than
+/// deleted, so a replay is recognisably a replay rather than an unknown token.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model TrainerProfile {
