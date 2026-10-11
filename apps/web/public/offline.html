@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Offline — Learnovize</title>
+<link rel="icon" href="/icon-192.png" />
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; min-height: 100dvh; display: grid; place-items: center;
+    background: #FBF6EE; color: #241C15; padding: 24px;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .card { max-width: 420px; text-align: center; }
+  .badge {
+    display: inline-block; width: 72px; height: 72px; border-radius: 16px;
+    background: #1B7E8D; color: #FBF6EE; font-size: 30px; line-height: 72px;
+    font-weight: 800; margin-bottom: 20px;
+  }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: #7A6A5C; line-height: 1.6; margin: 0 0 8px; }
+  button {
+    margin-top: 18px; padding: 12px 22px; border-radius: 999px; border: 0;
+    background: #1B7E8D; color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .note { font-size: 13px; margin-top: 22px; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #16120F; color: #F2EAE0; }
+    p { color: #A8998A; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge" aria-hidden="true">L</div>
+    <h1>You are offline</h1>
+    <p>This page needs a connection. Anything already downloaded — the app shell and your
+      static assets — still works, but live classes, payments and certificates need the network.</p>
+    <p>If you are in a live class right now, this usually means your connection dropped.
+      Rejoin from the class page once you are back.</p>
+    <button onclick="location.reload()">Try again</button>
+    <p class="note">Learnovize never caches your personal data for offline use.</p>
+  </div>
+</body>
+</html>
