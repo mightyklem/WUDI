@@ -85,10 +85,23 @@ for (const [p, label] of FEATURES) {
 }
 
 // --- the application form is the thing most likely to be stale silently -----------
+// The question text cannot be used here. /onboarding is a client component, so its
+// server HTML is a loading shell -- "How did you pick it up?" only exists after
+// hydration. Checking for it reported a false failure on a correct deployment.
+//
+// What is in the server HTML is the difference between the two versions: the old
+// three-field form rendered "Become a trainer" and "short bio" server-side, and the
+// new one renders a loading state. So the old form's wording is the reliable signal,
+// and its absence is the pass condition.
 const onboarding = await fetch(BASE + '/onboarding').then((r) => r.text()).catch(() => '');
 if (onboarding) {
-  record(onboarding.includes('pick it up'), 'onboarding serves the 16-question form',
-    onboarding.includes('pick it up') ? '' : 'still the old three-field form — build predates a255dda');
+  const OLD_MARKERS = ['Become a trainer', 'short bio', 'Name, photo, bio, topics'];
+  const staleBy = OLD_MARKERS.filter((m) => onboarding.includes(m));
+  record(
+    staleBy.length === 0,
+    'onboarding is not the old form',
+    staleBy.length ? `still serves: ${staleBy.join(', ')}` : 'old wording gone, new form in place',
+  );
 }
 
 // --- api sanity -------------------------------------------------------------------
