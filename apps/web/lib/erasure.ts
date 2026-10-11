@@ -1,6 +1,8 @@
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/db';
 import { removeObject } from '@/lib/storage';
+import { syncUserPoints } from '@/lib/points';
+import { POINT_REASONS } from '@learnovize/shared';
 
 /**
  * NDPA erasure (right to erasure).
@@ -121,6 +123,29 @@ export async function eraseAccount(
     });
   }
   await prisma.trainerApproval.deleteMany({ where: { trainerId: userId } });
+
+  // Reviews this learner wrote are their words and must go with the account. The user
+  // row is deliberately kept for the financial ledger, so nothing cascades here by
+  // itself -- without this an erased person keeps their name attached to a public
+  // review of a trainer forever.
+  //
+  // Each review also awarded standing to the trainer, keyed on the review id. Those
+  // points have to come back off, or a trainer would keep the benefit of a rating that
+  // no longer exists.
+  const reviews = await prisma.trainerReview.findMany({
+    where: { authorId: userId },
+    select: { id: true, trainerId: true },
+  });
+  if (reviews.length) {
+    const reviewIds = reviews.map((r) => r.id);
+    const trainers = [...new Set(reviews.map((r) => r.trainerId).filter((id) => id !== userId))];
+
+    await prisma.trainerReview.deleteMany({ where: { id: { in: reviewIds } } });
+    await prisma.pointsEvent.deleteMany({
+      where: { reason: POINT_REASONS.reviewReceived, ref: { in: reviewIds } },
+    });
+    for (const trainerId of trainers) await syncUserPoints(trainerId);
+  }
 
   return { deletedAt, failedKeys };
 }

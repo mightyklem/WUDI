@@ -15,6 +15,9 @@ export const POINTS = Object.freeze({
   paidDayAttended: 20,
   allEnrolledDaysCompleted: 25,
   certificateEarned: 50,
+  // One review is worth up to this, scaled by the stars it was given. See
+  // pointsForReview for why one and two stars award nothing.
+  reviewReceivedMax: 15,
 });
 
 /** Reasons recorded against a PointsEvent. */
@@ -22,12 +25,37 @@ export const POINT_REASONS = Object.freeze({
   sessionAttended: 'session_attended',
   programCompleted: 'program_completed',
   certificateEarned: 'certificate_earned',
+  reviewReceived: 'review_received',
   manualAdjustment: 'manual_adjustment',
 });
 
 /**
+ * What one learner review is worth to the trainer who received it.
+ *
+ * Scales with the stars, and awards nothing at one or two. A trainer should not be able
+ * to raise their standing by collecting complaints, and a one-star review says nothing
+ * about whether they are any good -- it usually says more about the learner than the
+ * teaching. So the floor is at three, which is neutral, and only clear positives count.
+ *
+ *   5 stars  15    4 stars  10    3 stars  5    1-2 stars  0
+ *
+ * This is bounded on purpose. The only thing standing between a trainer and a farmed
+ * reputation is that each learner can review each session once and only after turning
+ * up, so this should not be a number big enough to make that worth breaking.
+ */
+export function pointsForReview(rating) {
+  const r = Math.floor(Number(rating));
+  if (!Number.isFinite(r) || r <= 3) return r === 3 ? 5 : 0;
+  return (r - 2) * (POINTS.reviewReceivedMax / 3);
+}
+
+/**
  * The rank ladder, ascending. Lifetime points, no decay — a learner's history
  * should not be erased just because they stopped for a while.
+ *
+ * The same ladder carries a trainer's standing, which comes from reviews rather than
+ * attendance. One ladder for both keeps one definition of progress on the platform
+ * instead of two that quietly disagree about what "good" means.
  *
  * Each rank costs 4x the points of the rank before it, so every promotion is
  * visibly harder than the last. Gold is deliberately a long road: a full paid

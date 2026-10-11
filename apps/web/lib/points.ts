@@ -4,6 +4,7 @@ import {
   pointsForAttendanceDay,
   pointsForCertificate,
   pointsForProgramCompletion,
+  pointsForReview,
   rankFor,
 } from '@learnovize/shared';
 import { Prisma } from '../generated/prisma';
@@ -65,7 +66,34 @@ async function revoke(userId: string, ref: string) {
  * Awards the day points, then the once-only bonus if this completed every day
  * the learner enrolled in.
  */
-export async function awardAttendance({ userId, sessionId }: { userId: string; sessionId: string }) {
+/**
+   * Award the trainer standing for a review a learner left.
+   *
+   * Keyed on the review id, so a replayed request awards nothing further -- the same
+   * guarantee attendance awards rely on. The trainer is the recipient: this is their
+   * standing rising because people rated them, which is the whole reason a learner can
+   * only review a session they actually attended.
+   */
+  export async function awardReviewReceived({
+    trainerId,
+    reviewId,
+    rating,
+  }: {
+    trainerId: string;
+    reviewId: string;
+    rating: number;
+  }) {
+    const points = pointsForReview(rating);
+    // A one or two star review is worth nothing, so there is no event to write.
+    // Recording a zero-point row would only clutter the ledger and the reviewer's view.
+    if (points <= 0) return { awarded: false, points: 0 };
+
+    const created = await grant(trainerId, reviewId, POINT_REASONS.reviewReceived, points);
+    if (created) await syncUserPoints(trainerId);
+    return { awarded: created, points };
+  }
+
+  export async function awardAttendance({ userId, sessionId }: { userId: string; sessionId: string }) {
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: { day: true, training: { select: { id: true, accessType: true } } },

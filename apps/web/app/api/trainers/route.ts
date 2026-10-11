@@ -18,7 +18,22 @@ export async function GET() {
     },
   });
 
+  // One aggregate for the whole directory rather than a count query per trainer.
+  const ids = trainers.map((t) => t.userId);
+  const counts = ids.length
+    ? await prisma.trainerReview.groupBy({ by: ['trainerId'], where: { trainerId: { in: ids } }, _avg: { rating: true }, _count: true })
+    : [];
+  const stats = new Map(counts.map((c) => [c.trainerId, c]));
+
   return NextResponse.json({
-    trainers: trainers.map(({ application, ...t }) => ({ ...t, badge: badgeState(application) })),
+    trainers: trainers.map(({ application, ...t }) => {
+      const s = stats.get(t.userId);
+      return {
+        ...t,
+        badge: badgeState(application),
+        reviewAverage: s?._count ? Math.round((s._avg.rating || 0) * 10) / 10 : null,
+        reviewCount: s?._count ?? 0,
+      };
+    }),
   });
 }

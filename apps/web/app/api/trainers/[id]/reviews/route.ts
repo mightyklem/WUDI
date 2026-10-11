@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
+import { awardReviewReceived } from '@/lib/points';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,5 +81,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return r;
   });
 
-  return NextResponse.json({ ok: true, review: { id: review.id, rating: review.rating } });
+  // The trainer's standing rises from what the learner said. Deliberately after the
+  // transaction commits: a points write must never be able to roll back or fail the
+  // review itself, since the learner's words are the part that actually happened.
+  const award = await awardReviewReceived({ trainerId, reviewId: review.id, rating });
+
+  return NextResponse.json({ ok: true, review: { id: review.id, rating: review.rating }, award });
 }

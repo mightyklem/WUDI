@@ -8,6 +8,7 @@ import VerifiedBadge from '../components/VerifiedBadge';
 type Trainer = {
   userId: string; displayName: string; bio: string | null; topics: string[];
   badge: { verified: boolean; expired?: boolean; label: string | null; rating?: string | null };
+  reviewAverage: number | null; reviewCount: number;
 };
 
 export default function Trainers() {
@@ -44,8 +45,16 @@ export default function Trainers() {
         {trainers.map((t) => (
           <div className="course" key={t.userId}>
             <span className="status">{t.topics.join(' · ') || 'Trainer'}</span>
-            <span className="ctitle">{t.displayName} <VerifiedBadge state={t.badge} size="sm" /></span>
-            <span className="cmeta">{t.bio || 'Live classes only.'}</span>
+            <span className="ctitle">
+              <Link href={`/trainers/${t.userId}`} style={{ color: 'inherit' }}>{t.displayName}</Link>{' '}
+              <VerifiedBadge state={t.badge} size="sm" />
+            </span>
+            <span className="cmeta">
+              {t.reviewCount > 0 ? (
+                <span className="badge ok" style={{ marginRight: 8 }}>★ {t.reviewAverage} ({t.reviewCount})</span>
+              ) : null}
+              {t.bio || 'Live classes only.'}
+            </span>
             <span className="cfoot">
               {following.has(t.userId) ? '✓ Following' : (
                 <button className="btn" onClick={() => follow(t.userId)}>Follow</button>
