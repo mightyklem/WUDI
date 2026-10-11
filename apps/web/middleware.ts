@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { buildCsp, newNonce } from '@/lib/csp';
 
 /**
  * Edge rate limiting (single-instance, in-memory). Tune per route below.
@@ -32,6 +33,25 @@ function clientIp(req: NextRequest): string {
 
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  // Every document request gets a fresh nonce and a CSP built from the running config.
+  // A per-request nonce is the whole point: a static one would be readable by any
+  // injected markup, which is exactly what it is meant to prevent.
+  const nonce = newNonce();
+  const csp = buildCsp(nonce, { dev: isDev });
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-nonce', nonce);
+  // Next discovers the nonce from the CSP on the REQUEST, not the response. Setting it
+  // only on the response produces a policy that blocks Next's own inline hydration
+  // scripts on every statically rendered page, because the markup was already built
+  // without a nonce by the time the header is attached.
+  requestHeaders.set('Content-Security-Policy', csp);
+  const withCsp = (res: NextResponse) => {
+    res.headers.set('Content-Security-Policy', csp);
+    return res;
+  };
+
   // Most specific prefix wins, not the first one listed. `/api/auth/forgot-password`
   // also matches `/api/auth/`, so with a plain find() the looser 20/min rule would
   // always shadow the stricter per-route limits below and they would never apply.
@@ -41,21 +61,29 @@ export function middleware(req: NextRequest) {
       if (!rule || l.prefix.length > rule.prefix.length) rule = l;
     }
   }
-  if (!rule) return NextResponse.next();
+  if (!rule) return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
+
   const key = `${rule.prefix}:${clientIp(req)}`;
   const now = Date.now();
   const bucket = buckets.get(key);
   if (!bucket || bucket.reset <= now) {
     buckets.set(key, { count: 1, reset: now + rule.windowMs });
-    return NextResponse.next();
+    return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
   }
   bucket.count += 1;
   if (bucket.count > rule.max) {
-    return NextResponse.json({ error: 'Too many requests — slow down' }, { status: 429 });
+    return withCsp(NextResponse.json({ error: 'Too many requests — slow down' }, { status: 429 }));
   }
-  return NextResponse.next();
+  return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
 export const config = {
-  matcher: ['/api/auth/:path*', '/api/verify/:path*', '/api/trainings/:id/register'],
+  matcher: [
+    '/api/auth/:path*',
+    '/api/verify/:path*',
+    '/api/trainings/:id/register',
+    // Pages, so documents get a nonce. Static build output and images are excluded --
+    // they carry no scripts and would only pay for the middleware to run.
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 };

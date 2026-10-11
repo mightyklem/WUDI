@@ -17,6 +17,14 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=()' },
+          // The CSP itself is set per-request in middleware.ts, because it carries a
+          // nonce that must be new on every document.
+          // HSTS is deliberately NOT declared here. It is all-or-nothing per host, so
+          // enabling it on a deployment served over plain http -- including localhost
+          // -- locks browsers out of the site until the max-age expires, and there is
+          // no practical way to undo that from the page. Terminate TLS at the edge and
+          // set Strict-Transport-Security in the platform config once every hostname is
+          // confirmed to be https.
         ],
       },
     ];
