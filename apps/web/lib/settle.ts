@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { splitPayment, payoutHoldDays } from '@/lib/payments';
+import { splitPayment, payoutHoldDays, feeBorneByUs } from '@/lib/payments';
 import { emailEnabled, paymentReceiptEmail, sendEmail } from '@/lib/email';
 
 /** Payment receipt — best effort, never blocks or fails settlement (FR-9.1). */
@@ -50,7 +50,15 @@ export async function settlePaidPayment(opts: {
   }
 
   const plan = payment.registration.training.trainer.plan;
-  const split = splitPayment(payment.amountNgn, opts.providerFeeNgn, plan);
+  // Only the fee Learnovize actually paid is deducted. With Paystack's "pass fees to
+  // customers" switched on, the customer covers the fee and we receive the price in
+  // full, so charging it again here would come straight out of the trainer's payout.
+  const borneByUs = feeBorneByUs({
+    chargedNgn: opts.amountNgn,
+    askedNgn: payment.amountNgn,
+    providerFeeNgn: opts.providerFeeNgn,
+  });
+  const split = splitPayment(payment.amountNgn, borneByUs, plan);
   const lastEnd = payment.registration.training.sessions[0]?.endsAtUtc ?? new Date();
   const holdUntil = new Date(lastEnd.getTime() + payoutHoldDays() * 24 * 3600 * 1000);
 

@@ -49,6 +49,37 @@ export function splitPayment(amountNgn: number, providerFeeNgn: number, plan: st
   return trainerNet({ amountNgn, providerFeeNgn, plan: p });
 }
 
+/**
+ * The part of the provider fee Learnovize actually bears.
+ *
+ * Paystack can be set to add the transaction fee to the customer's total instead of
+ * taking it out of our proceeds. When it does, Paystack's own wording is that we
+ * "receive the exact amount listed for our products" -- the fee comes out of the extra
+ * the customer paid, not out of the price.
+ *
+ * So subtracting the full fee from the price in that mode would charge it a second
+ * time, straight off the trainer's payout: money that was never ours to lose.
+ *
+ * The two modes are told apart by comparing what the customer was charged against what
+ * we asked for. Anything charged above the price is by definition the fee the customer
+ * covered, so whatever remains is the fee we genuinely paid.
+ *
+ *   pass fees off : charged 1500, asked 1500, fee 123 -> we bear 123
+ *   pass fees on  : charged 1623, asked 1500, fee 123 -> we bear   0
+ */
+export function feeBorneByUs({
+  chargedNgn,
+  askedNgn,
+  providerFeeNgn,
+}: {
+  chargedNgn: number;
+  askedNgn: number;
+  providerFeeNgn: number;
+}) {
+  const coveredByCustomer = Math.max(0, chargedNgn - askedNgn);
+  return Math.max(0, providerFeeNgn - coveredByCustomer);
+}
+
 export type InitResult = { reference: string; payUrl: string | null; accessCode: string | null };
 
 /**
