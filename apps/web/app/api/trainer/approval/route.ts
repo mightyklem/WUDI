@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { ID_CONSENT_VERSION } from '@/lib/consent';
+import { describeAccess, idAccessQueryFor } from '@/lib/id-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,10 @@ export async function POST(req: Request) {
 }
 
 // GET /api/trainer/approval — my latest request + state
+//
+// Also returns who has opened my identity documents. The consent text says staff access
+// is recorded, which is only a real commitment if the trainer can actually see it --
+// otherwise "recorded" is indistinguishable from "we may or may not have looked".
 export async function GET(req: Request) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
@@ -58,10 +63,35 @@ export async function GET(req: Request) {
     prisma.trainerProfile.findUnique({ where: { userId } }),
     prisma.trainerApproval.findFirst({ where: { trainerId: userId }, orderBy: { createdAt: 'desc' } }),
   ]);
+
+  // Only meaningful once documents have actually been submitted -- an empty key list
+  // would otherwise match nothing and look like nobody ever looked, which is not the
+  // same claim as "there is nothing to look at".
+  const access = latest?.idDocUrls?.length
+    ? await prisma.auditLog.findMany({
+        where: idAccessQueryFor(userId),
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        select: {
+          createdAt: true,
+          actor: { select: { email: true, trainerProfile: { select: { displayName: true } } } },
+        },
+      })
+    : [];
+
   return NextResponse.json({
     approvalState: profile?.approvalState || 'none',
     paidCertApproved: profile?.paidCertApproved || false,
     rejectionReason: profile?.rejectionReason || null,
     latest,
+    idAccessLog: access.map((row) =>
+      describeAccess({
+        createdAt: row.createdAt,
+        actor: {
+          displayName: row.actor?.trainerProfile?.displayName ?? null,
+          email: row.actor?.email ?? null,
+        },
+      }),
+    ),
   });
 }

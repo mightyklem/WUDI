@@ -5,7 +5,10 @@ import { getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 
 export default function Approval() {
-  const [state, setState] = useState<{ approvalState: string; paidCertApproved: boolean; rejectionReason: string | null } | null>(null);
+  const [state, setState] = useState<{
+    approvalState: string; paidCertApproved: boolean; rejectionReason: string | null;
+    idAccessLog: { at: string; by: string }[];
+  } | null>(null);
   const [idFile, setIdFile] = useState<File | null>(null);
   const [evidence, setEvidence] = useState('LinkedIn + past workshops');
   const [msg, setMsg] = useState<string | null>(null);
@@ -61,6 +64,24 @@ export default function Approval() {
         <div className="card" style={{ marginTop: 12 }}>
           <p style={{ margin: 0 }}>Status: <b>{state.approvalState}</b> · paid certs: {state.paidCertApproved ? 'allowed' : 'blocked'}
           {state.rejectionReason && <> · reason: {state.rejectionReason}</>}</p>
+        </div>
+      )}
+
+      {state && state.idAccessLog.length > 0 && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <b>Who has opened your ID document</b>
+          <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+            We said staff access is recorded, so here it is. If something here looks wrong,
+            contact support and ask for it to be deleted.
+          </p>
+          <div style={{ display: 'grid', gap: 4, marginTop: 8 }}>
+            {state.idAccessLog.map((entry, i) => (
+              <div key={i} style={{ fontSize: 14 }}>
+                <b>{entry.by}</b>{' '}
+                <span className="muted">· {new Date(entry.at).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       <form onSubmit={submit} className="card" style={{ marginTop: 12 }}>
