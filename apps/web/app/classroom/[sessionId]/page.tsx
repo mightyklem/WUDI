@@ -64,7 +64,15 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <ClassroomClient sessionId={sessionId} />
+        <ClassroomClient
+          sessionId={sessionId}
+          title={session.training.title}
+          subtitle={
+            `${session.training.trainer.displayName}` +
+            `${day ? ` · ${day.topic ?? `Day ${day.dayIndex}`}` : ''}` +
+            ` · ${lagosSpanLabel(session.startsAtUtc, session.endsAtUtc)}`
+          }
+        />
       </div>
     </div>
   );

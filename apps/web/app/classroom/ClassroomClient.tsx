@@ -1,887 +1,214 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  LiveKitRoom, useRoomContext, useTracks, useLocalParticipant,
-  VideoTrack, RoomAudioRenderer,
-} from '@livekit/components-react';
-import { RoomEvent, Track, type DisconnectReason } from 'livekit-client';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAccess } from '@/lib/client-auth';
+import { useRoomConnection, describeConnectionFailure } from './client/useClassroom';
+import type { Role } from './client/model';
+import Lobby from './client/Lobby';
+import ClassroomRoom from './client/ClassroomRoom';
+import './client/classroom.css';
 
-type Role = 'admin' | 'trainer' | 'moderator' | 'participant';
-type ChatMsg = { key: string; from: string; who: string; text: string; at: number; reactions: Record<string, string[]> };
-type Poll = { id: string; question: string; options: string[]; open: boolean; votes: Record<number, number>; seen: Set<string> };
-type Reaction = { key: string; emoji: string; who: string; x: number };
-const REACTION_CHOICES = ['👏', '❤️', '😂', '💡', '🙋'];
+type Phase = 'landing' | 'lobby' | 'joining' | 'in' | 'left';
 
-const enc = new TextEncoder();
-const dec = new TextDecoder();
-
-/**
- * Chat and the hand list arrive keyed on participant identity, which is a database
- * id like cmuyynvyr0000uk8sssz6hj9d. Show something a person recognises: the
- * email local part, falling back to the full address and then the id.
- */
-function displayName(p?: { identity: string; name?: string }): string {
-  const raw = p?.name || p?.identity || 'someone';
-  const local = raw.split('@')[0];
-  return (local || raw).trim();
-}
+type Pass = { token: string; url: string; room: string; role: Role };
 
 /**
- * One main stage plus a picture-in-picture round of cameras.
+ * The classroom shell: landing, then a device check, then the room.
  *
- * A screen share always takes the stage when someone is sharing. Otherwise the
- * stage goes to whoever is speaking, falling back to the first camera. The round
- * keeps every camera visible without the duplicate feeds the grid used to produce.
- *
- * The controls and reactions ride on the stage itself rather than sitting below
- * it, so the person speaking can see a raised hand without looking away from the
- * lesson, and the presenter can act on it in one place.
+ * Nothing connects until the person chooses to join. The previous version fetched
+ * a room pass on mount and opened the camera the instant the page loaded, so a
+ * learner who only ever wanted to listen was prompted for permissions and shown
+ * a room they had not agreed to enter.
  */
-function StageAndRound({ overlay, reactions }: { overlay?: React.ReactNode; reactions: Reaction[] }) {
-  const room = useRoomContext();
-  const [big, setBig] = useState(false);
+export default function ClassroomClient({
+  sessionId,
+  title,
+  subtitle,
+}: {
+  sessionId: string;
+  title: string;
+  subtitle: string;
+}) {
+  const [phase, setPhase] = useState<Phase>('landing');
+  const [pass, setPass] = useState<Pass | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [fatal, setFatal] = useState<{ title: string; detail: string } | null>(null);
+  const [myId, setMyId] = useState('me');
+  const [intent, setIntent] = useState<{ mic: boolean; cam: boolean }>({ mic: false, cam: false });
 
-  const screens = useTracks([{ source: Track.Source.ScreenShare, withPlaceholder: false }]);
-  const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: false }]);
-
-  // Read from participant metadata rather than a prop: an admin can be in the room while
-  // the trainer is the one looking at this screen, and either party may be on stage.
-  const adminCount = room.remoteParticipants.size;
-  const adminObserving = useMemo(
-    () => [...room.remoteParticipants.values()].some((p) => {
-      try { return JSON.parse(p.metadata || '{}').role === 'admin'; } catch { return false; }
-    }),
-    // remoteParticipants is mutated in place by LiveKit, so its size stands in for
-    // membership changes and is what makes this recompute when someone joins or leaves.
-    [room, adminCount],
-  );
-
-  const share = screens[0] ?? null;
-  const speaking = cameras.find((t) => t.participant.isSpeaking) ?? null;
-  const stage = share ?? speaking ?? cameras[0] ?? null;
-  // While someone presents, their camera stays on the stage as a small inset. A learner
-  // watching a slide still needs to see the person explaining it, and dropping the camera
-  // into the thumbnail row left a 96px circle that was easy to miss and easy to scroll
-  // off the screen.
-  const pip = share
-    ? (cameras.find((t) => t.participant.identity === share.participant.identity) ?? speaking ?? cameras[0] ?? null)
-    : null;
-  // Everyone not already on the stage, so nobody appears twice.
-  const round = cameras.filter((t) => t !== stage && t !== pip);
-
-  return (
-    <div style={{ position: big ? 'fixed' : 'relative', inset: big ? 0 : undefined, zIndex: big ? 50 : undefined }}>
-      <div
-        style={{
-          position: 'relative',
-          background: '#0B1F14',
-          borderRadius: big ? 0 : 'var(--r-md)',
-          overflow: 'hidden',
-          border: '1.5px solid var(--line)',
-          // Landscape by default. A portrait stage wastes most of the frame and makes
-          // a shared slide impossible to read. In full screen the stage takes the height
-          // the control bar does not need, rather than keeping 16:9 and leaving dead space.
-          ...(big
-            ? { height: 'calc(100% - 76px)' }
-            : { aspectRatio: '16 / 9', width: '100%' }),
-        }}
-      >
-        {stage ? (
-          <VideoTrack
-            trackRef={stage as never}
-            // A shared slide is cropped by 'cover', which silently cuts off whatever
-            // hangs off the edges of the frame -- exactly the part being taught. Cameras
-            // still use 'cover' because filling the tile looks better than letterboxing.
-            style={{ width: '100%', height: '100%', objectFit: share ? 'contain' : 'cover', display: 'block' }}
-          />
-        ) : (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p className="muted" style={{ color: '#fff' }}>Waiting for the trainer to start…</p>
-          </div>
-        )}
-
-        <span style={{ position: 'absolute', left: 10, top: 10, background: 'rgba(0,0,0,.65)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: 13 }}>
-          {share ? `🖥 ${displayName(stage.participant)} is presenting` : stage ? displayName(stage.participant) : ''}
-        </span>
-
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => setBig((v) => !v)}
-          style={{ position: 'absolute', right: 10, top: 10, minHeight: 0, padding: '7px 13px', fontSize: 13 }}
-        >
-          {big ? '⤡ Exit full screen' : '⤢ Full screen'}
-        </button>
-
-        {/* Reactions float up across the stage so they read as part of the lesson. */}
-        {reactions.map((r) => (
-          <span
-            key={r.key}
-            aria-hidden
-            style={{
-              position: 'absolute', left: `${r.x}%`, bottom: '18%',
-              fontSize: 30, pointerEvents: 'none',
-              animation: `floatUp 2.4s var(--ease) forwards`,
-            }}
-          >
-            {r.emoji}
-          </span>
-        ))}
-
-        {/* An admin in the room is announced on the stage, not only in the roster below.
-            A trainer should know they are being observed while it happens. */}
-        {adminObserving && (
-          <div
-            style={{
-              position: 'absolute', top: 12, right: 12, zIndex: 3,
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '5px 11px', borderRadius: 'var(--r-full)',
-              background: 'rgba(15,92,104,0.92)', color: '#fff',
-              fontSize: 12, fontWeight: 700,
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
-            🛡 Admin observing
-          </div>
-        )}
-
-        {/* The presenter's face, kept on the stage while their slide fills it. */}
-        {pip && (
-          <div
-            style={{
-              position: 'absolute', right: 12, bottom: 12, width: '20%', minWidth: 92, maxWidth: 190,
-              aspectRatio: '4 / 3', borderRadius: 'var(--r-sm)', overflow: 'hidden',
-              border: '2px solid rgba(255,255,255,.85)', boxShadow: '0 4px 14px rgba(0,0,0,.45)',
-              background: '#0B1F14',
-            }}
-          >
-            <VideoTrack trackRef={pip as never} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <span
-              style={{
-                position: 'absolute', inset: 'auto 0 0 0', background: 'rgba(0,0,0,.6)',
-                color: '#fff', fontSize: 10, padding: '2px 4px', textAlign: 'center',
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}
-            >
-              {displayName(pip.participant)}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Controls sit below the stage, never on top of it. As an overlay they covered the
-          bottom of every shared slide, which is the one part of the screen the class is
-          actually about. */}
-      {overlay && (
-        <div
-          className="glass"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
-            marginTop: 10, padding: '8px 10px', borderRadius: 'var(--r-full)',
-            maxWidth: '100%', overflowX: 'auto', background: 'rgba(255,255,255,.86)',
-          }}
-        >
-          {overlay}
-        </div>
-      )}
-
-      {round.length > 0 && (
-        <div
-          style={{
-            display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10,
-            ...(big ? { position: 'fixed', right: 16, bottom: 16, zIndex: 51, marginTop: 0 } : {}),
-          }}
-        >
-          {round.map((t) => (
-            <div
-              key={t.participant.identity}
-              style={{
-                width: 96, height: 96, borderRadius: '50%', overflow: 'hidden',
-                border: `2px solid ${t.participant.isSpeaking ? 'var(--accent)' : 'var(--line)'}`,
-                background: '#0B1F14', position: 'relative',
-              }}
-            >
-              <VideoTrack trackRef={t as never} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <span
-                style={{
-                  position: 'absolute', inset: 'auto 0 0 0', background: 'rgba(0,0,0,.6)',
-                  color: '#fff', fontSize: 10, textAlign: 'center', padding: '2px 0',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}
-              >
-                {displayName(t.participant)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Resolve a participant id to a display name via the room's roster. */
-function nameOf(room: ReturnType<typeof useRoomContext>, identity: string): string {
-  const p = room.getParticipantByIdentity(identity);
-  return displayName(p ?? { identity });
-}
-
-function RoomBody({ sessionId, role, myId, lowData, onLowData }: { sessionId: string; role: Role; myId: string; lowData: boolean; onLowData: (v: boolean) => void }) {
-  const room = useRoomContext();
-  const { localParticipant } = useLocalParticipant();
-  const [chat, setChat] = useState<ChatMsg[]>([]);
-  const [draft, setDraft] = useState('');
-  const [poll, setPoll] = useState<Poll | null>(null);
-  const [pq, setPq] = useState('Which topic next?');
-  const [popts, setPopts] = useState('Pricing, Wiring, Safety');
-  const [hands, setHands] = useState<Set<string>>(new Set());
-  const [reactions, setReactions] = useState<Reaction[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
-  // Learners are minted listen-only. This flips true only when the server grants
-  // publish rights, which arrives as a real permission event rather than a
-  // data-channel message a learner could forge for themselves.
-  const [canSpeak, setCanSpeak] = useState(role !== 'participant');
-
-  useEffect(() => {
-    setCanSpeak(!!localParticipant.permissions?.canPublish);
-    // ParticipantPermission is declared in @livekit/protocol but not re-exported from
-    // livekit-client, so describe the slice of it we actually read.
-    const onPerm = (_prev: unknown, who: { identity: string; permissions?: { canPublish?: boolean } }) => {
-      if (who.identity === myId) setCanSpeak(!!who.permissions?.canPublish);
-    };
-    room.on(RoomEvent.ParticipantPermissionsChanged, onPerm);
-    return () => { room.off(RoomEvent.ParticipantPermissionsChanged, onPerm); };
-  }, [room, myId, localParticipant]);
-
-  useEffect(() => {
-    const onData = (payload: Uint8Array, participant?: { identity: string; name?: string }, _kind?: unknown, topic?: string) => {
-      try {
-        const m = JSON.parse(dec.decode(payload));
-        const from = participant?.identity || 'unknown';
-        // Keep the display name alongside the id: chat lines and the hand list
-        // both read better with a name, but the id is what the trainer acts on.
-        const who = displayName(participant);
-        if (topic === 'chat' && m.text) {
-          setChat((c) => {
-            // The sender carries the key, so a reaction points at the same message
-            // in everyone's view instead of a second copy.
-            const key = typeof m.key === 'string' ? m.key : `${from}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-            return [...c.slice(-99), { key, from, who, text: String(m.text).slice(0, 500), at: Date.now(), reactions: {} }];
-          });
-        }
-        // A reaction on a message, keyed by its own id so everyone sees the same bubble.
-        if (topic === 'react' && m.msgKey && m.emoji) {
-          setChat((c) => c.map((x) => {
-            if (x.key !== m.msgKey) return x;
-            const mine = x.reactions[m.emoji] || [];
-            if (mine.includes(who)) return x; // one reaction per person per emoji
-            return { ...x, reactions: { ...x.reactions, [m.emoji]: [...mine, who] } };
-          }));
-        }
-        // A free-floating reaction, shown on the stage so the speaker notices.
-        if (topic === 'reaction' && m.emoji) {
-          const key = `${from}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-          setReactions((r) => [...r.slice(-19), { key, emoji: String(m.emoji).slice(0, 4), who, x: 12 + Math.random() * 76 }]);
-          setTimeout(() => setReactions((r) => r.filter((x) => x.key !== key)), 2600);
-        }
-        if (topic === 'poll') {
-          if (m.kind === 'open') setPoll({ id: m.id, question: m.question, options: m.options, open: true, votes: {}, seen: new Set() });
-          if (m.kind === 'close') setPoll((p) => (p && p.id === m.id ? { ...p, open: false } : p));
-          if (m.kind === 'vote') setPoll((p) => {
-            if (!p || p.id !== m.id || !p.open || p.seen.has(from)) return p;
-            const seen = new Set(p.seen); seen.add(from);
-            return { ...p, seen, votes: { ...p.votes, [m.opt]: (p.votes[m.opt] || 0) + 1 } };
-          });
-        }
-        if (topic === 'hand') setHands((h) => {
-          const n = new Set(h);
-          if (m.up) n.add(from); else n.delete(from);
-          return n;
-        });
-      } catch { /* ignore malformed */ }
-    };
-    room.on('dataReceived', onData);
-    return () => { room.off('dataReceived', onData); };
-  }, [room]);
-
-  const send = useCallback(async (topic: string, obj: unknown) => {
-    await room.localParticipant.publishData(enc.encode(JSON.stringify(obj)), { reliable: true, topic });
-  }, [room]);
-
-  /**
-   * LiveKit delivers data messages to everyone EXCEPT the sender. Without an
-   * explicit local echo, a person types a message, it reaches everyone else, and
-   * it never appears in their own chat — which reads as the room being broken.
-   * Everything sent is therefore also applied locally at once.
-   */
-  const say = useCallback(async (text: string) => {
-    const clean = text.trim().slice(0, 500);
-    if (!clean) return;
-    const key = `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setChat((c) => [...c.slice(-99), { key, from: myId, who: displayName({ identity: myId, name: myId }), text: clean, at: Date.now(), reactions: {} }]);
-    await send('chat', { text: clean, key });
-  }, [myId, send]);
-
-  /** Add a reaction to a message locally, then broadcast it. */
-  const reactTo = useCallback(async (msgKey: string, emoji: string) => {
-    const me = displayName({ identity: myId, name: myId });
-    setChat((c) => c.map((x) => {
-      if (x.key !== msgKey) return x;
-      const mine = x.reactions[emoji] || [];
-      if (mine.includes(me)) return x;
-      return { ...x, reactions: { ...x.reactions, [emoji]: [...mine, me] } };
-    }));
-    await send('react', { msgKey, emoji });
-  }, [myId, send]);
-
-  /** Float a reaction on the stage locally, then broadcast it. */
-  const popReaction = useCallback(async (emoji: string) => {
-    const key = `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const push = () => {
-      setReactions((r) => [...r.slice(-19), { key, emoji, who: myId, x: 12 + Math.random() * 76 }]);
-      setTimeout(() => setReactions((r) => r.filter((x) => x.key !== key)), 2600);
-    };
-    push();
-    await send('reaction', { emoji });
-  }, [myId, send]);
-
-  const totalVotes = useMemo(() => Object.values(poll?.votes || {}).reduce((a, b) => a + b, 0), [poll]);
-  const canMod = role === 'trainer' || role === 'moderator';
-  const mayPublish = role !== 'participant' || canSpeak;
-  // Hands that have not yet been granted speech, in the order they were raised.
-// Bumped whenever a participant's permissions change. Without it the memo below never
-// re-runs after an Allow, so a learner kept showing as "waiting" after being granted
-// speech -- the queue disagreed with the room.
-const [permVersion, setPermVersion] = useState(0);
-useEffect(() => {
-  const bump = () => setPermVersion((v) => v + 1);
-  room.on(RoomEvent.ParticipantPermissionsChanged, bump);
-  return () => { room.off(RoomEvent.ParticipantPermissionsChanged, bump); };
-}, [room]);
-
-// Only count a hand from someone actually in the room. An identity that has left has no
-// participant record, so it cannot be resolved and would sit in the queue forever.
-const waiting = useMemo(
-  () => [...hands].filter((id) => {
-    const p = room.getParticipantByIdentity(id);
-    return !!p && !p.permissions?.canPublish;
-  }),
-  [hands, room, permVersion],
-);
-
-  // People currently holding speech. Mute has to act on these, not on the waiting queue:
-  // a learner who has not been granted speech cannot publish, so muting them is a no-op.
-  const [speakable, setSpeakable] = useState<string[]>([]);
-  useEffect(() => {
-    const refresh = () => {
-      const ids: string[] = [];
-      room.remoteParticipants.forEach((p) => {
-        if (p.permissions?.canPublish) ids.push(p.identity);
-      });
-      setSpeakable(ids);
-    };
-    refresh();
-    room.on(RoomEvent.ParticipantPermissionsChanged, refresh);
-    room.on(RoomEvent.TrackMuted, refresh);
-    room.on(RoomEvent.TrackUnmuted, refresh);
-    return () => {
-      room.off(RoomEvent.ParticipantPermissionsChanged, refresh);
-      room.off(RoomEvent.TrackMuted, refresh);
-      room.off(RoomEvent.TrackUnmuted, refresh);
-    };
-  }, [room]);
-
-  async function moderate(action: 'mute' | 'allowSpeak' | 'remove' | 'end', identity?: string) {
+  const fetchPass = useCallback(async () => {
     const access = getAccess();
-    const r = await fetch(`/api/sessions/${sessionId}/moderate`, {
+    if (!access) {
+      setErr('Log in first, then join from your training page.');
+      return null;
+    }
+    const r = await fetch(`/api/sessions/${sessionId}/token`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-      body: JSON.stringify({ action, identity }),
+      headers: { authorization: `Bearer ${access}` },
     });
     const j = await r.json().catch(() => ({}));
-    const said = action === 'end' ? 'Session ended.' : action === 'allowSpeak' ? 'They can speak now.' : `${action} sent.`;
-    setMsg(r.ok ? said : (j.error || 'Action failed'));
-  }
+    if (!r.ok) {
+      // The server's wording is specific -- "you did not register for this day",
+      // "this session has finished" -- and it is the only thing that tells a
+      // learner what to do next, so it is never replaced with a generic failure.
+      setErr([j.error || `Could not join (HTTP ${r.status})`, j.detail].filter(Boolean).join(' '));
+      return null;
+    }
+    const p: Pass = { token: j.token, url: j.url, room: j.room, role: j.role };
+    try {
+      const c = JSON.parse(atob(j.token.split('.')[1])) as { sub?: string };
+      if (c.sub) setMyId(c.sub);
+    } catch { /* a missing sub only costs a nicer name */ }
+    setPass(p);
+    return p;
+  }, [sessionId]);
 
-  return (
-    <div>
-      {!mayPublish && (
-        <p className="muted" style={{ fontSize: 14, marginTop: 0, marginBottom: 10 }}>
-          You are listening. Raise your hand and the trainer will let you speak.
-        </p>
-      )}
-      {mayPublish && role === 'participant' && (
-        <p className="muted" style={{ fontSize: 14, marginTop: 0, marginBottom: 10 }}>
-          The trainer has let you speak. Turn your mic or camera on below.
-        </p>
-      )}
-      {/* Controls render onto the stage itself, so "ask to speak" sits where the
-          lesson is rather than in a bar the speaker has to look away from. */}
-      <div style={{ marginTop: 12 }}>
-        <StageAndRound
-          reactions={reactions}
-          overlay={
-            <>
-              <button
-                className="btn"
-                disabled={!mayPublish}
-                style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
-                onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
-              >
-                {localParticipant.isMicrophoneEnabled ? '🎙 Mute' : '🎙 Unmute'}
-              </button>
-              {!lowData && (
-                <button
-                  className="btn"
-                  disabled={!mayPublish}
-                  style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
-                  onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
-                >
-                  {localParticipant.isCameraEnabled ? '📷 Cam off' : '📷 Cam on'}
-                </button>
-              )}
-              <button
-                className="btn"
-                disabled={!mayPublish}
-                style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
-                onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
-              >
-                🖥 Share
-              </button>
-              {!mayPublish && (
-                <button className="btn paid" style={{ minHeight: 0, padding: '8px 16px', fontSize: 14 }}
-                  onClick={async () => {
-                    // Local echo too, or your own hand never appears in the queue.
-                    setHands((h) => new Set(h).add(myId));
-                    await send('hand', { up: true });
-                  }}>
-                  ✋ Ask to speak
-                </button>
-              )}
-              {mayPublish && (
-                <button className="btn" style={{ minHeight: 0, padding: '8px 14px', fontSize: 14 }}
-                  onClick={async () => {
-                    const up = !hands.has(myId);
-                    setHands((h) => { const n = new Set(h); if (up) n.add(myId); else n.delete(myId); return n; });
-                    await send('hand', { up });
-                  }}>
-                  ✋ {hands.has(myId) ? 'Lower hand' : 'Raise hand'}
-                </button>
-              )}
-              {/* Free-floating reactions: they surface on the stage so a speaker
-                  notices an answer without watching the chat. */}
-              {REACTION_CHOICES.map((e) => (
-                <button key={e} className="btn" aria-label={`React ${e}`}
-                  style={{ minHeight: 0, padding: '6px 9px', fontSize: 16, borderRadius: 'var(--r-full)' }}
-                  onClick={() => popReaction(e)}>
-                  {e}
-                </button>
-              ))}
-              <label style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
-                <input type="checkbox" checked={lowData} onChange={(e) => onLowData(e.target.checked)} /> Low-data
-              </label>
-              {role === 'trainer' && (
-                <button className="btn primary" style={{ minHeight: 0, padding: '8px 16px', fontSize: 14 }}
-                  onClick={() => moderate('end')}>⏻ End</button>
-              )}
-            </>
-          }
-        />
-      </div>
-
-      {/* Raised hands surface on the stage, not down the page. A trainer acting on a
-          question has to be looking at the lesson, not scrolling to find a button. */}
-      {canMod && waiting.length > 0 && (
-        <div
-          className="rise"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-            marginTop: 12, padding: '10px 14px', borderRadius: 'var(--r-md)',
-            background: 'var(--gold-soft)', border: '1px solid #EBD9B4',
-            boxShadow: 'var(--sh-1)',
-          }}
-        >
-          <span className="tile-icon tint-gold" aria-hidden
-            style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', fontSize: 17 }}>✋</span>
-          <b style={{ fontSize: 14 }}>
-            {waiting.length} waiting to speak
-          </b>
-          {waiting.map((id) => (
-            <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13 }}>{nameOf(room, id)}</span>
-              <button className="btn primary" style={{ minHeight: 0, padding: '5px 12px', fontSize: 13 }}
-                onClick={() => moderate('allowSpeak', id)}>
-                Allow
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Mute lives beside Allow rather than in a roster at the foot of the page. It only
-          appears for someone who has actually been granted speech, because muting a learner
-          who cannot publish yet would do nothing and read as a broken button. */}
-      {canMod && speakable.length > 0 && (
-        <div
-          className="rise"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-            marginTop: 12, padding: '10px 14px', borderRadius: 'var(--r-md)',
-            background: 'var(--surface-2, #F7F4EF)', border: '1px solid var(--line-2, #E7E0D5)',
-          }}
-        >
-          <span className="tile-icon tint-accent" aria-hidden
-            style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', fontSize: 17 }}>🎙</span>
-          <b style={{ fontSize: 14 }}>Can speak</b>
-          {speakable.map((id) => (
-            <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13 }}>{nameOf(room, id)}</span>
-              <button className="btn" style={{ minHeight: 0, padding: '5px 12px', fontSize: 13 }}
-                onClick={() => moderate('mute', id)}>
-                Mute
-              </button>
-              {hands.has(id) && (
-                <button className="btn" style={{ minHeight: 0, padding: '5px 12px', fontSize: 13 }}
-                  onClick={() => moderate('allowSpeak', id)}>
-                  Allow again
-                </button>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {hands.size > 0 && (
-        <p className="muted" style={{ fontSize: 14 }}>
-          ✋ Waiting to speak: {[...hands].map((id) => nameOf(room, id)).join(', ')}
-        </p>
-      )}
-      <h2 className="sec">Chat</h2>
-      {/* Chat reads as a conversation: who said it, which side it sat on, and what
-          people thought of it. Your own messages sit apart so you can follow the thread. */}
-      <div className="card">
-        <div style={{ maxHeight: 320, overflowY: 'auto', marginBottom: 10, display: 'grid', gap: 10 }}>
-          {chat.length === 0 && (
-            <p className="muted" style={{ margin: 0 }}>No messages yet — this runs on the data channel, so it works on 2G.</p>
-          )}
-          {chat.map((c) => {
-            const mine = c.from === myId;
-            const total = Object.values(c.reactions).reduce((n, v) => n + v.length, 0);
-            return (
-              <div key={c.key} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
-                {!mine && (
-                  <span className="muted" style={{ fontSize: 12, marginBottom: 3 }}>{c.who}</span>
-                )}
-                <div
-                  style={{
-                    background: mine ? 'var(--accent)' : 'var(--pill)',
-                    color: mine ? '#fff' : 'var(--ink)',
-                    padding: '9px 13px',
-                    borderRadius: mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    maxWidth: '82%',
-                    fontSize: 15,
-                    boxShadow: 'var(--sh-1)',
-                  }}
-                >
-                  {c.text}
-                </div>
-                <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
-                  {/* Reactions already on this message, counted per person. */}
-                  {Object.entries(c.reactions).map(([emoji, who]) => (
-                    <button
-                      key={emoji}
-                      className="btn"
-                      aria-label={`${emoji} ${who.length}`}
-                      onClick={() => reactTo(c.key, emoji)}
-                      style={{
-                        minHeight: 0, padding: '2px 8px', fontSize: 12, borderRadius: 999,
-                        background: who.includes(displayName({ identity: c.from, name: c.from })) ? 'var(--accent-soft)' : '#fff',
-                      }}
-                    >
-                      {emoji} {who.length}
-                    </button>
-                  ))}
-                  {['👏', '❤️', '💡'].map((e) => (
-                    <button
-                      key={'add-' + e}
-                      className="btn link"
-                      aria-label={`React ${e}`}
-                      onClick={() => reactTo(c.key, e)}
-                      style={{ minHeight: 0, padding: '2px 6px', fontSize: 12 }}
-                    >
-                      {e}
-                    </button>
-                  ))}
-                  {total > 0 && <span className="muted" style={{ fontSize: 11, alignSelf: 'center' }}>{total}</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="btnrow" style={{ marginTop: 0 }}>
-          <input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { say(draft); setDraft(''); }
-            }}
-            placeholder="Message everyone…"
-            style={{ maxWidth: 320 }}
-          />
-          <button className="btn primary" onClick={() => { say(draft); setDraft(''); }}>
-            Send
-          </button>
-        </div>
-      </div>
-
-      <h2 className="sec">Polls {poll && (poll.open ? '(live)' : '(closed)')}</h2>
-      <div className="card">
-        {poll ? (
-          <div>
-            <p><b>{poll.question}</b></p>
-            {poll.options.map((o, i) => {
-              const v = poll.votes[i] || 0;
-              const pct = totalVotes ? Math.round((v / totalVotes) * 100) : 0;
-              return (
-                <div key={i} className="btnrow" style={{ marginTop: 8 }}>
-                  <button className="btn" disabled={!poll.open} onClick={() => send('poll', { kind: 'vote', id: poll.id, opt: i })}>{o}</button>
-                  <span className="muted">{v} votes · {pct}%</span>
-                </div>
-              );
-            })}
-            {canMod && poll.open && <div className="btnrow"><button className="btn" onClick={() => send('poll', { kind: 'close', id: poll.id })}>Close poll</button></div>}
-          </div>
-        ) : <p className="muted">No active poll.</p>}
-        {canMod && (
-          <div style={{ marginTop: 12 }}>
-            <label className="fl">New poll</label>
-            <input type="text" value={pq} onChange={(e) => setPq(e.target.value)} style={{ maxWidth: '100%' }} />
-            <label className="fl">Options (comma separated)</label>
-            <input type="text" value={popts} onChange={(e) => setPopts(e.target.value)} style={{ maxWidth: '100%' }} />
-            <div className="btnrow">
-              <button className="btn primary" onClick={() => {
-                const options = popts.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 6);
-                if (!pq.trim() || options.length < 2) return setMsg('Need a question + 2 options.');
-                send('poll', { kind: 'open', id: `poll-${Date.now()}`, question: pq.trim(), options });
-              }}>Open poll</button>
-            </div>
-          </div>
-        )}
-      </div>
-      {msg && <div className="okmsg">{msg}</div>}
-      {canMod && <p className="muted" style={{ fontSize: 13 }}>A learner can only speak once you allow it. Everyone else is listen-only.</p>}
-      {canMod && <RemoteRoster hands={hands} />}
-    </div>
-  );
-}
-
-function RemoteRoster({ hands }: { hands: Set<string> }) {
-  const room = useRoomContext();
-  const remotes = [...room.remoteParticipants.values()];
-  if (!remotes.length) return null;
-  // An administrator in someone's live class must be visible, not discovered later in a
-  // log. This is the trainer's classroom, and silent observation is how a safety feature
-  // turns into a complaint.
-  const admins = remotes.filter((p) => {
-    try { return JSON.parse(p.metadata || '{}').role === 'admin'; } catch { return false; }
+  const { room, state, quality, retryIn, retryNow } = useRoomConnection({
+    url: pass?.url ?? null,
+    token: pass?.token ?? null,
+    enabled: phase === 'joining' || phase === 'in',
+    onFatal: (f) => { setFatal(f); setPhase('left'); },
   });
-  return (
-    <div className="card" style={{ marginTop: 12 }}>
-      {admins.length > 0 && (
-        <p className="muted" style={{ fontSize: 13, margin: '0 0 8px 0' }}>
-          🛡 An administrator is observing this session
-          {admins.length > 1 ? ` (${admins.length})` : ''}.
-        </p>
-      )}
-      <p className="eyebrow" style={{ marginBottom: 8 }}>
-        Learners · no one is ever removed from a session
-      </p>
-      {/* Read-only on purpose. Allow and Mute both live under the stage now, where the
-          trainer is already looking; a second copy down here meant two buttons for the
-          same action, and the wrong one being pressed looked like it did nothing. */}
-      {remotes.map((p) => {
-        const speaking = !!p.permissions?.canPublish;
-        const raised = hands.has(p.identity);
-        return (
-          <div key={p.identity} className="btnrow" style={{ marginTop: 6, alignItems: 'center' }}>
-            <span>
-              {displayName(p)}
-              {raised && !speaking ? ' ✋' : ''}
-              {speaking ? ' 🎙' : ''}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
-/**
- * What a drop actually means, in words the person can act on.
- *
- * The previous version reported every drop as "Disconnected from the room", which
- * threw away the only information that distinguishes four completely different
- * problems: a LiveKit project that has not allowed this origin, an expired token,
- * a network drop, and someone leaving deliberately. A trainer whose room was being
- * rejected by the LiveKit project was told the same thing as one who closed the tab.
- *
- * DisconnectReason is a numeric enum from @livekit/protocol, so these are the
- * declared values rather than names.
- */
-function describeDisconnect(reason?: DisconnectReason): { title: string; detail: string } {
-  switch (reason) {
-    case 1: // CLIENT_INITIATED
-      return { title: 'You left the room', detail: 'Rejoin whenever you are ready.' };
-    case 2: // DUPLICATE_IDENTITY
-      return {
-        title: 'This account is already in the room',
-        detail: 'LiveKit allows one connection per person. Close the other tab or device, then rejoin.',
-      };
-    case 3: // SERVER_SHUTDOWN
-      return {
-        title: 'The room connection closed',
-        detail:
-          'Either the LiveKit server ended the room, or this device lost the connection. ' +
-          'On a phone this is usually the tab being backgrounded or the screen locking — ' +
-          'keep the screen on, close other tabs, and rejoin.',
-      };
-    case 4: // PARTICIPANT_REMOVED
-    case 5: // ROOM_DELETED
-    case 10: // ROOM_CLOSED
-      return { title: 'The room was closed', detail: 'The session has ended.' };
-    case 6: // STATE_MISMATCH
-      return {
-        title: 'The LiveKit keys do not match this project',
-        detail:
-          'This almost always means the API key and secret in Netlify belong to a different ' +
-          'LiveKit project than the one being connected to. Compare them against the Keys page ' +
-          'for this project, and check the API key itself has not been disabled.',
-      };
-    case 7: // JOIN_FAILURE
-      return {
-        title: 'LiveKit refused the connection',
-        detail:
-          'The room refused this join. Either the token was not valid for this room, or the ' +
-          'LiveKit project will not accept more participants. Try rejoin; if it persists, send ' +
-          'the trainer the LiveKit error code shown below.',
-      };
-    case 12: // USER_REJECTED
-      return {
-        title: 'LiveKit rejected this participant',
-        detail:
-          'The project refused this person specifically. The most common cause is a participant ' +
-          'limit on the LiveKit plan being reached.',
-      };
-    case 14: // CONNECTION_TIMEOUT
-    case 9: // SIGNAL_CLOSE
-      return {
-        title: 'Lost the connection to the room',
-        detail: 'The signal connection dropped. Check your network and rejoin.',
-      };
-    case 0: // UNKNOWN_REASON
-    default:
-      return {
-        title: 'Disconnected from the room',
-        detail: 'LiveKit did not say why. Rejoin, and check the room is still scheduled.',
-      };
-  }
-}
-
-export default function ClassroomClient({ sessionId }: { sessionId: string }) {
-  const [creds, setCreds] = useState<{ token: string; url: string; room: string; role: Role; myId: string } | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  // The reason a room dropped, kept apart from err so that "you were refused" and
-  // "the connection died" can be told apart and both keep their detail.
-  const [drop, setDrop] = useState<{ title: string; detail: string } | null>(null);
-  const [liveError, setLiveError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  // LiveKitRoom is remounted on every rejoin. Without this, a callback belonging to
-  // the abandoned room can land after the new one has mounted and describe a
-  // connection that no longer exists.
-  const currentAttempt = useRef(attempt);
-  const [lowData, setLowData] = useState(false);
+  // Apply the lobby's device choices once the room exists, not before. Learners
+  // always start muted: this is a taught class, and appearing on camera before
+  // the trainer grants permission is exactly what the hand-raise flow prevents.
+  const appliedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!room || state !== 'connected' || appliedFor.current === pass?.token) return;
+    appliedFor.current = pass?.token ?? null;
+    const wantMic = pass?.role !== 'participant' && intent.mic;
+    const wantCam = pass?.role !== 'participant' && intent.cam;
+    (async () => {
+      try {
+        if (wantMic) await room.localParticipant.setMicrophoneEnabled(true);
+        if (wantCam) await room.localParticipant.setCameraEnabled(true);
+      } catch { /* a refused device must not stop them joining to listen */ }
+    })();
+  }, [room, state, pass, intent]);
 
   useEffect(() => {
-    const access = getAccess();
-    if (!access) return void setErr('Log in first, then join from your training page.');
-    setDrop(null);
-    setLiveError(null);
-    fetch(`/api/sessions/${sessionId}/token`, {
-      method: 'POST', headers: { authorization: `Bearer ${access}` },
-    }).then(async (r) => {
-      const j = await r.json().catch(() => ({}));
-      // The server's message is the specific one ("You did not register for this
-      // day"), so it must not be flattened into a generic failure. detail carries the
-      // extra sentence when there is one.
-      if (!r.ok) return setErr([j.error || `Could not join (HTTP ${r.status})`, j.detail].filter(Boolean).join(' '));
-      let id = 'me';
-      try { id = (JSON.parse(atob(j.token.split('.')[1])) as { sub?: string }).sub || 'me'; } catch { /* ignore */ }
-      setCreds({ token: j.token, url: j.url, room: j.room, role: j.role, myId: id });
-    }).catch(() => setErr('Could not reach Learnovize to get your room pass. Check your connection.'));
-  }, [sessionId, attempt]);
+    if (state === 'connected' && (phase === 'joining')) setPhase('in');
+  }, [state, phase]);
 
-  if (err) return <div className="err">{err}</div>;
-  if (drop || liveError) {
+  const join = useCallback(async () => {
+    setErr(null);
+    setFatal(null);
+    setPhase('joining');
+    const p = await fetchPass();
+    if (!p) { setPhase('lobby'); return; }
+    appliedFor.current = null;
+  }, [fetchPass]);
+
+  const leave = useCallback(() => {
+    room?.disconnect();
+    setPass(null);
+    appliedFor.current = null;
+    setPhase('left');
+  }, [room]);
+
+  /* ----------------------------- landing ----------------------------- */
+
+  if (phase === 'landing' || (phase === 'left' && !fatal)) {
     return (
-      <div className="err">
-        <b>{drop?.title || 'Could not connect to the room'}</b>
-        <div style={{ marginTop: 6 }}>{drop?.detail || liveError}</div>
+      <div className="card" style={{ padding: 'var(--s-5)' }}>
+        <p className="eyebrow">Live classroom</p>
+        <h2 style={{ margin: '0 0 6px', fontSize: 20 }}>{title}</h2>
+        <p className="muted" style={{ margin: '0 0 14px', fontSize: 14 }}>{subtitle}</p>
         <div className="btnrow">
-          <button
-            className="btn primary"
-            onClick={() => {
-              setErr(null);
-              setDrop(null);
-              setLiveError(null);
-              setCreds(null);
-              setAttempt((n) => n + 1);
-            }}
-          >
-            Rejoin room
+          <button type="button" className="btn primary lg" onClick={() => setPhase('lobby')}>
+            Check camera and join
+          </button>
+          {phase === 'left' && <span className="muted">You left the room.</span>}
+        </div>
+        {err && <div className="err">{err}</div>}
+        <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+          Learners join muted. Raise your hand when you want to speak and the trainer will let you in.
+        </p>
+      </div>
+    );
+  }
+
+  /* ------------------------- fatal connection ------------------------- */
+
+  if (fatal) {
+    return (
+      <div className="card" style={{ padding: 'var(--s-5)' }}>
+        <h2 style={{ margin: '0 0 8px', fontSize: 20 }}>{fatal.title}</h2>
+        <p className="muted" style={{ margin: '0 0 14px' }}>{fatal.detail}</p>
+        <div className="btnrow">
+          <button type="button" className="btn primary" onClick={() => { setFatal(null); setPhase('lobby'); }}>
+            Back to the device check
           </button>
         </div>
       </div>
     );
   }
-  if (!creds) return <p className="muted">Joining room…</p>;
-  return (
-    <LiveKitRoom
-      serverUrl={creds.url} token={creds.token} connect
-      video={!lowData} audio
-      // LiveKit's own error carries the real cause. The message alone is often a
-      // generic sentence, but `status` and `reason` distinguish a rejected token
-      // from a refused join from an unreachable region, so they are shown too.
-      // Genericising these into one message is what made this fault slow to find.
-      onError={(e) => {
-        const anyErr = e as { message?: string; status?: number; reason?: string };
-        const msg = anyErr?.message || String(e);
-        // A connect cancelled by our own disconnect() surfaces here rather than through
-        // onDisconnected, so the DUPLICATE_IDENTITY wording never ran. LiveKit permits
-        // one connection per identity, so a second tab or device for the same account is
-        // torn down mid-join and reports exactly this.
-        if (/client initiated disconnect/i.test(msg) && !anyErr?.status && currentAttempt.current === attempt) {
-          setDrop({
-            title: 'This account is already in the room',
-            detail:
-              'LiveKit allows one connection per person, so a second tab or device signed in ' +
-              'to this account cancels this one. Close the other tab or device, then rejoin.',
-          });
-          return;
-        }
-        const code = [
-          anyErr?.reason ? `reason=${anyErr.reason}` : '',
-          anyErr?.status ? `status=${anyErr.status}` : '',
-        ].filter(Boolean).join(' ');
-        setLiveError(code ? `${msg} (${code})` : msg);
-      }}
-      onDisconnected={(reason) => setDrop(describeDisconnect(reason))}
-    >
-      <p className="muted" style={{ fontSize: 13 }}>you are <b>{creds.role}</b></p>
-      {/* Renders every remote audio track and handles the browser autoplay block.
-          Without it the learner hears nothing until they click something. */}
-      <RoomAudioRenderer />
-      <RoomBody sessionId={sessionId} role={creds.role} myId={creds.myId} lowData={lowData} onLowData={setLowData} />
-    </LiveKitRoom>
-  );
+
+  /* ------------------------------ lobby ------------------------------ */
+
+  if (phase === 'lobby' || phase === 'joining') {
+    // The room must exist before the lobby hands over, otherwise joining is a
+    // flash of empty stage while the socket opens.
+    if (phase === 'joining' && room) {
+      return (
+        <ClassroomRoom
+          room={room}
+          sessionId={sessionId}
+          sessionTitle={title}
+          subtitle={subtitle}
+          role={pass?.role ?? 'participant'}
+          myId={myId}
+          state={state}
+          quality={quality}
+          retryIn={retryIn}
+          retryNow={retryNow}
+          onLeave={leave}
+          onEnd={leave}
+        />
+      );
+    }
+    if (phase === 'joining') {
+      return (
+        <div className="croom-lobby">
+          <div className="croom-lobby-stage">
+            <div className="croom-waiting"><p>Joining the room…</p></div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <Lobby
+        role={pass?.role ?? 'participant'}
+        joining={false}
+        error={err}
+        onJoin={({ mic, cam }) => {
+          setIntent({ mic, cam });
+          void join();
+        }}
+      />
+    );
+  }
+
+  /* ------------------------------- room ------------------------------- */
+
+  if (phase === 'in' && room) {
+    return (
+      <ClassroomRoom
+        room={room}
+        sessionId={sessionId}
+        sessionTitle={title}
+        subtitle={subtitle}
+        role={pass?.role ?? 'participant'}
+        myId={myId}
+        state={state}
+        quality={quality}
+        retryIn={retryIn}
+        retryNow={retryNow}
+        onLeave={leave}
+        onEnd={leave}
+      />
+    );
+  }
+
+  return null;
 }
