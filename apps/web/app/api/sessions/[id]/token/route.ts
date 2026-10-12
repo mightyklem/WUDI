@@ -24,6 +24,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: 'Session is over' }, { status: 409 });
   }
 
+  // Status alone is not enough. A session whose end time has passed still reads
+  // 'scheduled' until someone ends it by hand, so the token route was minting
+  // passes for classes that had already finished -- and LiveKit's refusal to join
+  // then surfaced to the trainer as a bare connection failure. The clock is the
+  // truth here; the status is bookkeeping that can lag it.
+  //
+  // Trainers are still admitted after the hour ends, but only for a short grace
+  // window, because the room is genuinely still useful while people are leaving
+  // and shutting it instantly strands anyone a minute behind.
+  const GRACE_MINUTES = 15;
+  const past = session.endsAtUtc.getTime() + GRACE_MINUTES * 60_000;
+  if (Date.now() > past) {
+    return NextResponse.json(
+      {
+        error: 'This session has finished',
+        detail: `It ended at ${session.endsAtUtc.toISOString()}. Joining later cannot earn attendance.`,
+      },
+      { status: 409 },
+    );
+  }
+  const inGrace = Date.now() > session.endsAtUtc.getTime();
+
   let role: RoomRole | null = null;
   if (session.training.trainerId === userId) {
     role = 'trainer';

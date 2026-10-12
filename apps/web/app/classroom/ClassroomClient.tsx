@@ -752,8 +752,9 @@ export default function ClassroomClient({ sessionId }: { sessionId: string }) {
     }).then(async (r) => {
       const j = await r.json().catch(() => ({}));
       // The server's message is the specific one ("You did not register for this
-      // day"), so it must not be flattened into a generic failure.
-      if (!r.ok) return setErr(j.error || `Could not join (HTTP ${r.status})`);
+      // day"), so it must not be flattened into a generic failure. detail carries the
+      // extra sentence when there is one.
+      if (!r.ok) return setErr([j.error || `Could not join (HTTP ${r.status})`, j.detail].filter(Boolean).join(' '));
       let id = 'me';
       try { id = (JSON.parse(atob(j.token.split('.')[1])) as { sub?: string }).sub || 'me'; } catch { /* ignore */ }
       setCreds({ token: j.token, url: j.url, room: j.room, role: j.role, myId: id });
