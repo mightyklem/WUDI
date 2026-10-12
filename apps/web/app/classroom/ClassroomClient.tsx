@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   LiveKitRoom, useRoomContext, useTracks, useLocalParticipant,
   VideoTrack, RoomAudioRenderer,
@@ -759,6 +759,10 @@ export default function ClassroomClient({ sessionId }: { sessionId: string }) {
   const [drop, setDrop] = useState<{ title: string; detail: string } | null>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // LiveKitRoom is remounted on every rejoin. Without this, a callback belonging to
+  // the abandoned room can land after the new one has mounted and describe a
+  // connection that no longer exists.
+  const currentAttempt = useRef(attempt);
   const [lowData, setLowData] = useState(false);
 
   useEffect(() => {
@@ -814,12 +818,25 @@ export default function ClassroomClient({ sessionId }: { sessionId: string }) {
       // Genericising these into one message is what made this fault slow to find.
       onError={(e) => {
         const anyErr = e as { message?: string; status?: number; reason?: string };
-        const bits = [anyErr?.message || String(e)];
+        const msg = anyErr?.message || String(e);
+        // A connect cancelled by our own disconnect() surfaces here rather than through
+        // onDisconnected, so the DUPLICATE_IDENTITY wording never ran. LiveKit permits
+        // one connection per identity, so a second tab or device for the same account is
+        // torn down mid-join and reports exactly this.
+        if (/client initiated disconnect/i.test(msg) && !anyErr?.status && currentAttempt.current === attempt) {
+          setDrop({
+            title: 'This account is already in the room',
+            detail:
+              'LiveKit allows one connection per person, so a second tab or device signed in ' +
+              'to this account cancels this one. Close the other tab or device, then rejoin.',
+          });
+          return;
+        }
         const code = [
           anyErr?.reason ? `reason=${anyErr.reason}` : '',
           anyErr?.status ? `status=${anyErr.status}` : '',
         ].filter(Boolean).join(' ');
-        setLiveError(code ? `${bits[0]} (${code})` : bits[0]);
+        setLiveError(code ? `${msg} (${code})` : msg);
       }}
       onDisconnected={(reason) => setDrop(describeDisconnect(reason))}
     >
