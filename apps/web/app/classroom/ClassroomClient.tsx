@@ -702,7 +702,13 @@ function describeDisconnect(reason?: DisconnectReason): { title: string; detail:
         detail: 'LiveKit allows one connection per person. Close the other tab or device, then rejoin.',
       };
     case 3: // SERVER_SHUTDOWN
-      return { title: 'The LiveKit server is unavailable', detail: 'This is a service problem, not yours.' };
+      return {
+        title: 'The room connection closed',
+        detail:
+          'Either the LiveKit server ended the room, or this device lost the connection. ' +
+          'On a phone this is usually the tab being backgrounded or the screen locking — ' +
+          'keep the screen on, close other tabs, and rejoin.',
+      };
     case 4: // PARTICIPANT_REMOVED
     case 5: // ROOM_DELETED
     case 10: // ROOM_CLOSED
