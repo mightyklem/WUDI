@@ -30,14 +30,17 @@ export default function Lobby({
   const [devices, setDevices] = useState<LobbyDevice[]>([]);
   const [micId, setMicId] = useState('');
   const [camId, setCamId] = useState('');
-  const [micOn, setMicOn] = useState(false);
-  const [camOn, setCamOn] = useState(false);
+  const isLearner = role === 'participant';
+  // A learner arrives muted with the camera off, because they are not permitted
+  // to publish until the trainer allows it. Staff are here to teach, so they
+  // start live -- defaulting them off too meant every trainer had to turn
+  // themselves on from a cold join.
+  const [micOn, setMicOn] = useState(!isLearner);
+  const [camOn, setCamOn] = useState(!isLearner);
   const [perms, setPerms] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [probe, setProbe] = useState<{ mic: boolean; cam: boolean }>({ mic: false, cam: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
-  const isLearner = role === 'participant';
 
   // Ask once on mount. Permissions requested without a reason are refused far
   // more often, so the copy states the purpose before the prompt appears.

@@ -44,20 +44,37 @@ export default function ClassroomClient({
   // Whether the viewer owns this training decides if the attach-a-product grid is
   // shown at all. A learner should never be offered a form they cannot use. The
   // token lives in localStorage, so this has to be settled in the browser.
-  const [viewerId, setViewerId] = useState<string | null>(null);
+const [viewerId, setViewerId] = useState<string | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   useEffect(() => {
     const access = getAccess();
     if (!access) return;
     let dead = false;
     fetch('/api/me', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (dead || !j?.user?.id) return;
-        setViewerId(j.user.id);
-      })
+      .then((j) => { if (!dead && j?.user?.id) setViewerId(j.user.id); })
       .catch(() => {});
     return () => { dead = true; };
   }, []);
+
+  // What role would I have in this room? Asked before anyone clicks Join, because
+  // the lobby needs it to offer a camera check to a trainer rather than a
+  // listener's "you will join muted" notice -- and to a learner rather than a
+  // camera check they will never be allowed to use.
+  useEffect(() => {
+    const access = getAccess();
+    if (!access) return;
+    let dead = false;
+    fetch(`/api/sessions/${sessionId}/token`, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${access}` },
+      cache: 'no-store',
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (!dead && j?.role) setRole(j.role as Role); })
+      .catch(() => {});
+    return () => { dead = true; };
+  }, [sessionId]);
 
 
   const subtitle = `${intro.hostName} · ${spanLabel(intro)}`;
@@ -202,10 +219,10 @@ export default function ClassroomClient({
 
   /* ------------------------------ lobby ------------------------------ */
 
-  if (phase === 'lobby') {
+if (phase === 'lobby') {
     return (
       <Lobby
-        role={pass?.role ?? 'participant'}
+        role={role ?? 'participant'}
         joining={false}
         error={err}
         onJoin={({ mic, cam }) => {

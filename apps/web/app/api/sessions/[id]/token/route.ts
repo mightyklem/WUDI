@@ -6,6 +6,86 @@ import { isAdmin } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Who is this person in this session?
+ *
+ * Extracted so the pre-join screen and the token mint cannot disagree. They used
+ * to be two separate decisions, and the result was a trainer being told "you will
+ * join as a listener" and offered a button reading "Join as listener" -- because
+ * the lobby had to guess a role that was only computed later, at token time.
+ */
+async function resolveRole(
+  userId: string,
+  session: {
+    trainingId: string;
+    dayId: string | null;
+    training: { trainerId: string };
+  },
+): Promise<RoomRole | null> {
+  if (session.training.trainerId === userId) return 'trainer';
+  if (await isAdmin(userId)) {
+    // Staff can enter any classroom to settle a dispute. They skip the enrolment check
+    // below, which is correct -- an admin is not a learner and has no day seat. The
+    // webhook refuses to record attendance for them, so observing costs no one a
+    // certificate.
+    return 'admin';
+  }
+  const mod = await prisma.moderator.findUnique({
+    where: { trainingId_userId: { trainingId: session.trainingId, userId } },
+  });
+  if (mod && mod.status === 'active') return 'moderator';
+
+  const reg = await prisma.registration.findUnique({
+    where: { trainingId_userId: { trainingId: session.trainingId, userId } },
+  });
+  // A registration for the class is not enough. Learners pick specific days, and
+  // a seat on Day 1 must not admit them to Day 3 -- otherwise attendance and
+  // certificates are measured against days they never paid for or chose.
+  // Registering for free days still counts: the choice was theirs.
+  if (!reg || reg.status !== 'active') return null;
+  if (!session.dayId) return 'participant';
+  const enrolled = await prisma.dayEnrollment.findUnique({
+    where: { registrationId_dayId: { registrationId: reg.id, dayId: session.dayId } },
+  });
+  return enrolled ? 'participant' : null;
+}
+
+/**
+ * GET /api/sessions/[id]/token -- who would I be in this room, and may I enter?
+ *
+ * Mints nothing. The pre-join screen needs to know it is looking at the trainer
+ * so it can offer a camera check instead of a listener's mute-only notice, and
+ * asking for a room pass just to read a role would hand out a credential before
+ * anyone chose to join.
+ */
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const token = getBearer(req);
+  const userId = token ? await verifyAccessToken(token) : null;
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { id } = await params;
+
+  const session = await prisma.session.findUnique({
+    where: { id },
+    select: { id: true, trainingId: true, dayId: true, startsAtUtc: true, endsAtUtc: true, status: true, training: { select: { trainerId: true } } },
+  });
+  if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+
+  const role = await resolveRole(userId, session);
+  const past = session.endsAtUtc.getTime() + 15 * 60_000;
+  const finished = Date.now() > past || session.status === 'ended' || session.status === 'cancelled';
+  const speaker = role === 'trainer' || role === 'moderator' || role === 'admin';
+
+  return NextResponse.json({
+    role,
+    admitted: !!role && !finished,
+    finished,
+    startsInMs: Math.max(0, session.startsAtUtc.getTime() - Date.now()),
+    // Whether the person will be muted on arrival. The client uses this to enable
+    // the mic and camera automatically for staff and never for a learner.
+    startsWithMic: speaker,
+  });
+}
+
 // POST /api/sessions/[id]/token — mint a role-scoped LiveKit token (2h TTL).
 // Role is resolved server-side, never trusted from the client:
 // admin (staff) > trainer (owns training) > active moderator > registered participant.
@@ -46,42 +126,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   const inGrace = Date.now() > session.endsAtUtc.getTime();
 
-  let role: RoomRole | null = null;
-  if (session.training.trainerId === userId) {
-    role = 'trainer';
-  } else if (await isAdmin(userId)) {
-    // Staff can enter any classroom to settle a dispute. They skip the enrolment check
-    // below, which is correct -- an admin is not a learner and has no day seat. The
-    // webhook refuses to record attendance for them, so observing costs no one a
-    // certificate.
-    role = 'admin';
-  } else {
-    const mod = await prisma.moderator.findUnique({
-      where: { trainingId_userId: { trainingId: session.trainingId, userId } },
-    });
-    if (mod && mod.status === 'active') {
-      role = 'moderator';
-    } else {
-      const reg = await prisma.registration.findUnique({
-        where: { trainingId_userId: { trainingId: session.trainingId, userId } },
-      });
-      // A registration for the class is not enough. Learners pick specific days, and
-      // a seat on Day 1 must not admit them to Day 3 — otherwise attendance and
-      // certificates are measured against days they never paid for or chose.
-      // Registering for free days still counts: the choice was theirs.
-      if (reg && reg.status === 'active') {
-        if (session.dayId) {
-          const enrolled = await prisma.dayEnrollment.findUnique({
-            where: { registrationId_dayId: { registrationId: reg.id, dayId: session.dayId } },
-          });
-          role = enrolled ? 'participant' : null;
-        } else {
-          // Session predates the day model, so fall back to the class registration.
-          role = 'participant';
-        }
-      }
-    }
-  }
+  let role: RoomRole | null = await resolveRole(userId, session);
   if (!role) {
     return NextResponse.json(
       { error: 'You did not register for this day of the class' },
