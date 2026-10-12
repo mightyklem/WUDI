@@ -36,9 +36,17 @@ export async function mintRoomToken(opts: {
   // What admin deliberately does NOT get is the ability to end the session -- that stays
   // with the trainer whose class it is. That limit is enforced server-side in the
   // moderation route, not here.
-  const canPublish = opts.role === 'trainer' || opts.role === 'moderator' || opts.role === 'admin'
-    ? true
-    : (opts.canPublishOverride ?? false);
+  // Everyone who may enter the room may also publish. A learner is handed a
+  // camera-and-mic capable token and starts muted; the trainer and moderators
+  // grant speech from the room. Withholding canPublish here looked tidier --
+  // "listeners cannot talk" -- but it contradicted the product, which promises
+  // "a learner can only speak once you allow it", and it broke joining outright:
+  // the client asks for video and audio on every role, so a listen-only token
+  // made the SDK fail mid-connect and tear the room down, which surfaced as the
+  // misleading 'Client initiated disconnect' rather than a permission error.
+  // Keeping control in the moderation route also means the trainer's mute takes
+  // effect server-side and cannot be undone from the learner's browser.
+  const canPublish = opts.canPublishOverride ?? true;
   at.addGrant({
     roomJoin: true,
     room: opts.room,
