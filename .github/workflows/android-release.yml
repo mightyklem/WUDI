@@ -114,7 +114,11 @@ jobs:
           echo "fingerprint=$FP" >> "$GITHUB_OUTPUT"
 
       - name: Set up Gradle
+        # Pinned, not latest: AGP 8.5.x does not run on Gradle 9, and setup-gradle
+        # otherwise installs whatever is newest. 8.10.2 is the known-good pairing.
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
 
       - name: Build release APK and AAB
         env:
@@ -123,7 +127,22 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ steps.signing.outputs.key_alias }}
           ANDROID_KEY_PASSWORD: ${{ steps.signing.outputs.key_password }}
           ANDROID_VERSION_CODE: ${{ github.run_number }}
-        run: gradle -p "$APP_DIR" :app:assembleRelease :app:bundleRelease --no-daemon
+        run: |
+          set -o pipefail
+          gradle -p "$APP_DIR" :app:assembleRelease :app:bundleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
+
+      - name: Report build failure
+        # Step logs are only readable with an authenticated token, so a failed build
+        # would otherwise be a black box. The tail of the Gradle output goes into the
+        # run summary, which is retrievable without authentication.
+        if: failure()
+        run: |
+          {
+            echo "### Gradle build failed"
+            echo '```'
+            tail -120 /tmp/gradle.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify the signature
         run: |
