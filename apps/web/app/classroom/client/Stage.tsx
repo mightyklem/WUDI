@@ -105,9 +105,7 @@ export default function Stage({
         ) : speaker ? (
           <VideoTile tile={speaker} big onClick={() => onSpotlight(speaker.identity)} />
         ) : (
-          <div className="croom-waiting">
-            <p>Waiting for the trainer to start…</p>
-          </div>
+          <EmptyStage role={role} room={room} />
         )}
 
         <div className="croom-stage-label">
@@ -134,6 +132,51 @@ export default function Stage({
             <Thumb key={t.key} tile={t} onClick={() => onSpotlight(t.identity)} />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What an empty stage should say.
+ *
+ * "Waiting for the trainer to start" was shown whenever no camera was
+ * publishing -- including to the trainer, whose own camera was simply off. That
+ * reads as broken: the header says "Live", someone is in the room, and the stage
+ * insists nobody has arrived. The three cases are genuinely different and each
+ * needs a different next step.
+ */
+function EmptyStage({ role, room }: { role: Role; room: Room }) {
+  const me = room.localParticipant;
+  const isLearner = role === 'participant';
+  const others = room.remoteParticipants.size;
+
+  const turnOn = async () => {
+    try {
+      await me.setCameraEnabled(true);
+      await me.setMicrophoneEnabled(true);
+    } catch { /* refused device; the toolbar still shows the real state */ }
+  };
+
+  if (isLearner) {
+    return (
+      <div className="croom-waiting">
+        <p>{others > 0 ? 'The trainer has not started their camera yet.' : 'You are first in. The trainer will be here shortly.'}</p>
+        <p className="muted" style={{ fontSize: 13 }}>You are muted. Raise your hand if you want to speak.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="croom-waiting">
+      <p>Your camera is off, so there is nothing on the stage.</p>
+      <button type="button" className="croom-send" style={{ alignSelf: 'center' }} onClick={() => void turnOn()}>
+        Turn on camera and mic
+      </button>
+      {others > 0 && (
+        <p className="muted" style={{ fontSize: 13 }}>
+          {others} {others === 1 ? 'person is' : 'people are'} waiting for you.
+        </p>
       )}
     </div>
   );

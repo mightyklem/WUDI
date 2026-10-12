@@ -22,9 +22,12 @@
   flex-direction: column;
   background: var(--croom-bg);
   color: var(--croom-fg);
-  overflow: hidden;
+overflow: hidden;
   /* The page behind must not scroll; the room owns the viewport. */
   overscroll-behavior: none;
+  /* Above page content. The session card is still in the DOM behind the room,
+     and without this it drew on top of the stage. */
+  z-index: 100;
 }
 
 /* ---------- header ---------- */
@@ -529,6 +532,8 @@
 .croom-lobby {
   position: fixed;
   inset: 0;
+  /* Same reason as .croom: the page card must not draw over the device check. */
+  z-index: 100;
   display: flex;
   flex-direction: column;
   background: var(--croom-bg);
