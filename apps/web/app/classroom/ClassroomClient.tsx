@@ -708,14 +708,27 @@ function describeDisconnect(reason?: DisconnectReason): { title: string; detail:
     case 10: // ROOM_CLOSED
       return { title: 'The room was closed', detail: 'The session has ended.' };
     case 6: // STATE_MISMATCH
+      return {
+        title: 'The LiveKit keys do not match this project',
+        detail:
+          'This almost always means the API key and secret in Netlify belong to a different ' +
+          'LiveKit project than the one being connected to. Compare them against the Keys page ' +
+          'for this project, and check the API key itself has not been disabled.',
+      };
     case 7: // JOIN_FAILURE
-    case 12: // USER_REJECTED
       return {
         title: 'LiveKit refused the connection',
         detail:
-          'The room rejected this session. Most often the LiveKit project has not been allowed to ' +
-          'serve this domain — check its allowed origins, and that the API key and secret in Netlify ' +
-          'belong to that same project.',
+          'The room refused this join. Either the token was not valid for this room, or the ' +
+          'LiveKit project will not accept more participants. Try rejoin; if it persists, send ' +
+          'the trainer the LiveKit error code shown below.',
+      };
+    case 12: // USER_REJECTED
+      return {
+        title: 'LiveKit rejected this participant',
+        detail:
+          'The project refused this person specifically. The most common cause is a participant ' +
+          'limit on the LiveKit plan being reached.',
       };
     case 14: // CONNECTION_TIMEOUT
     case 9: // SIGNAL_CLOSE
@@ -789,9 +802,19 @@ export default function ClassroomClient({ sessionId }: { sessionId: string }) {
     <LiveKitRoom
       serverUrl={creds.url} token={creds.token} connect
       video={!lowData} audio
-      // LiveKit's own error carries the real cause (a rejected token, a refused
-      // origin). Reporting it beats inventing our own wording.
-      onError={(e) => setLiveError(e?.message || String(e))}
+      // LiveKit's own error carries the real cause. The message alone is often a
+      // generic sentence, but `status` and `reason` distinguish a rejected token
+      // from a refused join from an unreachable region, so they are shown too.
+      // Genericising these into one message is what made this fault slow to find.
+      onError={(e) => {
+        const anyErr = e as { message?: string; status?: number; reason?: string };
+        const bits = [anyErr?.message || String(e)];
+        const code = [
+          anyErr?.reason ? `reason=${anyErr.reason}` : '',
+          anyErr?.status ? `status=${anyErr.status}` : '',
+        ].filter(Boolean).join(' ');
+        setLiveError(code ? `${bits[0]} (${code})` : bits[0]);
+      }}
       onDisconnected={(reason) => setDrop(describeDisconnect(reason))}
     >
       <p className="muted" style={{ fontSize: 13 }}>you are <b>{creds.role}</b></p>
