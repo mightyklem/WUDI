@@ -132,9 +132,11 @@ jobs:
           gradle -p "$APP_DIR" :app:assembleRelease :app:bundleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
 
       - name: Report build failure
-        # Step logs are only readable with an authenticated token, so a failed build
-        # would otherwise be a black box. The tail of the Gradle output goes into the
-        # run summary, which is retrievable without authentication.
+        # Step logs need an authenticated token to read, and the run summary is not
+        # exposed by the public API either, so a failed build would be a black box.
+        # ::error:: annotations ARE readable without authentication, so the tail of
+        # the Gradle output goes out through them (escaped and chunked), plus the
+        # summary for readers in the web UI.
         if: failure()
         run: |
           {
@@ -143,6 +145,19 @@ jobs:
             tail -120 /tmp/gradle.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'EOF'
+          import re
+          with open('/tmp/gradle.log', errors='replace') as f:
+              lines = f.read().splitlines()
+          # The cause is at the end: keep the last 80 non-empty lines.
+          tail = [l for l in lines if l.strip()][-80:]
+          text = '\n'.join(tail)
+          # 6k-char chunks stay well inside annotation size limits.
+          chunks = [text[i:i + 6000] for i in range(0, len(text), 6000)][:8]
+          for n, c in enumerate(chunks, 1):
+              esc = c.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f"::error title=Gradle failure ({n}/{len(chunks)})::{esc}")
+          EOF
 
       - name: Verify the signature
         run: |

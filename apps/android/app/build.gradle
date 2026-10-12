@@ -23,7 +23,9 @@ android {
 
     // The signing block is only defined when a keystore is actually provided.
     // Defining it with a missing store file would break even unsigned builds,
-    // and this module must always stay buildable without secrets.
+    // and this module must always stay buildable without secrets. It lives inside
+    // android {} because signingConfigs only resolves against that delegate -- at
+    // the top level of the script the same call fails configuration outright.
     if (storeFilePath) {
         signingConfigs {
             release {
