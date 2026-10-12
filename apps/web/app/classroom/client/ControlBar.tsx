@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Icon, { type IconName } from '@/components/Icon';
 import { REACTION_CHOICES, type Role } from './model';
 
 /**
@@ -72,7 +73,7 @@ export default function ControlBar({
       <Btn
         on={micOn}
         off={!micOn}
-        icon={micOn ? '🎙' : '🔇'}
+        icon={micOn ? 'mic' : 'mic-off'}
         label="Mute"
         disabled={!mayPublish}
         onClick={onMic}
@@ -80,17 +81,17 @@ export default function ControlBar({
       <Btn
         on={camOn}
         off={!camOn}
-        icon={camOn ? '📷' : '🚫'}
+        icon={camOn ? 'camera' : 'camera-off'}
         label="Camera"
         disabled={!mayPublish}
         onClick={onCam}
       />
-      <Btn on={shareOn} icon="🖥" label="Share" disabled={!mayPublish} onClick={onShare} />
+      <Btn on={shareOn} icon="share" label="Share" disabled={!mayPublish} onClick={onShare} />
 
       {!compact && (
         <Btn
           on={handUp}
-          icon="✋"
+          icon="hand"
           label={handUp ? 'Lower' : 'Raise'}
           onClick={onHand}
         />
@@ -103,7 +104,7 @@ export default function ControlBar({
           aria-pressed={panel === 'chat'}
           onClick={() => onPanel(panel === 'chat' ? null : 'chat')}
         >
-          <b>💬</b>
+          <b><Icon name="chat" size={19} /></b>
           <span>Chat</span>
         </button>
       )}
@@ -114,7 +115,7 @@ export default function ControlBar({
           aria-pressed={panel === 'people'}
           onClick={() => onPanel(panel === 'people' ? null : 'people')}
         >
-          <b>👥</b>
+          <b><Icon name="people" size={19} /></b>
           <span>People</span>
         </button>
       )}
@@ -125,7 +126,7 @@ export default function ControlBar({
           aria-pressed={panel === 'polls'}
           onClick={() => onPanel(panel === 'polls' ? null : 'polls')}
         >
-          <b>📊</b>
+          <b><Icon name="poll" size={19} /></b>
           <span>Polls</span>
         </button>
       )}
@@ -137,7 +138,7 @@ export default function ControlBar({
           aria-expanded={more}
           onClick={() => setMore((v) => !v)}
         >
-          <b>⋯</b>
+          <b><Icon name="more" size={19} /></b>
           <span>More</span>
         </button>
         {more && (
@@ -179,7 +180,7 @@ export default function ControlBar({
       </div>
 
       <button type="button" className="croom-btn leave" onClick={onLeave}>
-        <b>✕</b>
+        <b><Icon name="leave" size={19} /></b>
         <span>Leave</span>
       </button>
 
@@ -191,7 +192,7 @@ export default function ControlBar({
           onClick={onEnd}
           title="End the session for everyone"
         >
-          <b>⏻</b>
+          <b><Icon name="power" size={19} /></b>
           <span>End</span>
         </button>
       )}
@@ -218,7 +219,7 @@ function Btn({
       disabled={disabled}
       onClick={onClick}
     >
-      <b>{icon}</b>
+      <b><Icon name={icon as IconName} size={19} /></b>
       <span>{label}</span>
     </button>
   );

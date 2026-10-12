@@ -220,3 +220,212 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 .tile-icon.tint-leaf{background:var(--leaf-soft);box-shadow:0 6px 16px rgba(47,107,65,.20)}
 .tile-icon.tint-clay{background:var(--clay-soft);box-shadow:0 6px 16px rgba(180,85,47,.20)}
 .tile-icon.tint-neutral{background:var(--pill);box-shadow:0 6px 16px rgba(58,40,25,.10)}
+
+/* =====================================================================
+   Learnovize design system
+   ---------------------------------------------------------------------
+   Teal and white are the product. The earlier palette was warm cream with
+   teal as one accent among several, which made teal read as a decoration
+   rather than the brand. The neutrals below are tinted toward teal so the
+   whole surface family sits in the same family as the accent.
+
+   These override the tokens declared above, so all 33 pages pick this up
+   without being edited. That is deliberate: the previous state was 390
+   inline style objects across 33 pages and no page free of them, which is
+   precisely why they stopped looking like one product.
+   ===================================================================== */
+
+:root {
+  /* teal ramp ------------------------------------------------------- */
+  --teal-50:  #F0F8F8;
+  --teal-100: #DCEFEF;
+  --teal-200: #B9DFDF;
+  --teal-300: #8AC7C9;
+  --teal-400: #4FA3A8;
+  --teal-500: #1B7E8D;
+  --teal-600: #14616E;
+  --teal-700: #0E4A55;
+  --teal-800: #0A343C;
+  --teal-900: #07252B;
+
+  /* teal-tinted neutrals -------------------------------------------- */
+  --n-0:   #FFFFFF;
+  --n-25:  #FBFDFD;
+  --n-50:  #F5F9F9;
+  --n-100: #EDF3F3;
+  --n-200: #E1EAEA;
+  --n-300: #CBD9D9;
+  --n-400: #9BAEAE;
+  --n-500: #6E8383;
+  --n-600: #4F6363;
+  --n-700: #3A4B4B;
+  --n-800: #243131;
+  --n-900: #12201F;
+
+  /* semantic, retuned to sit beside teal rather than fight it --------- */
+  --ok: #2F7A4F;   --ok-soft:   #E7F3EC;  --ok-line:   #BEDFCB;
+  --warn: #A2680F; --warn-soft: #FDF4E3;  --warn-line: #EBD6AC;
+  --bad:  #B0452B; --bad-soft:  #FCEEE9;  --bad-line:  #EFC9BC;
+
+  /* remapped core tokens -------------------------------------------- */
+  --bg: var(--n-50);
+  --card: var(--n-0);
+  --ink: var(--n-900);
+  --mut: var(--n-600);
+  --line: var(--n-200);
+  --pill: var(--n-100);
+  --accent: var(--teal-500);
+  --accent-ink: var(--teal-700);
+  --accent-deep: var(--teal-800);
+  --accent-soft: var(--teal-50);
+  --gold: var(--warn);  --gold-ink: #7E4F0C;  --gold-soft: var(--warn-soft);
+  --leaf: var(--ok);    --leaf-ink: #235334;  --leaf-soft: var(--ok-soft);
+  --clay: var(--bad);   --clay-ink: #93421F;  --clay-soft: var(--bad-soft);
+
+  --radius: var(--r-md);
+
+  /* type scale ------------------------------------------------------ */
+  --t-xs:   12px;
+  --t-sm:   13.5px;
+  --t-base: 15px;
+  --t-md:   17px;
+  --t-lg:   21px;
+  --t-xl:   26px;
+  --t-2xl:  32px;
+  --t-3xl:  40px;
+
+  /* elevation: teal-tinted, so shadows belong to the same family ------ */
+  --sh-1: 0 1px 2px rgba(18, 32, 31, 0.06);
+  --sh-2: 0 2px 10px rgba(18, 32, 31, 0.07);
+  --sh-3: 0 12px 30px rgba(18, 32, 31, 0.10);
+  --sh-tint: 0 8px 24px rgba(27, 126, 141, 0.26);
+}
+
+/* ---------------------------------------------------------------------
+   Boards -- the filled panels. One component, four tones.
+   Previously every page invented its own tinted panel with slightly
+   different padding and border, which is why nothing matched.
+   --------------------------------------------------------------------- */
+
+.board {
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  border: 1px solid var(--n-200);
+  background: var(--n-50);
+}
+.board-teal  { background: var(--teal-50);  border-color: var(--teal-200); }
+.board-ok    { background: var(--ok-soft);   border-color: var(--ok-line); }
+.board-warn  { background: var(--warn-soft); border-color: var(--warn-line); }
+.board-bad   { background: var(--bad-soft);  border-color: var(--bad-line); }
+
+/* A board with a label at the top, which is how notices are read. */
+.board-tag {
+  margin: 0 0 4px;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+.board-ok .board-tag   { color: var(--ok); }
+.board-warn .board-tag { color: var(--warn); }
+.board-bad .board-tag  { color: var(--bad); }
+
+/* ---------------------------------------------------------------------
+   Buttons
+   --------------------------------------------------------------------- */
+
+.btn {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  min-height: 40px;
+  border-radius: var(--r-sm);
+  transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease),
+              background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.btn.primary {
+  background: linear-gradient(135deg, var(--teal-500), var(--teal-700));
+  color: #fff;
+  border-color: transparent;
+}
+.btn.primary:hover { box-shadow: 0 12px 30px rgba(20, 97, 110, 0.30); }
+.btn.lg { font-size: var(--t-base); min-height: 52px; border-radius: var(--r-md); }
+
+/* ---------------------------------------------------------------------
+   Typography defaults
+   --------------------------------------------------------------------- */
+
+h1, h2, h3 { letter-spacing: -0.015em; color: var(--ink); }
+h1 { font-size: var(--t-2xl); line-height: 1.18; }
+h2 { font-size: var(--t-lg); line-height: 1.25; }
+p  { line-height: 1.6; }
+.sub, .muted { color: var(--mut); }
+
+/* ---------------------------------------------------------------------
+   Forms -- currently default browser styling on most pages
+   --------------------------------------------------------------------- */
+
+input[type='text'], input[type='email'], input[type='password'],
+input[type='number'], input[type='search'], select, textarea {
+  font: inherit;
+  font-size: var(--t-base);
+  color: var(--ink);
+  background: var(--n-0);
+  border: 1px solid var(--n-300);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  min-height: 44px;
+  width: 100%;
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: var(--teal-500);
+  box-shadow: 0 0 0 3px rgba(27, 126, 141, 0.18);
+}
+input::placeholder, textarea::placeholder { color: var(--n-400); }
+label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
+
+/* ---------------------------------------------------------------------
+   Motion and focus
+   --------------------------------------------------------------------- */
+
+:focus-visible { outline: 3px solid var(--teal-400); outline-offset: 2px; border-radius: var(--r-xs); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Cards and surfaces
+   --------------------------------------------------------------------- */
+
+.card {
+  background: var(--n-0);
+  border: 1px solid var(--n-200);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-1);
+}
+.surface-hero {
+  background: linear-gradient(160deg, var(--teal-50) 0%, var(--n-0) 62%);
+  border: 1px solid var(--teal-200);
+}
+
+.badge.free, .badge.paid, .badge {
+  border-radius: var(--r-full);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+/* A single accent rule used to mark the important thing on a page,
+   without a heavy fill competing with the content. */
+.rule-accent {
+  border: 0;
+  border-left: 3px solid var(--teal-500);
+  padding-left: 14px;
+  margin: 0 0 12px;
+}
