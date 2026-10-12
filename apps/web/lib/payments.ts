@@ -31,6 +31,26 @@ export function provider(): Provider {
   throw new Error(`Unknown PAYMENTS_PROVIDER "${raw}". Use "paystack" or "mock".`);
 }
 
+/**
+ * The same question, asked without the risk of a thrown error.
+ *
+ * provider() throwing is deliberate and correct -- an unconfigured production
+ * deploy must not quietly settle anything for free. But it throws out of whatever
+ * route called it, and Next turns that into a 500 with an empty body. The browser
+ * cannot read an error from that, so the page could only say "Could not start
+ * checkout", naming neither the cause nor the fix.
+ *
+ * Checkout routes call this instead, and tell the person what to set.
+ */
+export function providerIssue(): string | null {
+  try {
+    provider();
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
+
 export function payoutHoldDays(): number {
   const n = Number(process.env.PAYOUT_HOLD_DAYS || 7);
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 7;

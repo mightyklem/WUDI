@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@/generated/prisma';
 import { prisma } from '@/lib/db';
-import { provider, validPaystackSignature, verifyPaystack } from '@/lib/payments';
+import { provider, providerIssue, validPaystackSignature, verifyPaystack } from '@/lib/payments';
 import { settlePaidPayment } from '@/lib/settle';
 import { reconcileReversal } from '@/lib/payout-release';
 import { VERIFICATION_PREFIX, settleVerificationFromWebhook } from '@/lib/verification-settle';
@@ -11,6 +11,11 @@ export const dynamic = 'force-dynamic';
 // POST /api/payments/webhook — Paystack charge.success events (FR-9.1).
 // Signature-verified (HMAC-SHA512), idempotent on providerRef.
 export async function POST(req: Request) {
+  const issue = providerIssue();
+  if (issue) {
+    console.error('[payments/webhook] payments provider misconfigured:', issue);
+    return NextResponse.json({ error: 'Payments are not configured on this deployment.' }, { status: 503 });
+  }
   if (provider() !== 'paystack') {
     return NextResponse.json({ error: 'Paystack not enabled' }, { status: 404 });
   }

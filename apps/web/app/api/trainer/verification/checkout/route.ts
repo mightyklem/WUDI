@@ -21,7 +21,30 @@ export async function POST(req: Request) {
   const profile = await prisma.trainerProfile.findUnique({ where: { userId }, select: { userId: true } });
   if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
 
-  if (provider() !== 'paystack') {
+  // provider() deliberately throws in production when it is misconfigured. That is
+  // the right behaviour -- mock payments must never settle anything by accident --
+  // but an uncaught throw becomes a 500 with an empty body, and the browser sees no
+  // message at all. It just said "Could not start checkout", which tells neither
+  // the trainer nor whoever is trying to help them.
+  //
+  // So the throw is turned into an answer here, naming the setting that is missing.
+  let paystack = false;
+  try {
+    paystack = provider() === 'paystack';
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error('[verification/checkout] payments provider misconfigured:', detail);
+    return NextResponse.json(
+      {
+        error: 'Payments are not configured on this deployment.',
+        detail:
+          'Set PAYMENTS_PROVIDER to "paystack" and PAYSTACK_SECRET_KEY in the environment, ' +
+          'then redeploy. Nothing was charged.',
+      },
+      { status: 503 },
+    );
+  }
+  if (!paystack) {
     return NextResponse.json({ error: 'Verification is only available on Paystack' }, { status: 404 });
   }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
-import { initCheckout, newReference, provider, resumeUrl } from '@/lib/payments';
+import { initCheckout, newReference, provider, providerIssue, resumeUrl } from '@/lib/payments';
 import { reconcilePendingPayments } from '@/lib/reconcile';
 import { quoteFor } from '@/lib/pricing';
 
@@ -11,6 +11,16 @@ export const dynamic = 'force-dynamic';
 // On a paid class the fee covers attendance AND the certificate. The participant
 // pays the quoted per-day price multiplied by the number of billable days.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // A misconfigured provider throws, which becomes a 500 with an empty body and an
+  // error the browser cannot read. Ask first so the message names the setting.
+  const issue = providerIssue();
+  if (issue) {
+    console.error('[registrations/checkout] payments provider misconfigured:', issue);
+    return NextResponse.json(
+      { error: 'Payments are not configured on this deployment.', detail: 'Nothing was charged.' },
+      { status: 503 },
+    );
+  }
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
