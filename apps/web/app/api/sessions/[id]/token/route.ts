@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { mintRoomToken, type RoomRole } from '@/lib/livekit';
 import { isAdmin } from '@/lib/admin';
+import { canPublishInRoom } from '@learnovize/shared/room-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,20 +149,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         where: { sessionId_userId: { sessionId: id, userId } },
       })
     : null;
-  const canSpeak = !!grant && !grant.revokedAt;
+const canPublish = canPublishInRoom(role, !!grant && !grant.revokedAt);
 
-  const jwt = await mintRoomToken({
-    identity: userId,
-    name: user?.email || userId,
-    room: session.livekitRoom,
-    role,
-    // A granted learner is minted with publishing rights; everyone else is not.
-    canPublishOverride: canSpeak,
-  });
-  return NextResponse.json({
-    token: jwt,
-    url: process.env.LIVEKIT_URL,
-    room: session.livekitRoom,
-    role,
-  });
-}
+    const jwt = await mintRoomToken({
+      identity: userId,
+      name: user?.email || userId,
+      room: session.livekitRoom,
+      role,
+      canPublishOverride: canPublish,
+    });
+    // The room is told who it is looking at through token metadata, and the client
+    // uses this flag to decide whether to switch the mic and camera on by itself.
+    // Getting it wrong meant the trainer joining muted with no way to fix it.
+    return NextResponse.json({
+      token: jwt,
+      url: process.env.LIVEKIT_URL,
+      room: session.livekitRoom,
+      role,
+      canPublish: canPublishInRoom(role, !!grant && !grant.revokedAt),
+    });
+  }

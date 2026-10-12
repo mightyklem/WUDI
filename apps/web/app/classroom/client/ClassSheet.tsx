@@ -35,18 +35,23 @@ export type Intro = {
 export default function ClassSheet({
   intro,
   viewerId,
+  sessionId,
   onJoin,
+  onAdmitted,
   joining,
   error,
 }: {
   intro: Intro;
   viewerId: string | null;
+  sessionId: string;
   onJoin: () => void;
+  onAdmitted?: () => void;
   joining: boolean;
   error: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [productType, setProductType] = useState<ProductType | null>(null);
+  const [opening, setOpening] = useState(false);
   const canAttach = viewerId === intro.ownerId;
 
   const start = new Date(intro.startsAtUtc).getTime();
@@ -54,12 +59,21 @@ export default function ClassSheet({
   const open = new Date(intro.opensAtUtc ?? intro.startsAtUtc).getTime();
   const now = Date.now();
 
+  const isHost = !!viewerId && viewerId === intro.ownerId;
+
   const state = useMemo(() => {
+    if (isHost) {
+      // The host is never waiting for themselves. Until they open the room it says
+      // so plainly and offers the button that does it.
+      return intro.admittedAtUtc
+        ? { label: 'Room is open', tone: 'live' as const, canJoin: true }
+        : { label: 'You are hosting', tone: 'waiting' as const, canJoin: true };
+    }
     if (intro.admittedAtUtc) return { label: 'Room is open', tone: 'live' as const, canJoin: true };
     if (now >= open && now < end) return { label: 'Waiting for the host', tone: 'waiting' as const, canJoin: true };
     if (now < start) return { label: `Starts ${ago(start - now)}`, tone: 'soon' as const, canJoin: false };
     return { label: 'Finished', tone: 'over' as const, canJoin: false };
-  }, [intro.admittedAtUtc, now, open, start, end]);
+  }, [isHost, intro.admittedAtUtc, now, open, start, end]);
 
   const seatsLeft = Math.max(0, intro.cap - intro.registered);
   const free = intro.accessType !== 'paid';
@@ -70,6 +84,32 @@ export default function ClassSheet({
   const blurb = intro.description?.trim() || `${intro.title}, live with ${intro.hostName}.`;
   // Two lines is roughly what fits on a phone; the rest waits behind See more.
   const long = blurb.length > 150;
+
+  /**
+   * Open the room for everyone. Until the trainer does this, a learner is told the
+   * host has not arrived -- which was also being shown to the trainer themselves,
+   * because nothing in the app ever set the admitted flag.
+   */
+  const openRoom = async () => {
+    setOpening(true);
+    try {
+      const { getAccess } = await import('@/lib/client-auth');
+      const r = await fetch(`/api/sessions/${sessionId}/moderate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${getAccess()}` },
+        body: JSON.stringify({ action: 'admit' }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) onAdmitted?.();
+      else setErrorText(j.error || 'Could not open the room.');
+    } catch {
+      setErrorText('Could not reach the server.');
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   return (
     <div className="cs">
@@ -142,20 +182,28 @@ export default function ClassSheet({
       )}
 
       <div className="cs-actions">
+        {isHost && !intro.admittedAtUtc && (
+          <button type="button" className="cs-open" disabled={opening} onClick={() => void openRoom()}>
+            {opening ? 'Opening…' : 'Open the room for learners'}
+          </button>
+        )}
         <button
           type="button"
           className="cs-join"
           disabled={!state.canJoin || joining}
           onClick={onJoin}
         >
-          {joining ? 'Opening…' : state.canJoin ? 'Join the class' : state.label}
+          {joining ? 'Opening…' : state.canJoin ? (isHost ? 'Enter your class' : 'Join the class') : state.label}
         </button>
+        {isHost && !intro.admittedAtUtc && (
+          <p className="cs-hint">Learners see “waiting for the host” until you open the room.</p>
+        )}
         {!state.canJoin && state.tone === 'soon' && (
           <p className="cs-hint">The waiting room opens {ago(open - now)} before the start.</p>
         )}
       </div>
 
-      {error && <p className="cs-error">{error}</p>}
+      {(errorText || error) && <p className="cs-error">{errorText || error}</p>}
 
       <ul className="cs-notes">
         <li>Learners join muted. Raise your hand to be given the floor.</li>

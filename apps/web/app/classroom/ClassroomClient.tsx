@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getAccess } from '@/lib/client-auth';
 import { useRoomConnection } from './client/useClassroom';
 import type { Role } from './client/model';
@@ -29,7 +29,7 @@ function spanLabel(intro: Intro): string {
  */
 export default function ClassroomClient({
   sessionId,
-  intro,
+  intro: intro0,
 }: {
   sessionId: string;
   intro: Intro;
@@ -77,7 +77,7 @@ const [viewerId, setViewerId] = useState<string | null>(null);
   }, [sessionId]);
 
 
-  const subtitle = `${intro.hostName} · ${spanLabel(intro)}`;
+  const subtitle = `${intro0.hostName} · ${spanLabel(intro0)}`;
 
   const fetchPass = useCallback(async () => {
     const access = getAccess();
@@ -113,14 +113,43 @@ const [viewerId, setViewerId] = useState<string | null>(null);
     onFatal: (f) => { setFatal(f); setPhase('left'); },
   });
 
-  // Apply the lobby's device choices once the room exists, not before. Learners
-  // always start muted: this is a taught class, and appearing on camera before the
-  // trainer grants permission is exactly what the hand-raise flow prevents.
+const [admitted, setAdmitted] = useState(false);
+  const [canPublish, setCanPublish] = useState(false);
+  const [liveIntro, setLiveIntro] = useState<Intro | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/sessions/${sessionId}/token`, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${getAccess() ?? ''}` },
+      cache: 'no-store',
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!j) return;
+        if (j.role) setRole(j.role as Role);
+        if (typeof j.admitted === 'boolean') setAdmitted(j.admitted);
+        if (typeof j.startsWithMic === 'boolean') setCanPublish(j.startsWithMic);
+      })
+      .catch(() => {});
+  }, [sessionId]);
+
+  const intro = useMemo(
+    () => (liveIntro ? { ...intro0, admittedAtUtc: liveIntro.admittedAtUtc } : intro0),
+    [liveIntro, intro0],
+  );
+
+  // The room is told who it is looking at through the token, and this flag decides
+  // whether the client switches the mic and camera on by itself. A trainer who
+  // arrives muted because this was false cannot teach, and used to have no way to
+  // tell that apart from a hardware fault.
   useEffect(() => {
     if (!room || state !== 'connected' || appliedFor.current === pass?.token) return;
     appliedFor.current = pass?.token ?? null;
-    const wantMic = pass?.role !== 'participant' && intent.mic;
-    const wantCam = pass?.role !== 'participant' && intent.cam;
+    // Only ever for staff. A learner is muted on arrival because they cannot
+    // publish until the trainer grants it, and auto-enabling would fight that.
+    const staff = pass?.role === 'trainer' || pass?.role === 'moderator' || pass?.role === 'admin';
+    const wantMic = staff && intent.mic;
+    const wantCam = staff && intent.cam;
     (async () => {
       try {
         if (wantMic) await room.localParticipant.setMicrophoneEnabled(true);
@@ -192,6 +221,11 @@ const [viewerId, setViewerId] = useState<string | null>(null);
       <ClassSheet
         intro={intro}
         viewerId={viewerId}
+        sessionId={sessionId}
+        onAdmitted={() => {
+          setAdmitted(true);
+          setLiveIntro({ ...intro0, admittedAtUtc: new Date().toISOString() });
+        }}
         joining={false}
         error={err}
         onJoin={() => setPhase('lobby')}
@@ -236,12 +270,17 @@ if (phase === 'lobby') {
   /* ------------------------------ left ------------------------------- */
 
   return (
-    <ClassSheet
-      intro={intro}
-      viewerId={viewerId}
-      joining={false}
-      error={err ?? 'You left the room. Rejoin whenever you are ready.'}
-      onJoin={() => setPhase('lobby')}
-    />
-  );
+<ClassSheet
+        intro={intro}
+        viewerId={viewerId}
+        sessionId={sessionId}
+        onAdmitted={() => {
+          setAdmitted(true);
+          setLiveIntro({ ...intro0, admittedAtUtc: new Date().toISOString() });
+        }}
+        joining={false}
+        error={err ?? 'You left the room. Rejoin whenever you are ready.'}
+        onJoin={() => setPhase('lobby')}
+      />
+    );
 }

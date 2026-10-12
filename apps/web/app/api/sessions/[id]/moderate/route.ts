@@ -40,6 +40,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const svc = roomService();
+
+  // Open the waiting room.
+  //
+  // This was the missing half of the webinar framing: admittedAtUtc existed as a
+  // column and nothing ever set it, so the page told every viewer -- including the
+  // trainer -- that they were "waiting for the host" when the trainer was the host.
+  if (action === 'admit') {
+    if (!isTrainer) return NextResponse.json({ error: 'Only the trainer can open the room' }, { status: 403 });
+    const updated = await prisma.session.update({
+      where: { id },
+      data: { admittedAtUtc: new Date(), status: 'live' },
+    });
+    await prisma.auditLog.create({
+      data: { actorId: userId, action: 'session.admit', target: `session:${id}` },
+    });
+    return NextResponse.json({ ok: true, admittedAtUtc: updated.admittedAtUtc });
+  }
+
   if (action === 'end') {
     if (!isTrainer) return NextResponse.json({ error: 'Only the trainer can end' }, { status: 403 });
     await svc.deleteRoom(session.livekitRoom).catch(() => {});

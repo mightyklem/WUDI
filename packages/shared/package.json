@@ -6,7 +6,8 @@
   "main": "./src/rules.js",
   "exports": {
     ".": "./src/rules.js",
-    "./giveaway": "./src/giveaway.js"
+    "./giveaway": "./src/giveaway.js",
+    "./room-access": "./src/room-access.js"
   },
   "scripts": {
     "test": "node --test \"test/*.test.js\""
