@@ -60,8 +60,15 @@ function StageAndRound({ overlay, reactions }: { overlay?: React.ReactNode; reac
   const share = screens[0] ?? null;
   const speaking = cameras.find((t) => t.participant.isSpeaking) ?? null;
   const stage = share ?? speaking ?? cameras[0] ?? null;
+  // While someone presents, their camera stays on the stage as a small inset. A learner
+  // watching a slide still needs to see the person explaining it, and dropping the camera
+  // into the thumbnail row left a 96px circle that was easy to miss and easy to scroll
+  // off the screen.
+  const pip = share
+    ? (cameras.find((t) => t.participant.identity === share.participant.identity) ?? speaking ?? cameras[0] ?? null)
+    : null;
   // Everyone not already on the stage, so nobody appears twice.
-  const round = cameras.filter((t) => t !== stage);
+  const round = cameras.filter((t) => t !== stage && t !== pip);
 
   return (
     <div style={{ position: big ? 'fixed' : 'relative', inset: big ? 0 : undefined, zIndex: big ? 50 : undefined }}>
@@ -73,15 +80,20 @@ function StageAndRound({ overlay, reactions }: { overlay?: React.ReactNode; reac
           overflow: 'hidden',
           border: '1.5px solid var(--line)',
           // Landscape by default. A portrait stage wastes most of the frame and makes
-          // a shared slide impossible to read.
-          aspectRatio: '16 / 9',
-          width: '100%',
+          // a shared slide impossible to read. In full screen the stage takes the height
+          // the control bar does not need, rather than keeping 16:9 and leaving dead space.
+          ...(big
+            ? { height: 'calc(100% - 76px)' }
+            : { aspectRatio: '16 / 9', width: '100%' }),
         }}
       >
         {stage ? (
           <VideoTrack
             trackRef={stage as never}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            // A shared slide is cropped by 'cover', which silently cuts off whatever
+            // hangs off the edges of the frame -- exactly the part being taught. Cameras
+            // still use 'cover' because filling the tile looks better than letterboxing.
+            style={{ width: '100%', height: '100%', objectFit: share ? 'contain' : 'cover', display: 'block' }}
           />
         ) : (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -134,20 +146,45 @@ function StageAndRound({ overlay, reactions }: { overlay?: React.ReactNode; reac
           </div>
         )}
 
-        {/* Controls live on the stage, so "ask to speak" is where the lesson is. */}
-        {overlay && (
+        {/* The presenter's face, kept on the stage while their slide fills it. */}
+        {pip && (
           <div
-            className="glass"
             style={{
-              position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: 12,
-              padding: '7px 9px', borderRadius: 'var(--r-full)', maxWidth: 'calc(100% - 20px)',
-              overflowX: 'auto', background: 'rgba(255,255,255,.86)',
+              position: 'absolute', right: 12, bottom: 12, width: '20%', minWidth: 92, maxWidth: 190,
+              aspectRatio: '4 / 3', borderRadius: 'var(--r-sm)', overflow: 'hidden',
+              border: '2px solid rgba(255,255,255,.85)', boxShadow: '0 4px 14px rgba(0,0,0,.45)',
+              background: '#0B1F14',
             }}
           >
-            {overlay}
+            <VideoTrack trackRef={pip as never} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <span
+              style={{
+                position: 'absolute', inset: 'auto 0 0 0', background: 'rgba(0,0,0,.6)',
+                color: '#fff', fontSize: 10, padding: '2px 4px', textAlign: 'center',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}
+            >
+              {displayName(pip.participant)}
+            </span>
           </div>
         )}
       </div>
+
+      {/* Controls sit below the stage, never on top of it. As an overlay they covered the
+          bottom of every shared slide, which is the one part of the screen the class is
+          actually about. */}
+      {overlay && (
+        <div
+          className="glass"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
+            marginTop: 10, padding: '8px 10px', borderRadius: 'var(--r-full)',
+            maxWidth: '100%', overflowX: 'auto', background: 'rgba(255,255,255,.86)',
+          }}
+        >
+          {overlay}
+        </div>
+      )}
 
       {round.length > 0 && (
         <div
