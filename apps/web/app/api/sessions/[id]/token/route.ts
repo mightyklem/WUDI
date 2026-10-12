@@ -91,11 +91,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.suspended) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  // Re-apply a speech grant the trainer already gave.
+  //
+  // LiveKit permissions live on the connection, so anyone who was allowed to speak
+  // and then reconnected came back muted with no explanation and a hand still
+  // raised from before. A learner losing the floor to a dropped signal reads as a
+  // broken room, so the grant is read back here and restored on every join.
+  const grant = role === 'participant'
+    ? await prisma.speechGrant.findUnique({
+        where: { sessionId_userId: { sessionId: id, userId } },
+      })
+    : null;
+  const canSpeak = !!grant && !grant.revokedAt;
+
   const jwt = await mintRoomToken({
     identity: userId,
     name: user?.email || userId,
     room: session.livekitRoom,
     role,
+    // A granted learner is minted with publishing rights; everyone else is not.
+    canPublishOverride: canSpeak,
   });
   return NextResponse.json({
     token: jwt,

@@ -6,6 +6,7 @@ import {
   DisconnectReason,
   Room,
   RoomEvent,
+  VideoPresets,
   type RemoteParticipant,
 } from 'livekit-client';
 import {
@@ -55,8 +56,28 @@ export function useRoomConnection(opts: {
     const r = new Room({
       adaptiveStream: true,
       dynacast: true,
-      // Smooth the handoff when the network flickers instead of freezing the frame.
-      videoCaptureDefaults: { resolution: { width: 1280, height: 720, frameRate: 30 } },
+      videoCaptureDefaults: {
+        resolution: { width: 1280, height: 720, frameRate: 30 },
+      },
+      audioCaptureDefaults: {
+        // Echo cancellation is what stops a trainer hearing themselves twice
+        // through the speakers, the classic complaint about browser classes.
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      publishDefaults: {
+        // Two spatial layers: a phone gets the small one and a desktop the full one,
+        // instead of everyone receiving whatever the trainer's connection can push.
+        // A third layer was tried and dropped -- past two layers the extra handshake
+        // cost more than the bandwidth it saved on a class this size.
+        videoSimulcastLayers: [VideoPresets.h720, VideoPresets.h180],
+        videoCodec: 'vp9',
+        // Discontinuous transmission: silence costs almost no data, which is most of
+        // a class where one person is talking and thirty are listening.
+        dtx: true,
+        red: true,
+      },
     });
     roomRef.current = r;
     setRoom(r);
@@ -82,6 +103,17 @@ export function useRoomConnection(opts: {
       setState(tries === 0 ? 'connecting' : 'retrying');
       try {
         await room.connect(url, token, { autoSubscribe: true });
+        if (cancelled) return;
+        // Prefer a steady frame rate over a sharp image. On a phone that is the
+        // difference between a class that looks live and one that stutters: the
+        // encoder drops resolution before it drops frames, which reads as lag.
+        // This is a per-track setting, not a room option.
+        for (const pub of room.localParticipant.videoTrackPublications.values()) {
+          const t = pub.track as unknown as {
+            setDegradationPreference?: (p: 'maintain-framerate') => Promise<void>;
+          } | undefined;
+          await t?.setDegradationPreference?.('maintain-framerate').catch(() => {});
+        }
         if (cancelled) return;
         tries = 0;
         setRetryIn(0);

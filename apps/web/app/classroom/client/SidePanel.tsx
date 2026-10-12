@@ -3,8 +3,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Room } from 'livekit-client';
 import { displayName, initials, type Role } from './model';
 import type { useClassroomData, useModeration } from './useClassroom';
+import GiveawayPanel from './GiveawayPanel';
 
-type Tab = 'chat' | 'people' | 'polls';
+type Tab = 'chat' | 'people' | 'polls' | 'giveaway';
 type Data = ReturnType<typeof useClassroomData>;
 type Mod = ReturnType<typeof useModeration>;
 
@@ -19,6 +20,7 @@ type Mod = ReturnType<typeof useModeration>;
  */
 export default function SidePanel({
   room,
+  sessionId,
   role,
   myId,
   tab,
@@ -26,8 +28,10 @@ export default function SidePanel({
   onClose,
   d,
   mod,
+  showcase,
 }: {
   room: Room;
+  sessionId: string;
   role: Role;
   myId: string;
   tab: Tab | null;
@@ -35,6 +39,7 @@ export default function SidePanel({
   onClose: () => void;
   d: Data;
   mod: Mod;
+  showcase?: { name: string; note: string | null; url: string | null; imageUrl: string | null } | null;
 }) {
   if (!tab) return null;
   return (
@@ -49,7 +54,7 @@ export default function SidePanel({
             aria-selected={tab === t}
             onClick={() => onTab(t)}
           >
-            {t === 'chat' ? 'Chat' : t === 'people' ? 'People' : 'Polls'}
+            {t === 'chat' ? 'Chat' : t === 'people' ? 'People' : t === 'giveaway' ? 'Giveaway' : 'Polls'}
           </button>
         ))}
         <button type="button" className="croom-tab" aria-label="Close panel" onClick={onClose}>
@@ -59,6 +64,9 @@ export default function SidePanel({
       {tab === 'chat' && <Chat d={d} myId={myId} />}
       {tab === 'people' && <People room={room} role={role} d={d} mod={mod} />}
       {tab === 'polls' && <Polls room={room} role={role} d={d} />}
+      {tab === 'giveaway' && (
+        <GiveawayPanel sessionId={sessionId} isTrainer={role === 'trainer'} showcase={showcase ?? null} />
+      )}
     </aside>
   );
 }

@@ -61,8 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     } catch (e) {
       // LiveKit only tracks participants that are actually connected. A trainer
       // clicking this on someone who just dropped would otherwise get a 500, so
-      // say plainly what happened. Note the grant does not survive a reconnect:
-      // permissions are per-participant, not per-registration.
+      // say plainly what happened.
       const detail = e instanceof Error ? e.message : String(e);
       const gone = /does not exist|not found/i.test(detail);
       return NextResponse.json(
@@ -74,6 +73,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         { status: gone ? 409 : 502 },
       );
     }
+
+    // Persisted, not just applied to the live room. LiveKit permissions belong to
+    // one connection, so a learner who was granted the floor and then lost signal,
+    // backgrounded their phone, or reloaded the page dropped silently back to
+    // listen-only -- and the hand queue disagreed with the room they were in. The
+    // token route reads this row back and re-applies the grant on every join.
+    if (canPublish) {
+      await prisma.speechGrant.upsert({
+        where: { sessionId_userId: { sessionId: id, userId: identity } },
+        update: { revokedAt: null },
+        create: { sessionId: id, userId: identity },
+      });
+    } else {
+      await prisma.speechGrant.updateMany({
+        where: { sessionId: id, userId: identity, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+
     // Worth recording: who was allowed to speak, and when. Admin actions are audited
     // under the same log as everyone else's, so an intervention in someone's class is
     // always traceable afterwards.

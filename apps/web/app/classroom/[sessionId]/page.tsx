@@ -16,6 +16,8 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
       training: {
         select: {
           title: true,
+          seatsTaken: true,
+          cap: true,
           trainer: { select: { displayName: true } },
           days: { orderBy: { dayIndex: 'asc' } },
         },
@@ -66,12 +68,23 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
       <div style={{ marginTop: 14 }}>
         <ClassroomClient
           sessionId={sessionId}
-          title={session.training.title}
-          subtitle={
-            `${session.training.trainer.displayName}` +
-            `${day ? ` · ${day.topic ?? `Day ${day.dayIndex}`}` : ''}` +
-            ` · ${lagosSpanLabel(session.startsAtUtc, session.endsAtUtc)}`
-          }
+          intro={{
+            title: session.training.title,
+            hostName: session.training.trainer.displayName,
+            startsAtUtc: session.startsAtUtc.toISOString(),
+            endsAtUtc: session.endsAtUtc.toISOString(),
+            // The waiting room opens an hour early, so people can sort their camera
+            // out before the advertised start rather than during it.
+            opensAtUtc: (session.opensAtUtc ?? new Date(started - 3600_000)).toISOString(),
+            admittedAtUtc: session.admittedAtUtc?.toISOString() ?? null,
+            agenda: session.agenda,
+            showcaseName: session.showcaseName,
+            showcaseUrl: session.showcaseUrl,
+            showcaseNote: session.showcaseNote,
+            showcaseImageUrl: session.showcaseImageUrl,
+            registered: session.training.seatsTaken,
+            cap: session.training.cap,
+          }}
         />
       </div>
     </div>

@@ -4,6 +4,10 @@
   "description": "Learnovize shared business rules (pure, framework-free). Imported by API and clients read-only.",
   "type": "module",
   "main": "./src/rules.js",
+  "exports": {
+    ".": "./src/rules.js",
+    "./giveaway": "./src/giveaway.js"
+  },
   "scripts": {
     "test": "node --test \"test/*.test.js\""
   }

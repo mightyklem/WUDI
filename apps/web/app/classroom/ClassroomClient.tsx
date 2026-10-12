@@ -1,32 +1,38 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAccess } from '@/lib/client-auth';
-import { useRoomConnection, describeConnectionFailure } from './client/useClassroom';
+import { useRoomConnection } from './client/useClassroom';
 import type { Role } from './client/model';
 import Lobby from './client/Lobby';
+import WebinarIntro, { type Intro } from './client/WebinarIntro';
 import ClassroomRoom from './client/ClassroomRoom';
 import './client/classroom.css';
 
 type Phase = 'landing' | 'lobby' | 'joining' | 'in' | 'left';
-
 type Pass = { token: string; url: string; room: string; role: Role };
 
+/** Same short human span the intro page shows, for the room header. */
+function spanLabel(intro: Intro): string {
+  const opts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+  const s = new Date(intro.startsAtUtc).toLocaleTimeString(undefined, opts);
+  const e = new Date(intro.endsAtUtc).toLocaleTimeString(undefined, opts);
+  return `${s} – ${e} WAT`;
+}
+
 /**
- * The classroom shell: landing, then a device check, then the room.
+ * The classroom shell: webinar intro page, then a device check, then the room.
  *
  * Nothing connects until the person chooses to join. The previous version fetched
  * a room pass on mount and opened the camera the instant the page loaded, so a
- * learner who only ever wanted to listen was prompted for permissions and shown
- * a room they had not agreed to enter.
+ * learner who only ever wanted to listen was prompted for permissions and shown a
+ * room they had not agreed to enter.
  */
 export default function ClassroomClient({
   sessionId,
-  title,
-  subtitle,
+  intro,
 }: {
   sessionId: string;
-  title: string;
-  subtitle: string;
+  intro: Intro;
 }) {
   const [phase, setPhase] = useState<Phase>('landing');
   const [pass, setPass] = useState<Pass | null>(null);
@@ -34,6 +40,9 @@ export default function ClassroomClient({
   const [fatal, setFatal] = useState<{ title: string; detail: string } | null>(null);
   const [myId, setMyId] = useState('me');
   const [intent, setIntent] = useState<{ mic: boolean; cam: boolean }>({ mic: false, cam: false });
+  const appliedFor = useRef<string | null>(null);
+
+  const subtitle = `${intro.hostName} · ${spanLabel(intro)}`;
 
   const fetchPass = useCallback(async () => {
     const access = getAccess();
@@ -57,7 +66,7 @@ export default function ClassroomClient({
     try {
       const c = JSON.parse(atob(j.token.split('.')[1])) as { sub?: string };
       if (c.sub) setMyId(c.sub);
-    } catch { /* a missing sub only costs a nicer name */ }
+    } catch { /* a missing sub only costs a nicer display name */ }
     setPass(p);
     return p;
   }, [sessionId]);
@@ -70,9 +79,8 @@ export default function ClassroomClient({
   });
 
   // Apply the lobby's device choices once the room exists, not before. Learners
-  // always start muted: this is a taught class, and appearing on camera before
-  // the trainer grants permission is exactly what the hand-raise flow prevents.
-  const appliedFor = useRef<string | null>(null);
+  // always start muted: this is a taught class, and appearing on camera before the
+  // trainer grants permission is exactly what the hand-raise flow prevents.
   useEffect(() => {
     if (!room || state !== 'connected' || appliedFor.current === pass?.token) return;
     appliedFor.current = pass?.token ?? null;
@@ -87,16 +95,16 @@ export default function ClassroomClient({
   }, [room, state, pass, intent]);
 
   useEffect(() => {
-    if (state === 'connected' && (phase === 'joining')) setPhase('in');
+    if (state === 'connected' && phase === 'joining') setPhase('in');
   }, [state, phase]);
 
   const join = useCallback(async () => {
     setErr(null);
     setFatal(null);
     setPhase('joining');
-    const p = await fetchPass();
-    if (!p) { setPhase('lobby'); return; }
     appliedFor.current = null;
+    const p = await fetchPass();
+    if (!p) setPhase('lobby');
   }, [fetchPass]);
 
   const leave = useCallback(() => {
@@ -106,27 +114,35 @@ export default function ClassroomClient({
     setPhase('left');
   }, [room]);
 
-  /* ----------------------------- landing ----------------------------- */
-
-  if (phase === 'landing' || (phase === 'left' && !fatal)) {
+  const renderRoom = () => {
+    if (!room) return null;
     return (
-      <div className="card" style={{ padding: 'var(--s-5)' }}>
-        <p className="eyebrow">Live classroom</p>
-        <h2 style={{ margin: '0 0 6px', fontSize: 20 }}>{title}</h2>
-        <p className="muted" style={{ margin: '0 0 14px', fontSize: 14 }}>{subtitle}</p>
-        <div className="btnrow">
-          <button type="button" className="btn primary lg" onClick={() => setPhase('lobby')}>
-            Check camera and join
-          </button>
-          {phase === 'left' && <span className="muted">You left the room.</span>}
-        </div>
-        {err && <div className="err">{err}</div>}
-        <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
-          Learners join muted. Raise your hand when you want to speak and the trainer will let you in.
-        </p>
-      </div>
+      <ClassroomRoom
+        room={room}
+        sessionId={sessionId}
+        sessionTitle={intro.title}
+        subtitle={subtitle}
+        role={pass?.role ?? 'participant'}
+        myId={myId}
+        state={state}
+        quality={quality}
+        retryIn={retryIn}
+        retryNow={retryNow}
+        onLeave={leave}
+        onEnd={leave}
+        showcase={
+          intro.showcaseName
+            ? {
+                name: intro.showcaseName,
+                note: intro.showcaseNote,
+                url: intro.showcaseUrl,
+                imageUrl: intro.showcaseImageUrl,
+              }
+            : null
+        }
+      />
     );
-  }
+  };
 
   /* ------------------------- fatal connection ------------------------- */
 
@@ -144,38 +160,40 @@ export default function ClassroomClient({
     );
   }
 
+  /* ----------------------------- landing ----------------------------- */
+
+  if (phase === 'landing') {
+    return (
+      <WebinarIntro
+        intro={intro}
+        joining={false}
+        error={err}
+        onJoin={() => setPhase('lobby')}
+      />
+    );
+  }
+
+  /* ----------------------------- in room ----------------------------- */
+
+  if (phase === 'in' || (phase === 'joining' && room)) {
+    return renderRoom();
+  }
+
+  /* ----------------------------- joining ----------------------------- */
+
+  if (phase === 'joining') {
+    return (
+      <div className="croom-lobby">
+        <div className="croom-lobby-stage">
+          <div className="croom-waiting"><p>Joining the room…</p></div>
+        </div>
+      </div>
+    );
+  }
+
   /* ------------------------------ lobby ------------------------------ */
 
-  if (phase === 'lobby' || phase === 'joining') {
-    // The room must exist before the lobby hands over, otherwise joining is a
-    // flash of empty stage while the socket opens.
-    if (phase === 'joining' && room) {
-      return (
-        <ClassroomRoom
-          room={room}
-          sessionId={sessionId}
-          sessionTitle={title}
-          subtitle={subtitle}
-          role={pass?.role ?? 'participant'}
-          myId={myId}
-          state={state}
-          quality={quality}
-          retryIn={retryIn}
-          retryNow={retryNow}
-          onLeave={leave}
-          onEnd={leave}
-        />
-      );
-    }
-    if (phase === 'joining') {
-      return (
-        <div className="croom-lobby">
-          <div className="croom-lobby-stage">
-            <div className="croom-waiting"><p>Joining the room…</p></div>
-          </div>
-        </div>
-      );
-    }
+  if (phase === 'lobby') {
     return (
       <Lobby
         role={pass?.role ?? 'participant'}
@@ -189,26 +207,14 @@ export default function ClassroomClient({
     );
   }
 
-  /* ------------------------------- room ------------------------------- */
+  /* ------------------------------ left ------------------------------- */
 
-  if (phase === 'in' && room) {
-    return (
-      <ClassroomRoom
-        room={room}
-        sessionId={sessionId}
-        sessionTitle={title}
-        subtitle={subtitle}
-        role={pass?.role ?? 'participant'}
-        myId={myId}
-        state={state}
-        quality={quality}
-        retryIn={retryIn}
-        retryNow={retryNow}
-        onLeave={leave}
-        onEnd={leave}
-      />
-    );
-  }
-
-  return null;
+  return (
+    <WebinarIntro
+      intro={intro}
+      joining={false}
+      error={err ?? 'You left the room. Rejoin whenever you are ready.'}
+      onJoin={() => setPhase('lobby')}
+    />
+  );
 }

@@ -60,8 +60,10 @@ model User {
   orgMemberships OrgMember[]
   ownedOrgs      Organization[]     @relation("OrgOwner")
   authoredPosts  FeedPost[]         @relation("PostAuthor")
-  reviewsWritten TrainerReview[]   @relation("ReviewAuthor")
-}
+reviewsWritten TrainerReview[]   @relation("ReviewAuthor")
+    speechGrants   SpeechGrant[]
+    giveawayEntries GiveawayEntry[]
+  }
 
 /// One award or clawback of points. Append-only so a rank can always be re-derived.
 ///
@@ -364,11 +366,103 @@ model Session {
   startsAtUtc DateTime
   endsAtUtc   DateTime
   livekitRoom String   @unique
-  status      String   @default("scheduled") // scheduled|live|ended|cancelled
+status      String   @default("scheduled") // scheduled|live|ended|cancelled
+    // Webinar framing: a room can open early and hold people in a lobby before the
+    // trainer starts. Admitted controls whether people may enter the room itself.
+    opensAtUtc     DateTime?
+    admittedAtUtc  DateTime?
+    agenda          String?
+    // A product the trainer is demonstrating during this session. Shown in the
+    // webinar intro page and pinned in the room so nobody has to ask what they are
+    // being shown.
+    showcaseName     String?
+    showcaseUrl      String?
+    showcaseNote     String?
+    showcaseImageUrl String?
 
-  attendanceLogs AttendanceLog[]
-  pointEvents    PointsEvent[]
-}
+    attendanceLogs AttendanceLog[]
+    pointEvents    PointsEvent[]
+    speechGrants   SpeechGrant[]
+    giveaways      Giveaway[]
+    showcaseItems  ShowcaseItem[]
+  }
+
+  /// A learner the trainer has allowed to speak, kept in the database rather than
+  /// only in the LiveKit room.
+  ///
+  /// LiveKit permissions are per-connection. A learner who was granted speech and
+  /// then lost signal, backgrounded their phone, or reloaded the page silently
+  /// dropped back to listen-only and the hand-raise queue disagreed with the room.
+  /// Persisting the grant means the token route can re-apply it on every join.
+  model SpeechGrant {
+    id        String   @id @default(cuid())
+    sessionId String
+    session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    grantedAt DateTime @default(now())
+    revokedAt DateTime?
+
+    @@unique([sessionId, userId])
+    @@index([userId, sessionId])
+  }
+
+  /// A giveaway running inside a session. Entries are recorded on the server so a
+  /// winner can be drawn fairly and, more importantly, so the draw can be
+  /// demonstrated afterwards.
+  model Giveaway {
+    id        String   @id @default(cuid())
+    sessionId String
+    session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    prize     String
+    /// Free text shown to learners, e.g. "1 of 3 winners".
+    rules     String?
+    /// Draw is closed while open is true. Entries stop being accepted once closed.
+    open      Boolean  @default(true)
+    /// Winner count and the drawn winners, stored as a JSON array of user ids.
+    /// Null until drawn.
+    winners   String?
+    drawnAt   DateTime?
+    /// Whether entry required paying. False for a plain webinar giveaway, which is
+    /// the common case and the one with no legal surface around it.
+    requiresPayment Boolean @default(false)
+    createdAt DateTime @default(now())
+
+    entries   GiveawayEntry[]
+
+    @@index([sessionId, open])
+  }
+
+  /// One learner, one entry per giveaway. The unique constraint is the fairness
+  /// guarantee: refreshing the page or hammering the button cannot add a name twice.
+  model GiveawayEntry {
+    id         String   @id @default(cuid())
+    giveawayId String
+    giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+    userId     String
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt  DateTime @default(now())
+
+    @@unique([giveawayId, userId])
+    @@index([userId])
+  }
+
+  /// An item the trainer highlights during the session. Several per session so a
+  /// webinar can walk through a small catalogue without losing what came before.
+  model ShowcaseItem {
+    id        String   @id @default(cuid())
+    sessionId String
+    session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    name      String
+    note      String?
+    url       String?
+    imageUrl  String?
+    /// Ordering the trainer chooses; the pinned item is the lowest number.
+    position  Int      @default(0)
+    createdAt DateTime @default(now())
+
+    @@index([sessionId, position])
+  }
 
 model Registration {
   id                String   @id @default(cuid())

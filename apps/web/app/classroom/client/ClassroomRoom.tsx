@@ -1,14 +1,14 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
-import type { Room } from 'livekit-client';
+import type { Room, TrackPublishOptions } from 'livekit-client';
 import { useClassroomData, useModeration, type ConnectState } from './useClassroom';
 import { displayName, type Role } from './model';
 import Stage from './Stage';
 import ControlBar from './ControlBar';
 import SidePanel from './SidePanel';
 
-type Tab = 'chat' | 'people' | 'polls';
+type Tab = 'chat' | 'people' | 'polls' | 'giveaway';
 
 export default function ClassroomRoom({
   room,
@@ -21,9 +21,10 @@ export default function ClassroomRoom({
   quality,
   retryIn,
   retryNow,
-  onLeave,
-  onEnd,
-}: {
+onLeave,
+    onEnd,
+    showcase,
+  }: {
   room: Room;
   sessionId: string;
   sessionTitle: string;
@@ -36,6 +37,7 @@ export default function ClassroomRoom({
   retryNow: () => void;
   onLeave: () => void;
   onEnd: () => void;
+  showcase: { name: string; note: string | null; url: string | null; imageUrl: string | null } | null;
 }) {
   const d = useClassroomData(room, myId, role);
   const mod = useModeration(sessionId);
@@ -60,8 +62,26 @@ export default function ClassroomRoom({
 
   const toggleShare = useCallback(async () => {
     try {
-      await lp.setScreenShareEnabled(!lp.isScreenShareEnabled);
-    } catch { /* ignore */ }
+      if (lp.isScreenShareEnabled) {
+        await lp.setScreenShareEnabled(false);
+        return;
+      }
+      // The second argument is capture options, the third is how the track is
+    // published. Both matter here: 'detail' keeps text crisp, and a hard cap on
+    // bitrate and frame rate frees the bandwidth that keeps a learner's own audio
+    // and video smooth while a slide is on screen.
+    await lp.setScreenShareEnabled(
+      true,
+      { contentHint: 'detail' },
+      {
+        videoEncoding: { maxBitrate: 1_500_000, maxFramerate: 15 },
+        screenShareEncoding: { maxBitrate: 1_500_000, maxFramerate: 15 },
+        // Never simulcast a screen: every viewer needs the same legible frame, and
+        // the low layers would smear the text.
+        simulcast: false,
+      } as TrackPublishOptions,
+    );
+    } catch { /* a denied picker or a busy device must not break the room */ }
   }, [lp]);
 
   const end = useCallback(async () => {
@@ -143,8 +163,9 @@ export default function ClassroomRoom({
               busy={mod.busy}
             />
           </div>
-          <SidePanel
+<SidePanel
             room={room}
+            sessionId={sessionId}
             role={role}
             myId={myId}
             tab={panel}
@@ -152,6 +173,7 @@ export default function ClassroomRoom({
             onClose={() => setPanel(null)}
             d={d}
             mod={mod}
+            showcase={showcase}
           />
         </div>
       </div>
