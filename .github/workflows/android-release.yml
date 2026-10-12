@@ -134,9 +134,10 @@ jobs:
       - name: Report build failure
         # Step logs need an authenticated token to read, and the run summary is not
         # exposed by the public API either, so a failed build would be a black box.
-        # ::error:: annotations ARE readable without authentication, so the tail of
-        # the Gradle output goes out through them (escaped and chunked), plus the
-        # summary for readers in the web UI.
+        # ::error:: annotations ARE readable without authentication. The useful part
+        # of a Gradle failure is the "What went wrong" block and the "Caused by"
+        # lines, which sit ABOVE the stack trace -- so those are extracted first and
+        # the raw tail follows only as a fallback.
         if: failure()
         run: |
           {
@@ -148,15 +149,25 @@ jobs:
           python3 - <<'EOF'
           import re
           with open('/tmp/gradle.log', errors='replace') as f:
-              lines = f.read().splitlines()
-          # The cause is at the end: keep the last 80 non-empty lines.
-          tail = [l for l in lines if l.strip()][-80:]
-          text = '\n'.join(tail)
-          # 6k-char chunks stay well inside annotation size limits.
-          chunks = [text[i:i + 6000] for i in range(0, len(text), 6000)][:8]
+              text = f.read()
+          sections = []
+          failed = re.findall(r'^> Task .+ FAILED\s*$', text, re.M)
+          if (failed):
+              sections.append('FAILED TASKS\n' + '\n'.join(failed))
+          m = re.search(r'\* What went wrong:\n(.*?)(?=\n\* |\Z)', text, re.S)
+          if (m):
+              sections.append('WHAT WENT WRONG\n' + m.group(1).strip())
+          caused = re.findall(r'Caused by:.*', text)
+          if (caused):
+              sections.append('CAUSED BY\n' + '\n'.join(dict.fromkeys(caused)))
+          if (not sections):
+              lines = [l for l in text.splitlines() if l.strip()]
+              sections.append('TAIL (no failure block found)\n' + '\n'.join(lines[-80:]))
+          out = '\n\n'.join(sections)
+          chunks = [out[i:i + 6000] for i in range(0, len(out), 6000)][:8]
           for n, c in enumerate(chunks, 1):
               esc = c.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-              print(f"::error title=Gradle failure ({n}/{len(chunks)})::{esc}")
+              print(f"::error title=Gradle diagnosis ({n}/{len(chunks)})::{esc}")
           EOF
 
       - name: Verify the signature
