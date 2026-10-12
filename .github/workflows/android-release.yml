@@ -108,10 +108,14 @@ jobs:
               echo "ephemeral=true"
             } >> "$GITHUB_OUTPUT"
           fi
+          # keytool indents the fingerprint line with a tab, so the match must not be
+          # anchored to spaces -- '^ *SHA256:' silently matched nothing and shipped
+          # empty fingerprints in run #6's release notes.
           FP="$(keytool -list -v -keystore /tmp/learnovize-release.jks \
             -storepass "$([ -n "$KEYSTORE_B64" ] && echo "$KEYSTORE_PASSWORD" || echo "$PASS")" \
-            2>/dev/null | grep -i '^ *SHA256:' | head -1 | sed 's/.*SHA256: *//')"
+            2>/dev/null | grep -i 'SHA256:' | head -1 | sed 's/.*SHA256: *//')"
           echo "fingerprint=$FP" >> "$GITHUB_OUTPUT"
+          if [ -z "$FP" ]; then echo "Fingerprint came back empty; check the keytool output above."; exit 1; fi
 
       - name: Set up Gradle
         # Pinned, not latest: AGP 8.5.x does not run on Gradle 9, and setup-gradle
