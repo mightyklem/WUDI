@@ -1,0 +1,193 @@
+# Builds the Learnovize Android app (Trusted Web Activity) on every push to main,
+# signs it, uploads the APK + AAB, and publishes a GitHub Release with both attached.
+#
+# Signing works in two modes, and the release notes always say which one was used:
+#
+#   Stable (production): set these four repository secrets once, and every build is
+#     signed with the same upload key, so updates install cleanly and the TWA
+#     address bar disappears once the fingerprint below is in assetlinks.json:
+#       ANDROID_KEYSTORE_BASE64  (base64 of the .jks file)
+#       ANDROID_KEYSTORE_PASSWORD
+#       ANDROID_KEY_ALIAS
+#       ANDROID_KEY_PASSWORD
+#
+#   Ephemeral (first run, no secrets yet): the job generates a throwaway key, signs
+#     with it, then destroys it. The APK installs and runs, but it can never be
+#     updated by a later build and its fingerprint must never go into assetlinks.json.
+#     The release is marked as a prerelease and says so in plain words.
+#
+# One-time production setup (run on your own machine, never commit the key):
+#   keytool -genkeypair -keystore learnovize-upload.jks -alias learnovize \
+#     -keyalg RSA -keysize 2048 -validity 10950 \
+#     -dname "CN=Learnovize, OU=Learnovize, O=Learnovize, L=Lagos, ST=Lagos, C=NG"
+#   base64 -w0 learnovize-upload.jks   # then: gh secret set ANDROID_KEYSTORE_BASE64
+# Copy the SHA-256 from that build's release notes into the TWA_SHA256_FINGERPRINTS
+# environment variable so the app opens fullscreen.
+
+name: Android release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+env:
+  APP_DIR: apps/android
+  VERSION_NAME: 1.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      fingerprint: ${{ steps.signing.outputs.fingerprint }}
+      ephemeral: ${{ steps.signing.outputs.ephemeral }}
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install platform and build tools
+        # setup-android already accepts the SDK licenses; this only pins the exact
+        # platform and build-tools the Gradle files target.
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Prepare signing key
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > /tmp/learnovize-release.jks
+            {
+              echo "store_file=/tmp/learnovize-release.jks"
+              echo "store_password=$KEYSTORE_PASSWORD"
+              echo "key_alias=$KEY_ALIAS"
+              echo "key_password=$KEY_PASSWORD"
+              echo "ephemeral=false"
+            } >> "$GITHUB_OUTPUT"
+          else
+            PASS="$(openssl rand -base64 24)"
+            keytool -genkeypair -keystore /tmp/learnovize-release.jks -alias learnovize \
+              -keyalg RSA -keysize 2048 -validity 365 \
+              -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=Learnovize, OU=Learnovize, O=Learnovize, L=Lagos, ST=Lagos, C=NG" > /dev/null
+            {
+              echo "store_file=/tmp/learnovize-release.jks"
+              echo "store_password=$PASS"
+              echo "key_alias=learnovize"
+              echo "key_password=$PASS"
+              echo "ephemeral=true"
+            } >> "$GITHUB_OUTPUT"
+          fi
+          FP="$(keytool -list -v -keystore /tmp/learnovize-release.jks \
+            -storepass "$([ -n "$KEYSTORE_B64" ] && echo "$KEYSTORE_PASSWORD" || echo "$PASS")" \
+            2>/dev/null | grep -i '^ *SHA256:' | head -1 | sed 's/.*SHA256: *//')"
+          echo "fingerprint=$FP" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK and AAB
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ steps.signing.outputs.store_file }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ steps.signing.outputs.store_password }}
+          ANDROID_KEY_ALIAS: ${{ steps.signing.outputs.key_alias }}
+          ANDROID_KEY_PASSWORD: ${{ steps.signing.outputs.key_password }}
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: gradle -p "$APP_DIR" :app:assembleRelease :app:bundleRelease --no-daemon
+
+      - name: Verify the signature
+        run: |
+          APKSIGNER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools/34.0.0/apksigner"
+          APK="$APP_DIR/app/build/outputs/apk/release/app-release.apk"
+          "$APKSIGNER" verify --print-certs "$APK" | grep -i SHA-256
+          echo "### Signing certificate" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          "$APKSIGNER" verify --print-certs "$APK" | grep -iE 'SHA-256|DN:' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Collect artifacts
+        id: meta
+        run: |
+          TAG="android-v${VERSION_NAME}-${GITHUB_RUN_NUMBER}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          mkdir -p dist
+          cp "$APP_DIR/app/build/outputs/apk/release/app-release.apk" "dist/learnovize-$TAG.apk"
+          cp "$APP_DIR/app/build/outputs/bundle/release/app-release.aab" "dist/learnovize-$TAG.aab"
+          ls -la dist
+
+      - name: Destroy the ephemeral key
+        if: steps.signing.outputs.ephemeral == 'true'
+        run: shred -u /tmp/learnovize-release.jks || rm -f /tmp/learnovize-release.jks
+
+      - name: Upload APK and AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: learnovize-android-${{ steps.meta.outputs.tag }}
+          path: dist/*
+          retention-days: 30
+
+      - name: Write release notes
+        run: |
+          {
+            echo "## Learnovize for Android ${VERSION_NAME} (${{ steps.meta.outputs.tag }})"
+            echo ""
+            if [ "${{ steps.signing.outputs.ephemeral }}" = "true" ]; then
+              echo "> **Preview build — ephemeral signing key.** This APK installs and runs,"
+              echo "> but it was signed with a throwaway key that no longer exists, so a later"
+              echo "> build cannot update it and its fingerprint must never go into"
+              echo "> \`assetlinks.json\`. Follow the one-time production setup in"
+              echo "> \`.github/workflows/android-release.yml\` for stable releases."
+              echo ""
+            else
+              echo "Signed with the stable upload key."
+              echo ""
+            fi
+            echo "### Signing certificate (SHA-256)"
+            echo '```'
+            echo "${{ steps.signing.outputs.fingerprint }}"
+            echo '```'
+            echo ""
+            echo "### Verify the installed app (TWA address bar)"
+            echo 'Serve this at \`https://learnovize.com/.well-known/assetlinks.json\`:'
+            echo '```json'
+            echo '[{ "relation": ["delegate_permission/common.handle_all_urls"],'
+            echo '   "target": { "namespace": "android_app", "package_name": "ng.learnovize.app",'
+            echo "               \"sha256_cert_fingerprints\": [\"${{ steps.signing.outputs.fingerprint }}\"] } }]"
+            echo '```'
+            echo ""
+            echo "### Install"
+            echo "1. Download \`learnovize-${{ steps.meta.outputs.tag }}.apk\` on the phone."
+            echo "2. Open it and allow **Install unknown apps** for the browser when asked."
+            echo "3. Requires Android 7.0 (API 24)+ and an up-to-date Chrome."
+            echo ""
+            echo "### For Google Play"
+            echo "Upload \`learnovize-${{ steps.meta.outputs.tag }}.aab\` to the Play Console"
+            echo "(versionCode ${{ github.run_number }}, versionName ${VERSION_NAME})."
+          } > dist/RELEASE_NOTES.md
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Learnovize Android ${{ env.VERSION_NAME }} (${{ steps.meta.outputs.tag }})
+          body_path: dist/RELEASE_NOTES.md
+          prerelease: ${{ steps.signing.outputs.ephemeral == 'true' }}
+          files: |
+            dist/learnovize-${{ steps.meta.outputs.tag }}.apk
+            dist/learnovize-${{ steps.meta.outputs.tag }}.aab

@@ -1,0 +1,61 @@
+plugins {
+    id("com.android.application")
+}
+
+def storeFilePath = System.getenv("ANDROID_KEYSTORE_FILE")
+def storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+
+android {
+    namespace = "ng.learnovize.app"
+    compileSdk = 34
+
+    defaultConfig {
+        // Must match the Expo app's package and the assetlinks statement.
+        applicationId = "ng.learnovize.app"
+        minSdk = 24
+        targetSdk = 34
+        // Monotonic per CI run so Play accepts every upload. Overridable locally.
+        versionCode = (System.getenv("ANDROID_VERSION_CODE") ?: "1").toInteger()
+        versionName = "1.0.0"
+    }
+
+    // The signing block is only defined when a keystore is actually provided.
+    // Defining it with a missing store file would break even unsigned builds,
+    // and this module must always stay buildable without secrets.
+    if (storeFilePath) {
+        signingConfigs {
+            release {
+                storeFile = file(storeFilePath)
+                storePassword = storePassword
+                keyAlias = keyAlias
+                keyPassword = keyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+            shrinkResources = false
+            if (storeFilePath) {
+                signingConfig = signingConfigs.release
+            }
+        }
+        debug {
+            minifyEnabled = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Trusted Web Activity launcher. No app code of our own is needed: the manifest
+    // points straight at the library's LauncherActivity.
+    implementation("com.google.androidbrowserhelper:androidbrowserhelper:2.5.0")
+}

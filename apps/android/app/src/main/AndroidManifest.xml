@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Trusted Web Activity shell for the Learnovize PWA at https://learnovize.com.
+  There is deliberately no app code: the activity below belongs to the
+  android-browser-helper library, and every behaviour (fullscreen site, splash from
+  the web manifest, shortcuts) is driven by the PWA itself plus this manifest.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Camera and microphone are requested by the classroom at runtime; the
+         manifest entries let the install screen state them honestly. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.Learnovize"
+        android:allowBackup="true"
+        android:supportsRtl="true">
+
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Learnovize.Launcher">
+
+            <!-- The verified origin. Must stay in sync with the PWA scope ("/")
+                 and with apps/web/app/.well-known/assetlinks.json/route.ts. -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                android:value="https://learnovize.com/dashboard" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                android:value="@color/colorPrimary" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+                android:value="@color/colorPrimary" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_DIVIDER_COLOR"
+                android:value="@color/colorPrimaryDark" />
+            <meta-data
+                android:name="asset_statements"
+                android:resource="@string/asset_statements" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- App Links: learnovize.com URLs open in the app once assetlinks.json
+                 verifies. Until the fingerprint is configured the app still works;
+                 links just keep the browser address bar. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="learnovize.com" />
+                <data android:scheme="https" android:host="www.learnovize.com" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

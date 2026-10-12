@@ -11,3 +11,12 @@ apps/web/generated/
 .local-storage/
 # tsc incremental build info
 tsconfig.tsbuildinfo
+# Android signing material must never be committed. Release builds read the
+# keystore from GitHub Actions secrets (ANDROID_KEYSTORE_BASE64 and friends);
+# local debug keystores and Gradle outputs stay out of version control too.
+*.jks
+*.keystore
+apps/android/local.properties
+apps/android/.gradle/
+apps/android/build/
+apps/android/app/build/

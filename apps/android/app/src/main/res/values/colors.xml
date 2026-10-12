@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand palette, same values as the web app accent tokens. -->
+    <color name="colorPrimary">#1B7E8D</color>
+    <color name="colorPrimaryDark">#0E4A55</color>
+    <color name="colorAccent">#1B7E8D</color>
+    <color name="splashBackground">#FBF6EE</color>
+</resources>

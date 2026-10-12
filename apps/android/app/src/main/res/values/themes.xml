@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Framework theme only: no Material dependency is needed for a TWA shell,
+         and the in-app splash comes from the web manifest's theme/background. -->
+    <style name="Theme.Learnovize" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/colorPrimary</item>
+        <item name="android:navigationBarColor">@color/colorPrimary</item>
+        <item name="android:windowBackground">@color/splashBackground</item>
+    </style>
+    <style name="Theme.Learnovize.Launcher" parent="Theme.Learnovize">
+        <item name="android:windowBackground">@color/splashBackground</item>
+    </style>
+</resources>

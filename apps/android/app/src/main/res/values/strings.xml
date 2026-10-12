@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Learnovize</string>
+    <!-- Must match the statement served at
+         https://learnovize.com/.well-known/assetlinks.json or the app opens
+         links with the browser chrome instead of fullscreen. -->
+    <string name="asset_statements">[{ \"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": { \"namespace\": \"web\", \"site\": \"https://learnovize.com\" } }]</string>
+</resources>
