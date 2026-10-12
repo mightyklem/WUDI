@@ -28,7 +28,6 @@ export default function SidePanel({
   onClose,
   d,
   mod,
-  showcase,
 }: {
   room: Room;
   sessionId: string;
@@ -39,7 +38,6 @@ export default function SidePanel({
   onClose: () => void;
   d: Data;
   mod: Mod;
-  showcase?: { name: string; note: string | null; url: string | null; imageUrl: string | null } | null;
 }) {
   if (!tab) return null;
   return (
@@ -65,7 +63,7 @@ export default function SidePanel({
       {tab === 'people' && <People room={room} role={role} d={d} mod={mod} />}
       {tab === 'polls' && <Polls room={room} role={role} d={d} />}
       {tab === 'giveaway' && (
-        <GiveawayPanel sessionId={sessionId} isTrainer={role === 'trainer'} showcase={showcase ?? null} />
+        <GiveawayPanel sessionId={sessionId} isTrainer={role === 'trainer'} />
       )}
     </aside>
   );

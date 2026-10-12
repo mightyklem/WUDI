@@ -1,0 +1,199 @@
+'use client';
+import { useMemo, useState } from 'react';
+import ProductTypeGrid, { type ProductType } from './ProductTypeGrid';
+
+export type Intro = {
+  title: string;
+  hostName: string;
+  startsAtUtc: string;
+  endsAtUtc: string;
+  opensAtUtc: string | null;
+  admittedAtUtc: string | null;
+  agenda: string | null;
+  description: string | null;
+  showcaseName: string | null;
+  showcaseUrl: string | null;
+  showcaseNote: string | null;
+  showcaseImageUrl: string | null;
+  registered: number;
+  cap: number;
+  accessType: string;
+  pricePerDayNgn: number | null;
+  /** The trainer who owns this training. Not secret: their name is already shown. */
+  ownerId: string;
+};
+
+/**
+ * The class page, laid out as a sheet: title, three figures, a description you
+ * can expand, then what the class covers.
+ *
+ * The three figures are the ones a person actually decides on -- who is going,
+ * when it starts, whether there is room. Vanity counts are deliberately absent;
+ * a class with 12 registered learners is not improved by also telling them it
+ * has 9 views.
+ */
+export default function ClassSheet({
+  intro,
+  viewerId,
+  onJoin,
+  joining,
+  error,
+}: {
+  intro: Intro;
+  viewerId: string | null;
+  onJoin: () => void;
+  joining: boolean;
+  error: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [productType, setProductType] = useState<ProductType | null>(null);
+  const canAttach = viewerId === intro.ownerId;
+
+  const start = new Date(intro.startsAtUtc).getTime();
+  const end = new Date(intro.endsAtUtc).getTime();
+  const open = new Date(intro.opensAtUtc ?? intro.startsAtUtc).getTime();
+  const now = Date.now();
+
+  const state = useMemo(() => {
+    if (intro.admittedAtUtc) return { label: 'Room is open', tone: 'live' as const, canJoin: true };
+    if (now >= open && now < end) return { label: 'Waiting for the host', tone: 'waiting' as const, canJoin: true };
+    if (now < start) return { label: `Starts ${ago(start - now)}`, tone: 'soon' as const, canJoin: false };
+    return { label: 'Finished', tone: 'over' as const, canJoin: false };
+  }, [intro.admittedAtUtc, now, open, start, end]);
+
+  const seatsLeft = Math.max(0, intro.cap - intro.registered);
+  const free = intro.accessType !== 'paid';
+  const price = free ? 'Free' : intro.pricePerDayNgn
+    ? `₦${intro.pricePerDayNgn.toLocaleString()}`
+    : 'Paid';
+
+  const blurb = intro.description?.trim() || `${intro.title}, live with ${intro.hostName}.`;
+  // Two lines is roughly what fits on a phone; the rest waits behind See more.
+  const long = blurb.length > 150;
+
+  return (
+    <div className="cs">
+      <div className="cs-head">
+        <h1 className="cs-title">{intro.title}</h1>
+        <p className="cs-sub">
+          {intro.hostName} · {clock(start)}–{clock(end)} WAT
+        </p>
+        <span className="cs-state" data-tone={state.tone}>{state.label}</span>
+      </div>
+
+      <div className="cs-stats">
+        <Stat value={price} label={free ? 'Access' : 'Per day'} />
+        <Stat value={String(intro.registered)} label={intro.registered === 1 ? 'Registered' : 'Registered'} />
+        <Stat
+          value={seatsLeft > 0 ? String(seatsLeft) : 'Full'}
+          label={seatsLeft > 0 ? 'Seats left' : 'Class full'}
+        />
+      </div>
+
+      <section className="cs-desc">
+        <p className={expanded ? 'cs-desc-body' : 'cs-desc-body cs-clamp'}>{blurb}</p>
+        {intro.showcaseUrl && (
+          <a className="cs-link" href={intro.showcaseUrl} target="_blank" rel="noreferrer noopener">
+            {intro.showcaseName || 'Class link'} ↗
+          </a>
+        )}
+        {long && (
+          <button type="button" className="cs-more" onClick={() => setExpanded((v) => !v)}>
+            {expanded ? 'Show less' : 'See more'}
+          </button>
+        )}
+      </section>
+
+      {intro.showcaseName && (
+        <div className="cs-feature">
+          {intro.showcaseImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={intro.showcaseImageUrl} alt="" className="cs-feature-img" />
+          )}
+          <div>
+            <p className="cs-feature-tag">Featured</p>
+            <p className="cs-feature-name">{intro.showcaseName}</p>
+            {intro.showcaseNote && <p className="cs-feature-note">{intro.showcaseNote}</p>}
+          </div>
+        </div>
+      )}
+
+      {intro.agenda && (
+        <section className="cs-block">
+          <h2 className="cs-h">What you will see</h2>
+          <p className="cs-block-body">{intro.agenda}</p>
+        </section>
+      )}
+
+      {canAttach && (
+        <section className="cs-block">
+          <h2 className="cs-h">Attach something to this class</h2>
+          {productType ? (
+            <div className="cs-attach">
+              <p className="cs-attach-done">✓ {labelFor(productType)} selected</p>
+              <button type="button" className="cs-ghost" onClick={() => setProductType(null)}>
+                Change
+              </button>
+            </div>
+          ) : (
+            <ProductTypeGrid onPick={setProductType} />
+          )}
+        </section>
+      )}
+
+      <div className="cs-actions">
+        <button
+          type="button"
+          className="cs-join"
+          disabled={!state.canJoin || joining}
+          onClick={onJoin}
+        >
+          {joining ? 'Opening…' : state.canJoin ? 'Join the class' : state.label}
+        </button>
+        {!state.canJoin && state.tone === 'soon' && (
+          <p className="cs-hint">The waiting room opens {ago(open - now)} before the start.</p>
+        )}
+      </div>
+
+      {error && <p className="cs-error">{error}</p>}
+
+      <ul className="cs-notes">
+        <li>Learners join muted. Raise your hand to be given the floor.</li>
+        <li>Nothing is recorded and there is no replay.</li>
+      </ul>
+    </div>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="cs-stat">
+      <p className="cs-stat-v">{value}</p>
+      <p className="cs-stat-l">{label}</p>
+    </div>
+  );
+}
+
+/** Short relative time, in the "6h ago" shape the reference uses. */
+function ago(ms: number): string {
+  const m = Math.floor(ms / 60000);
+  if (m < 60) return `in ${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `in ${h}h`;
+  const d = Math.floor(h / 24);
+  return `in ${d}d`;
+}
+
+function clock(ms: number): string {
+  return new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function labelFor(t: ProductType): string {
+  return {
+    digital: 'Digital product',
+    coaching: 'Coaching call',
+    course: 'eCourse',
+    custom: 'Custom product',
+    link: 'Link or media',
+  }[t];
+}

@@ -23,7 +23,6 @@ export default function ClassroomRoom({
   retryNow,
 onLeave,
     onEnd,
-    showcase,
   }: {
   room: Room;
   sessionId: string;
@@ -37,7 +36,6 @@ onLeave,
   retryNow: () => void;
   onLeave: () => void;
   onEnd: () => void;
-  showcase: { name: string; note: string | null; url: string | null; imageUrl: string | null } | null;
 }) {
   const d = useClassroomData(room, myId, role);
   const mod = useModeration(sessionId);
@@ -173,7 +171,6 @@ onLeave,
             onClose={() => setPanel(null)}
             d={d}
             mod={mod}
-            showcase={showcase}
           />
         </div>
       </div>

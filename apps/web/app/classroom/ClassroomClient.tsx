@@ -4,7 +4,7 @@ import { getAccess } from '@/lib/client-auth';
 import { useRoomConnection } from './client/useClassroom';
 import type { Role } from './client/model';
 import Lobby from './client/Lobby';
-import WebinarIntro, { type Intro } from './client/WebinarIntro';
+import ClassSheet, { type Intro } from './client/ClassSheet';
 import ClassroomRoom from './client/ClassroomRoom';
 import './client/classroom.css';
 
@@ -41,6 +41,24 @@ export default function ClassroomClient({
   const [myId, setMyId] = useState('me');
   const [intent, setIntent] = useState<{ mic: boolean; cam: boolean }>({ mic: false, cam: false });
   const appliedFor = useRef<string | null>(null);
+  // Whether the viewer owns this training decides if the attach-a-product grid is
+  // shown at all. A learner should never be offered a form they cannot use. The
+  // token lives in localStorage, so this has to be settled in the browser.
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  useEffect(() => {
+    const access = getAccess();
+    if (!access) return;
+    let dead = false;
+    fetch('/api/me', { headers: { authorization: `Bearer ${access}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (dead || !j?.user?.id) return;
+        setViewerId(j.user.id);
+      })
+      .catch(() => {});
+    return () => { dead = true; };
+  }, []);
+
 
   const subtitle = `${intro.hostName} · ${spanLabel(intro)}`;
 
@@ -130,16 +148,6 @@ export default function ClassroomClient({
         retryNow={retryNow}
         onLeave={leave}
         onEnd={leave}
-        showcase={
-          intro.showcaseName
-            ? {
-                name: intro.showcaseName,
-                note: intro.showcaseNote,
-                url: intro.showcaseUrl,
-                imageUrl: intro.showcaseImageUrl,
-              }
-            : null
-        }
       />
     );
   };
@@ -164,8 +172,9 @@ export default function ClassroomClient({
 
   if (phase === 'landing') {
     return (
-      <WebinarIntro
+      <ClassSheet
         intro={intro}
+        viewerId={viewerId}
         joining={false}
         error={err}
         onJoin={() => setPhase('lobby')}
@@ -210,8 +219,9 @@ export default function ClassroomClient({
   /* ------------------------------ left ------------------------------- */
 
   return (
-    <WebinarIntro
+    <ClassSheet
       intro={intro}
+      viewerId={viewerId}
       joining={false}
       error={err ?? 'You left the room. Rejoin whenever you are ready.'}
       onJoin={() => setPhase('lobby')}

@@ -16,8 +16,12 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
       training: {
         select: {
           title: true,
+          description: true,
+          accessType: true,
+          pricePerDayNgn: true,
           seatsTaken: true,
           cap: true,
+          trainerId: true,
           trainer: { select: { displayName: true } },
           days: { orderBy: { dayIndex: 'asc' } },
         },
@@ -84,6 +88,12 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
             showcaseImageUrl: session.showcaseImageUrl,
             registered: session.training.seatsTaken,
             cap: session.training.cap,
+            description: session.training.description,
+            accessType: session.training.accessType,
+            pricePerDayNgn: session.training.pricePerDayNgn,
+            // Resolved on the client against /api/me: the access token lives in localStorage,
+            // so a server component cannot see who is asking.
+            ownerId: session.training.trainerId,
           }}
         />
       </div>
