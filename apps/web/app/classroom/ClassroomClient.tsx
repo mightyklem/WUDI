@@ -4,7 +4,7 @@ import {
   LiveKitRoom, useRoomContext, useTracks, useLocalParticipant,
   VideoTrack, RoomAudioRenderer,
 } from '@livekit/components-react';
-import { RoomEvent, Track } from 'livekit-client';
+import { RoomEvent, Track, type DisconnectReason } from 'livekit-client';
 import { getAccess } from '@/lib/client-auth';
 
 type Role = 'admin' | 'trainer' | 'moderator' | 'participant';
@@ -680,32 +680,118 @@ function RemoteRoster({ hands }: { hands: Set<string> }) {
   );
 }
 
+/**
+ * What a drop actually means, in words the person can act on.
+ *
+ * The previous version reported every drop as "Disconnected from the room", which
+ * threw away the only information that distinguishes four completely different
+ * problems: a LiveKit project that has not allowed this origin, an expired token,
+ * a network drop, and someone leaving deliberately. A trainer whose room was being
+ * rejected by the LiveKit project was told the same thing as one who closed the tab.
+ *
+ * DisconnectReason is a numeric enum from @livekit/protocol, so these are the
+ * declared values rather than names.
+ */
+function describeDisconnect(reason?: DisconnectReason): { title: string; detail: string } {
+  switch (reason) {
+    case 1: // CLIENT_INITIATED
+      return { title: 'You left the room', detail: 'Rejoin whenever you are ready.' };
+    case 2: // DUPLICATE_IDENTITY
+      return {
+        title: 'This account is already in the room',
+        detail: 'LiveKit allows one connection per person. Close the other tab or device, then rejoin.',
+      };
+    case 3: // SERVER_SHUTDOWN
+      return { title: 'The LiveKit server is unavailable', detail: 'This is a service problem, not yours.' };
+    case 4: // PARTICIPANT_REMOVED
+    case 5: // ROOM_DELETED
+    case 10: // ROOM_CLOSED
+      return { title: 'The room was closed', detail: 'The session has ended.' };
+    case 6: // STATE_MISMATCH
+    case 7: // JOIN_FAILURE
+    case 12: // USER_REJECTED
+      return {
+        title: 'LiveKit refused the connection',
+        detail:
+          'The room rejected this session. Most often the LiveKit project has not been allowed to ' +
+          'serve this domain — check its allowed origins, and that the API key and secret in Netlify ' +
+          'belong to that same project.',
+      };
+    case 14: // CONNECTION_TIMEOUT
+    case 9: // SIGNAL_CLOSE
+      return {
+        title: 'Lost the connection to the room',
+        detail: 'The signal connection dropped. Check your network and rejoin.',
+      };
+    case 0: // UNKNOWN_REASON
+    default:
+      return {
+        title: 'Disconnected from the room',
+        detail: 'LiveKit did not say why. Rejoin, and check the room is still scheduled.',
+      };
+  }
+}
+
 export default function ClassroomClient({ sessionId }: { sessionId: string }) {
   const [creds, setCreds] = useState<{ token: string; url: string; room: string; role: Role; myId: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // The reason a room dropped, kept apart from err so that "you were refused" and
+  // "the connection died" can be told apart and both keep their detail.
+  const [drop, setDrop] = useState<{ title: string; detail: string } | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [lowData, setLowData] = useState(false);
 
   useEffect(() => {
     const access = getAccess();
     if (!access) return void setErr('Log in first, then join from your training page.');
+    setDrop(null);
+    setLiveError(null);
     fetch(`/api/sessions/${sessionId}/token`, {
       method: 'POST', headers: { authorization: `Bearer ${access}` },
     }).then(async (r) => {
-      const j = await r.json();
-      if (!r.ok) return setErr(j.error || 'Could not join');
+      const j = await r.json().catch(() => ({}));
+      // The server's message is the specific one ("You did not register for this
+      // day"), so it must not be flattened into a generic failure.
+      if (!r.ok) return setErr(j.error || `Could not join (HTTP ${r.status})`);
       let id = 'me';
       try { id = (JSON.parse(atob(j.token.split('.')[1])) as { sub?: string }).sub || 'me'; } catch { /* ignore */ }
       setCreds({ token: j.token, url: j.url, room: j.room, role: j.role, myId: id });
-    }).catch(() => setErr('Network error joining room'));
-  }, [sessionId]);
+    }).catch(() => setErr('Could not reach Learnovize to get your room pass. Check your connection.'));
+  }, [sessionId, attempt]);
 
   if (err) return <div className="err">{err}</div>;
+  if (drop || liveError) {
+    return (
+      <div className="err">
+        <b>{drop?.title || 'Could not connect to the room'}</b>
+        <div style={{ marginTop: 6 }}>{drop?.detail || liveError}</div>
+        <div className="btnrow">
+          <button
+            className="btn primary"
+            onClick={() => {
+              setErr(null);
+              setDrop(null);
+              setLiveError(null);
+              setCreds(null);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Rejoin room
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!creds) return <p className="muted">Joining room…</p>;
   return (
     <LiveKitRoom
       serverUrl={creds.url} token={creds.token} connect
       video={!lowData} audio
-      onDisconnected={() => setErr('Disconnected from the room.')}
+      // LiveKit's own error carries the real cause (a rejected token, a refused
+      // origin). Reporting it beats inventing our own wording.
+      onError={(e) => setLiveError(e?.message || String(e))}
+      onDisconnected={(reason) => setDrop(describeDisconnect(reason))}
     >
       <p className="muted" style={{ fontSize: 13 }}>you are <b>{creds.role}</b></p>
       {/* Renders every remote audio track and handles the browser autoplay block.
