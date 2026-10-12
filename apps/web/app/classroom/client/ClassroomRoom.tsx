@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
-import { LiveKitRoom } from '@livekit/components-react';
+import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 import type { Room, TrackPublishOptions } from 'livekit-client';
 import { useClassroomData, useModeration, type ConnectState } from './useClassroom';
 import { displayName, type Role } from './model';
@@ -22,6 +22,7 @@ export default function ClassroomRoom({
   retryIn,
   retryNow,
 onLeave,
+    mediaIssue,
     onEnd,
   }: {
   room: Room;
@@ -34,8 +35,9 @@ onLeave,
   quality: number;
   retryIn: number;
   retryNow: () => void;
-  onLeave: () => void;
-  onEnd: () => void;
+onLeave: () => void;
+    mediaIssue?: string | null;
+    onEnd: () => void;
 }) {
   const d = useClassroomData(room, myId, role);
   const mod = useModeration(sessionId);
@@ -110,7 +112,12 @@ onLeave,
       audio={false}
       video={false}
     >
-      <div className="croom">
+<div className="croom">
+        {/* Without this, remote audio is subscribed but never attached to an
+            element and the room is completely silent. LiveKit does not attach
+            remote audio on its own; it has to be rendered somewhere. It was
+            dropped in the rebuild and took every sound with it. */}
+        <RoomAudioRenderer />
         <header className="croom-head">
           <div className="croom-head-title">
             {sessionTitle}
@@ -142,6 +149,9 @@ onLeave,
               spotlight={spotlight}
               onSpotlight={(id) => setSpotlight((cur) => (cur === id ? null : id))}
             />
+            {mediaIssue && (
+              <p className="croom-media-issue" role="alert">{mediaIssue}</p>
+            )}
             <ControlBar
               role={role}
               micOn={!!d.local?.mic}

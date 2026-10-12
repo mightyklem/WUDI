@@ -960,3 +960,79 @@ overflow: hidden;
   .cs-stat-v { font-size: 15px; }
   .cs-join { width: 100%; }
 }
+
+/* ---------- landscape 16:9 presentation ---------- */
+
+/* A shared slide gets a real 16:9 block instead of being stretched across
+   whatever shape the window happens to be. The participant rail moves beside it
+   so the slide is not sharing height with a filmstrip. */
+.croom-stage[data-wide='true'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.croom-stage[data-wide='true'] .croom-video-wrap {
+  aspect-ratio: 16 / 9;
+  height: auto;
+  max-height: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  background: #000;
+}
+
+.croom-stage[data-wide='true'] .croom-strip {
+  flex-direction: column;
+  align-self: stretch;
+  height: 100%;
+  max-height: 100%;
+  border-top: 0;
+  border-left: 1px solid var(--croom-line);
+  padding: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.croom-wide-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 4;
+  padding: 7px 13px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12.5px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+.croom-wide-btn:hover { background: rgba(0, 0, 0, 0.75); }
+.croom-wide-btn[aria-pressed='true'] { background: rgba(27, 126, 141, 0.85); border-color: var(--accent); }
+.croom-wide-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* The stage label sits top-left; keep it clear of the 16:9 button. */
+.croom-stage[data-wide='true'] .croom-stage-label { max-width: calc(100% - 140px); }
+
+@media (max-width: 760px) {
+  .croom-stage[data-wide='true'] { grid-template-columns: minmax(0, 1fr); }
+  .croom-stage[data-wide='true'] .croom-strip {
+    flex-direction: row;
+    border-left: 0;
+    border-top: 1px solid var(--croom-line);
+    height: auto;
+    overflow-x: auto;
+  }
+}
+
+/* A device that failed to start says so. Silence with no explanation is the same
+   as a muted microphone, and only one of those is the trainer's fault. */
+.croom-media-issue {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 9px 14px;
+  background: rgba(180, 85, 47, 0.18);
+  border-top: 1px solid rgba(180, 85, 47, 0.5);
+  color: #ffd9c9;
+  font-size: 13.5px;
+}

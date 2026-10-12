@@ -31,6 +31,10 @@ export default function Stage({
   onSpotlight: (identity: string | null) => void;
 }) {
   const [reactionsVisible, setReactionsVisible] = useState(true);
+  // Landscape presentation mode. A slide deserves a real 16:9 block rather than
+  // being stretched across whatever shape the window happens to be, which crops
+  // nothing but letterboxes badly and leaves the presenter squashed into a corner.
+  const [wide, setWide] = useState(false);
 
   const screenShares = useTracks([{ source: Track.Source.ScreenShare, withPlaceholder: false }]);
   const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: false }]);
@@ -82,8 +86,19 @@ export default function Stage({
   }, [share, cameras]);
 
   return (
-    <div className="croom-stage">
+    <div className="croom-stage" data-wide={wide && !!share}>
       <div className="croom-video-wrap">
+        {share && (
+          <button
+            type="button"
+            className="croom-wide-btn"
+            aria-pressed={wide}
+            onClick={() => setWide((v) => !v)}
+            title={wide ? 'Back to filling the stage' : 'Present in landscape 16:9'}
+          >
+            {wide ? '⤡ Fill' : '⛶ 16:9'}
+          </button>
+        )}
         {mode === 'share' && share ? (
           <>
             <VideoTrack

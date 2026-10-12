@@ -41,6 +41,7 @@ export default function ClassroomClient({
   const [myId, setMyId] = useState('me');
   const [intent, setIntent] = useState<{ mic: boolean; cam: boolean }>({ mic: false, cam: false });
   const appliedFor = useRef<string | null>(null);
+  const [mediaIssue, setMediaIssue] = useState<string | null>(null);
   // Whether the viewer owns this training decides if the attach-a-product grid is
   // shown at all. A learner should never be offered a form they cannot use. The
   // token lives in localStorage, so this has to be settled in the browser.
@@ -151,10 +152,24 @@ const [admitted, setAdmitted] = useState(false);
     const wantMic = staff && intent.mic;
     const wantCam = staff && intent.cam;
     (async () => {
+      // Reported, not swallowed. A refused device used to fail silently, which is
+      // indistinguishable from a muted microphone -- the one thing a trainer cannot
+      // afford to misdiagnose while standing in front of a class.
+      const fail = (what: string, e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        const denied = /permission|denied|notallowed|notfound|inuse/i.test(msg);
+        setMediaIssue(
+          denied
+            ? `Your ${what} is blocked. Allow it in your browser's site settings, then reload.`
+            : `Could not start your ${what}: ${msg}`,
+        );
+      };
       try {
         if (wantMic) await room.localParticipant.setMicrophoneEnabled(true);
+      } catch (e) { fail('microphone', e); }
+      try {
         if (wantCam) await room.localParticipant.setCameraEnabled(true);
-      } catch { /* a refused device must not stop them joining to listen */ }
+      } catch (e) { fail('camera', e); }
     })();
   }, [room, state, pass, intent]);
 
@@ -192,6 +207,7 @@ const [admitted, setAdmitted] = useState(false);
         quality={quality}
         retryIn={retryIn}
         retryNow={retryNow}
+        mediaIssue={mediaIssue}
         onLeave={leave}
         onEnd={leave}
       />
