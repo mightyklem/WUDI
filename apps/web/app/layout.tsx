@@ -22,11 +22,18 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
   },
   icons: {
+    // Ordered by preference. The .ico leads because every browser tab asks for
+    // it; the SVG follows for browsers that will use it, at any zoom, without
+    // the pixelation a 16px PNG can never avoid.
     icon: [
+      { url: '/favicon.ico', sizes: '48x48 32x32 16x16' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
+    // iOS does not round an apple-touch-icon, so this one is full-bleed square.
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+    other: [{ rel: 'mask-icon', url: '/icon.svg' }],
   },
 };
 
@@ -34,7 +41,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   // Matches the manifest, so the browser chrome and the installed app agree.
-  themeColor: '#1B7E8D',
+  themeColor: '#0E4A55',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

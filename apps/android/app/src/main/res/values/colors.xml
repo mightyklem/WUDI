@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Brand palette, same values as the web app accent tokens. -->
-    <color name="colorPrimary">#1B7E8D</color>
-    <color name="colorPrimaryDark">#0E4A55</color>
-    <color name="colorAccent">#1B7E8D</color>
-    <color name="splashBackground">#FBF6EE</color>
-</resources>
+<color name="colorPrimary">#1B7E8D</color>
+      <color name="colorPrimaryDark">#0E4A55</color>
+      <color name="colorAccent">#1B7E8D</color>
+      <!-- Now the teal-tinted page background, not the old warm cream. -->
+      <color name="splashBackground">#F5F9F9</color>
+      <!-- Adaptive icon background. Referenced by mipmap-anydpi-v26/ic_launcher.xml;
+           without this the launcher falls back to the legacy square icon. -->
+      <color name="ic_launcher_background">#14616E</color>
+  </resources>

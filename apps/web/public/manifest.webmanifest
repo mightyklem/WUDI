@@ -2,14 +2,21 @@
   "name": "Learnovize — live trainings",
   "short_name": "Learnovize",
   "description": "Join live classes, track real attendance, earn verifiable certificates.",
+  "id": "/dashboard",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#FBF6EE",
-  "theme_color": "#1B7E8D",
-  "categories": ["education"],
+  "orientation": "any",
+  "background_color": "#F5F9F9",
+  "theme_color": "#0E4A55",
+  "categories": ["education", "productivity"],
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
@@ -31,16 +38,14 @@
   ],
   "shortcuts": [
     {
-      "name": "My seats",
-      "short_name": "Seats",
-      "url": "/me/registrations",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/dashboard"
     },
     {
       "name": "Explore classes",
-      "short_name": "Explore",
-      "url": "/feed",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "short_name": "Classes",
+      "url": "/classes"
     }
   ]
 }
