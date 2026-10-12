@@ -70,6 +70,24 @@ export function cspConnectSources() {
     // wss://host and https://host are different origins to the browser, and the client
     // library uses both depending on what it is doing.
     out.add(livekit.replace(/^http/, 'ws'));
+
+    // CRITICAL: LiveKit Cloud does not keep the browser on the hostname above. It
+    // redirects signalling to a regional subdomain such as
+    // wss://oashburn1b.production.livekit.cloud, and the SDK walks a list of regions
+    // until one answers. Those regional hosts are NOT covered by the exact origin,
+    // so the browser blocked the redirect before any request left the page and the
+    // classroom reported a bare connection failure. The same applies to TURN-over-TLS
+    // when UDP is unavailable.
+    //
+    // A wildcard is only added when the configured host really is LiveKit Cloud, so a
+    // self-hosted server at wss://livekit.example.com gets no wildcard -- nothing about
+    // that deployment implies sibling hosts are equally trusted.
+    // One call per entry: Set.add() accepts a single argument and silently drops the
+    // rest, which is how https://*.livekit.cloud went missing the first time.
+    if (/\.livekit\.cloud$/i.test(new URL(livekit).hostname)) {
+      out.add('wss://*.livekit.cloud');
+      out.add('https://*.livekit.cloud');
+    }
   } else {
     // Never block the classroom because an env var is missing on one deploy.
     out.add('wss://*.livekit.cloud');
