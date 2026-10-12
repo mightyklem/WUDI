@@ -75,7 +75,7 @@ export default function Dashboard() {
       <SiteNav />
 
       <h1 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span aria-hidden style={{ fontSize: 30 }}>{head.icon}</span>
+        <span aria-hidden className="u-num">{head.icon}</span>
         {head.title}
       </h1>
       <p className="sub">{me.user.email}</p>
@@ -96,14 +96,14 @@ export default function Dashboard() {
             {points.rank.icon}
           </span>
           <div style={{ flex: 1, minWidth: 160 }}>
-            <p style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>
+            <p className="u-h">
               {/* Icon carries the rank on its own — the ladder is Stone, Bronze,
                   Silver, Gold, so the picture says it without a word. */}
               <span aria-hidden style={{ marginRight: 8 }}>{points.rank.icon}</span>
               <span className="sr-only">{points.rank.label}</span>
               {points.points} point{points.points === 1 ? '' : 's'}
             </p>
-            <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+            <p className="muted u-sub">
               {points.next ? `${points.next.needed} to ${points.next.icon} ${points.next.label}` : 'Top rank'}
             </p>
           </div>
@@ -124,11 +124,11 @@ export default function Dashboard() {
 
       {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
         <div className="card" style={{ marginTop: 16, borderLeft: '4px solid #9A5B12' }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div className="u-flex">
             <span className="ibadge" style={{ background: '#FDF0E3', color: '#9A5B12', fontSize: 18 }} aria-hidden>⏳</span>
             <div>
-              <p style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>Free trainings: unlocked now</p>
-              <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+              <p className="u-h">Free trainings: unlocked now</p>
+              <p className="muted u-sub">
                 Paid certificates need platform approval.
                 {me.trainer.approvalState === 'pending' ? ' Yours is under review.' : ''}
               </p>
@@ -139,11 +139,11 @@ export default function Dashboard() {
 
       {role === 'trainer' && pendingTotal > 0 && (
         <div className="card" style={{ marginTop: 12, borderLeft: '4px solid #0B5E2E' }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div className="u-flex">
             <span className="ibadge" style={{ background: '#E4F5EA', color: '#0B5E2E', fontSize: 18 }} aria-hidden>✓</span>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>{pendingTotal} awaiting your approval</p>
-              <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>Attendees who met the bar</p>
+              <p className="u-h">{pendingTotal} awaiting your approval</p>
+              <p className="muted u-sub">Attendees who met the bar</p>
             </div>
             <Link className="btn primary" href="/trainings">Review</Link>
           </div>
@@ -152,11 +152,11 @@ export default function Dashboard() {
 
       {role === 'trainer' && nextUp && (
         <div className="card" style={{ marginTop: 12, borderLeft: '4px solid #156B78' }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div className="u-flex">
             <span className="ibadge" style={{ background: '#E9F3F6', color: '#156B78', fontSize: 18 }} aria-hidden>▶</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>{nextUp.title}</p>
-              <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+            <div className="u-grow">
+              <p className="u-h">{nextUp.title}</p>
+              <p className="muted u-sub">
                 {nextUp.nextSessionAt ? lagosWhenLabel(nextUp.nextSessionAt) : ''}
               </p>
             </div>
@@ -191,7 +191,7 @@ export default function Dashboard() {
             >
               {t.icon}
             </span>
-            <p style={{ margin: '12px 0 0', fontWeight: 700, fontSize: 15 }}>{t.label}</p>
+            <p className="u-h-md">{t.label}</p>
             {t.badge !== undefined && t.badge !== 0 && (
               <span className="badge" style={{ position: 'absolute', top: 14, right: 14 }}>{t.badge}</span>
             )}
@@ -210,10 +210,10 @@ export default function Dashboard() {
                 className="card"
                 style={{ textDecoration: 'none', color: 'inherit', display: 'flex', gap: 14, alignItems: 'center', padding: 16 }}
               >
-                <span className="ibadge" style={{ background: '#EEF1F4', color: '#1C2430' }} aria-hidden>📘</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: 800 }}>{t.title}</p>
-                  <p className="muted" style={{ margin: '2px 0 0', fontSize: 13 }}>
+                <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
+                <div className="u-grow">
+                  <p className="u-h">{t.title}</p>
+                  <p className="muted u-sub-sm">
                     {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
                     {t.pendingApproval > 0 ? ` · ${t.pendingApproval} to approve` : ''}
                   </p>
@@ -227,36 +227,36 @@ export default function Dashboard() {
       )}
 
       {role === 'trainer' && trainings && trainings.length === 0 && (
-        <div className="card" style={{ marginTop: 18, textAlign: 'center', padding: 30 }}>
-          <div style={{ fontSize: 30 }} aria-hidden>＋</div>
-          <p style={{ margin: '10px 0 0', fontWeight: 800, fontSize: 18 }}>No trainings yet</p>
-          <p className="muted" style={{ margin: '6px 0 0', fontSize: 14 }}>Host a free one right away</p>
-          <div className="btnrow" style={{ justifyContent: 'center' }}>
+        <div className="card u-empty">
+          <div className="u-num" aria-hidden>＋</div>
+          <p className="u-h-lg">No trainings yet</p>
+          <p className="muted u-sub">Host a free one right away</p>
+          <div className="btnrow u-center">
             <Link className="btn primary" href="/trainings/new">Create</Link>
           </div>
         </div>
       )}
 
       {role === 'participant' && seats === 0 && (
-        <div className="card" style={{ marginTop: 18, textAlign: 'center', padding: 30 }}>
-          <div style={{ fontSize: 30 }} aria-hidden>◎</div>
-          <p style={{ margin: '10px 0 0', fontWeight: 800, fontSize: 18 }}>No seats yet</p>
-          <p className="muted" style={{ margin: '6px 0 0', fontSize: 14 }}>Find something live</p>
-          <div className="btnrow" style={{ justifyContent: 'center' }}>
+        <div className="card u-empty">
+          <div className="u-num" aria-hidden>◎</div>
+          <p className="u-h-lg">No seats yet</p>
+          <p className="muted u-sub">Find something live</p>
+          <div className="btnrow u-center">
             <Link className="btn primary" href="/feed">Explore</Link>
           </div>
         </div>
       )}
 
 {role === 'trainer' && (
-        <p style={{ marginTop: 22 }}>
+        <p className="u-mt-4">
           Want learners to know you were checked?{' '}
           <Link className="btn link" href="/trainer/verification">Get verified →</Link>
         </p>
       )}
 
       {role === 'participant' && (
-        <p style={{ marginTop: 22 }}>
+        <p className="u-mt-4">
           Want to teach? <Link className="btn link" href="/onboarding">Become a trainer →</Link>
         </p>
       )}

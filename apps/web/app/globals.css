@@ -429,3 +429,58 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   padding-left: 14px;
   margin: 0 0 12px;
 }
+
+/* ---------------------------------------------------------------------
+   Utility layer
+   ---------------------------------------------------------------------
+   Small on purpose. The 390 inline styles were not 390 unique problems --
+   most were the same handful of spacing and text patterns retyped on every
+   page, which is why nothing lined up. These name the patterns that actually
+   repeat, so a change lands everywhere at once.
+
+   If a rule appears once and is genuinely local, leave it inline. A utility
+   layer earns its place by being reused, not by being complete.
+   --------------------------------------------------------------------- */
+
+/* spacing ------------------------------------------------------- */
+.u-mt-1 { margin-top: 6px; }
+.u-mt-2 { margin-top: 12px; }
+.u-mt-3 { margin-top: 18px; }
+.u-mt-4 { margin-top: 22px; }
+.u-mb-2 { margin-bottom: 12px; }
+
+/* text ---------------------------------------------------------- */
+.u-sub   { margin: 2px 0 0; font-size: var(--t-sm); color: var(--mut); }
+.u-sub-sm { margin: 2px 0 0; font-size: var(--t-xs); color: var(--mut); }
+.u-h     { margin: 0; font-size: var(--t-md); font-weight: 800; letter-spacing: -0.01em; }
+.u-h-md  { margin: 12px 0 0; font-size: var(--t-base); font-weight: 700; }
+.u-h-lg  { margin: 10px 0 0; font-size: var(--t-lg); font-weight: 800; letter-spacing: -0.015em; }
+.u-num   { font-size: var(--t-2xl); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
+
+/* layout -------------------------------------------------------- */
+.u-flex  { display: flex; gap: 14px; align-items: center; }
+.u-flex-top { display: flex; gap: 14px; align-items: flex-start; }
+.u-center{ justify-content: center; }
+.u-grow  { flex: 1; min-width: 0; }
+.u-wrap  { flex-wrap: wrap; }
+
+/* an empty region inside a page, so "nothing here" still looks designed */
+.u-empty {
+  margin-top: var(--s-3);
+  text-align: center;
+  padding: var(--s-6);
+  border: 1px dashed var(--n-300);
+  border-radius: var(--r-md);
+  color: var(--mut);
+  background: var(--n-25);
+}
+
+/* more patterns that actually repeat across pages ---------------- */
+.u-note    { font-size: var(--t-xs); color: var(--mut); }
+.u-note14  { margin: 4px 0 0; font-size: var(--t-sm); }
+.u-block14 { display: block; font-size: var(--t-sm); }
+.u-hint    { margin: 6px 0 0; font-size: var(--t-xs); }
+.u-mt-half { margin-top: 8px; }
+.u-center-t { text-align: center; }
+.u-chips   { display: flex; gap: 10px; flex-wrap: wrap; }
+.u-chips-sm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

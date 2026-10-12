@@ -100,7 +100,7 @@ export default function NewTraining() {
     <div className="wrap">
       <h1>New training.</h1>
       <p className="sub">An invite link with preview is generated on save.</p>
-      <form onSubmit={submit} className="card" style={{ marginTop: 18 }}>
+      <form onSubmit={submit} className="card u-mt-3">
         <label className="fl">Title</label>
         <input type="text" required minLength={3} value={title} onChange={(e) => setTitle(e.target.value)} style={{ maxWidth: '100%' }} />
         <label className="fl">Topic</label>
@@ -109,7 +109,7 @@ export default function NewTraining() {
         <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
 
         <label className="fl">Class type</label>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="u-chips">
           {(['free', 'paid'] as const).map((t) => (
             <button key={t} type="button" onClick={() => setAccessType(t)}
               aria-pressed={accessType === t} className={accessType === t ? 'btn primary' : 'btn'}
@@ -118,7 +118,7 @@ export default function NewTraining() {
             </button>
           ))}
         </div>
-        <p className="muted" style={{ fontSize: 13, margin: '6px 0 0' }}>
+        <p className="muted u-hint">
           {accessType === 'free'
             ? 'Anyone can attend. No certificate is issued — attendees still earn points.'
             : 'Participants pay per day of class and receive a certificate.'}
@@ -127,7 +127,7 @@ export default function NewTraining() {
         {accessType === 'paid' && (
           <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
             <label className="fl">Price category</label>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="u-chips">
               {TIERS.map((k) => (
                 <button key={k} type="button" onClick={() => setTier(k)}
                   aria-pressed={tier === k} className={tier === k ? 'btn primary' : 'btn'}>
@@ -135,15 +135,15 @@ export default function NewTraining() {
                 </button>
               ))}
             </div>
-            <p className="muted" style={{ fontSize: 13, margin: '6px 0 0' }}>{tierRangeText(tier)}</p>
+            <p className="muted u-hint">{tierRangeText(tier)}</p>
 
-            <label className="fl" style={{ marginTop: 12 }}>Price for each day of class</label>
+            <label className="fl u-mt-2">Price for each day of class</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span aria-hidden style={{ fontWeight: 800 }}>₦</span>
               <input type="text" inputMode="numeric" value={pricePerDay}
                 onChange={(e) => setPricePerDay(e.target.value)} style={{ maxWidth: 160 }} />
             </div>
-            <p className="muted" style={{ fontSize: 13, margin: '6px 0 0' }}>
+            <p className="muted u-hint">
               {band.label} accepts {formatNgn(band.min)}{band.max !== null ? ` to ${formatNgn(band.max)}` : ' and above'} per day.
             </p>
 
@@ -163,8 +163,8 @@ export default function NewTraining() {
         <label className="fl" style={{ marginTop: 14 }}>Sessions · times are Africa/Lagos</label>
         <div style={{ display: 'grid', gap: 10 }}>
           {slots.map((s, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="ibadge" style={{ background: '#EEF1F4', color: '#1C2430' }} aria-hidden>{i + 1}</span>
+            <div key={i} className="u-chips-sm">
+              <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>{i + 1}</span>
               <select value={s.date} onChange={(e) => setSlot(i, { date: e.target.value })} aria-label={`Session ${i + 1} date`} style={{ minWidth: 150 }}>
                 <option value="" disabled>Pick a date</option>
                 {dateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -186,12 +186,12 @@ export default function NewTraining() {
             </div>
           ))}
         </div>
-        <div className="btnrow" style={{ marginTop: 8 }}>
+        <div className="btnrow u-mt-half">
           <button type="button" className="btn" onClick={() => setSlots((prev) => [...prev, { date: prev[prev.length - 1]?.date ?? '', start: '09:00', end: '11:00' }])}>
             + Add a day
           </button>
         </div>
-        {badRow && <p className="err" style={{ marginTop: 8 }}>{badRow.error}</p>}
+        {badRow && <p className="err u-mt-half">{badRow.error}</p>}
         {!badRow && sessions.length > 0 && (
           <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
             {sessions.map((s, i) => `${i + 1}. ${lagosRangeLabel(s.startsAtUtc, s.endsAtUtc)}`).join('  ·  ')}
@@ -199,13 +199,13 @@ export default function NewTraining() {
         )}
 
         <div className="card" style={{ marginTop: 14, background: 'var(--canvas)', borderLeft: '4px solid var(--accent)' }}>
-          <p style={{ margin: 0, fontWeight: 800 }}>What participants see</p>
+          <p className="u-h">What participants see</p>
           {accessType === 'free' ? (
-            <p className="muted" style={{ margin: '4px 0 0', fontSize: 14 }}>
+            <p className="muted u-note14">
               Free · {price.days} day{price.days === 1 ? '' : 's'} · no certificate
             </p>
           ) : (
-            <p className="muted" style={{ margin: '4px 0 0', fontSize: 14 }}>
+            <p className="muted u-note14">
               {formatNgn(price.pricePerDayNgn ?? 0)} × {price.days} day{price.days === 1 ? '' : 's'} ={' '}
               <b style={{ color: 'var(--ink)' }}>{formatNgn(price.totalNgn)}</b>
               {wantsCertificate ? ' · certificate included' : ' · no certificate'}

@@ -74,9 +74,9 @@ export default function DesignSystem() {
               <div key={c.token} className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ height: 64, background: c.hex }} />
                 <div style={{ padding: '10px 12px' }}>
-                  <b style={{ fontSize: 14, display: 'block' }}>{c.name}</b>
-                  <code style={{ fontSize: 12, color: 'var(--mut)' }}>{c.token}</code>
-                  <div style={{ fontSize: 12, color: 'var(--mut)' }}>{c.hex} · {c.use}</div>
+                  <b className="u-block14">{c.name}</b>
+                  <code className="u-note">{c.token}</code>
+                  <div className="u-note">{c.hex} · {c.use}</div>
                 </div>
               </div>
             ))}
@@ -85,8 +85,8 @@ export default function DesignSystem() {
       ))}
 
       <div className="card" style={{ background: 'var(--gold-soft)', border: 'none' }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Colour carries meaning</p>
-        <p className="muted" style={{ margin: '4px 0 0', fontSize: 14 }}>
+        <p className="u-h">Colour carries meaning</p>
+        <p className="muted u-note14">
           Teal is what you act on. Amber is anything involving money — a paid class, a
           price, a receipt. Green is what you have earned — a certificate, a confirmed
           attendance. They are not interchangeable, so the same idea looks the same
@@ -102,7 +102,7 @@ export default function DesignSystem() {
             style={{ borderRadius: 'var(--r-md)', border: '1px solid var(--line)', minHeight: 150, padding: 16 }}>
             <span className={`tile-icon ${p.tint}`} aria-hidden>◆</span>
             <b style={{ display: 'block', marginTop: 10, fontSize: 15 }}>{p.label}</b>
-            <code style={{ fontSize: 12, color: 'var(--mut)' }}>{p.k}</code>
+            <code className="u-note">{p.k}</code>
             <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{p.note}</p>
           </div>
         ))}
@@ -120,20 +120,20 @@ export default function DesignSystem() {
       <h2 className="sec">Shape</h2>
       <div style={{ display: 'grid', gap: 10 }}>
         {RADII.map((r) => (
-          <div key={r.k} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <code style={{ width: 90, fontSize: 12, color: 'var(--mut)' }}>{r.k}</code>
+          <div key={r.k} className="u-flex">
+            <code className="u-note">{r.k}</code>
             <div style={{ width: 56, height: 40, background: 'var(--accent)', opacity: .85,
               borderRadius: `var(${r.k})`, flex: '0 0 56px' }} />
-            <span style={{ fontSize: 14 }}>{r.v} · {r.use}</span>
+            <span className="u-note14">{r.v} · {r.use}</span>
           </div>
         ))}
       </div>
 
       {/* ---- Space ---- */}
       <h2 className="sec">Space</h2>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+      <div className="u-flex u-wrap">
         {SPACE.map((s) => (
-          <div key={s.k} style={{ textAlign: 'center' }}>
+          <div key={s.k} className="u-center-t">
             <div style={{ width: 22, height: parseInt(s.v), background: 'var(--accent-ink)', opacity: .7, borderRadius: 3 }} />
             <code style={{ display: 'block', fontSize: 11, color: 'var(--mut)', marginTop: 6 }}>{s.k}</code>
           </div>
@@ -146,7 +146,7 @@ export default function DesignSystem() {
         {SHADOWS.map((s) => (
           <div key={s.k} style={{ background: '#fff', borderRadius: 'var(--r-md)', padding: 18,
             boxShadow: s.style, border: '1px solid var(--line)' }}>
-            <b style={{ fontSize: 14, display: 'block' }}>{s.v}</b>
+            <b className="u-block14">{s.v}</b>
             <code style={{ fontSize: 11, color: 'var(--mut)' }}>{s.k}</code>
           </div>
         ))}
@@ -160,7 +160,7 @@ export default function DesignSystem() {
       <h2 className="sec">Icon tiles</h2>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         {(['tint-accent', 'tint-gold', 'tint-leaf', 'tint-clay', 'tint-neutral'] as const).map((t) => (
-          <div key={t} style={{ textAlign: 'center' }}>
+          <div key={t} className="u-center-t">
             <span className={`tile-icon ${t}`} aria-hidden>◎</span>
             <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 6 }}>{t.replace('tint-', '')}</div>
           </div>
