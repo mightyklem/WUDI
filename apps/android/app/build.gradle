@@ -2,10 +2,10 @@ plugins {
     id("com.android.application")
 }
 
-def storeFilePath = System.getenv("ANDROID_KEYSTORE_FILE")
-def storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-def keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-def keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+def envStoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
+def envStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def envKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def envKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
 
 android {
     namespace = "ng.learnovize.app"
@@ -23,16 +23,18 @@ android {
 
     // The signing block is only defined when a keystore is actually provided.
     // Defining it with a missing store file would break even unsigned builds,
-    // and this module must always stay buildable without secrets. It lives inside
-    // android {} because signingConfigs only resolves against that delegate -- at
-    // the top level of the script the same call fails configuration outright.
-    if (storeFilePath) {
+    // and this module must always stay buildable without secrets. The locals are
+    // deliberately prefixed: inside this closure a bare `storePassword` would
+    // resolve to the SigningConfig's own (still null) property instead of the
+    // script variable, and the build would fail at packaging time complaining the
+    // property is missing -- exactly what run #5 did.
+    if (envStoreFile) {
         signingConfigs {
             release {
-                storeFile = file(storeFilePath)
-                storePassword = storePassword
-                keyAlias = keyAlias
-                keyPassword = keyPassword
+                storeFile = file(envStoreFile)
+                storePassword = envStorePassword
+                keyAlias = envKeyAlias
+                keyPassword = envKeyPassword
             }
         }
     }
@@ -41,7 +43,7 @@ android {
         release {
             minifyEnabled = false
             shrinkResources = false
-            if (storeFilePath) {
+            if (envStoreFile) {
                 signingConfig = signingConfigs.release
             }
         }
