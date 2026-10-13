@@ -24,6 +24,12 @@ const MUST_HAVE = [
   { re: /\.logo\s*\{[^}]*text-overflow:\s*ellipsis/, why: 'logo must ellipsis rather than overflow' },
   { re: /\.navicon\s*\{[^}]*width:\s*clamp\(/, why: 'icon targets must be clamp() sized so 5 fit at 320px' },
   { re: /\.navicon\s*\{[^}]*flex:\s*0 0 auto/, why: 'nav icons must never shrink; they are the navigation' },
+  // These are <a> elements. Without a colour of their own they take the user
+  // agent's link blue and sit as bright blue glyphs in a teal header -- which is
+  // exactly what happened, and it only shows at rest because hover and the
+  // active state both set their own colour.
+  { re: /\.navicon\s*\{[^}]*color:\s*var\(--mut\)/, why: 'nav icons must declare a resting colour or they render link-blue' },
+  { re: /\.navicon\[aria-current='page'\]\s*\{[^}]*color:\s*#fff/, why: 'the active icon must invert to white on the teal fill' },
 ];
 
 let failed = 0;

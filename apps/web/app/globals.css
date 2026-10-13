@@ -584,6 +584,11 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   flex: 0 0 auto;
   border-radius: var(--r-sm);
   text-decoration: none;
+  /* Required, not decorative. These are <a> elements, so with no colour of
+     their own they inherit the user agent's link blue and sat as three bright
+     blue glyphs in a teal header. Hover and aria-current both set a colour,
+     which is why it only showed at rest. */
+  color: var(--mut);
   transition: background 120ms cubic-bezier(.2,.7,.3,1), color 120ms cubic-bezier(.2,.7,.3,1);
 }
 .navicon:hover { background: var(--accent-soft); color: var(--accent-ink); }
