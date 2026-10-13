@@ -28,12 +28,12 @@ public class SplashActivity extends android.app.Activity {
     /**
      * How long the lockup is held.
      *
-     * Deliberately short. Five seconds was asked for, and it is honoured, but a
-     * hold this long delays the content every single launch, so it is one constant
-     * and easy to shorten. The screen can also be tapped to skip, because making
-     * someone wait for a splash they have already seen is worse than no hold.
+     * Three seconds, which is long enough for the mark to register and short
+     * enough not to feel like the app is stuck. The screen can be tapped to skip
+     * it, because making someone wait for a splash they have already seen is
+     * worse than no hold at all.
      */
-    private static final long HOLD_MILLIS = 5000L;
+    private static final long HOLD_MILLIS = 3000L;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean handedOver = false;

@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The held launch screen. Teal, the mark, the wordmark.
+  The launch screen: the Learnovize mark with the wordmark under it, on the brand
+  teal, held briefly before the app appears.
 
-  Small and close together on purpose. The brief was a welcoming lockup rather
-  than a title screen, so the group reads as one compact badge in the middle of
-  the teal instead of two large elements competing for attention.
+  Only two things on it. The tagline that sat here first made the lockup read as
+  a title card rather than a mark, and the brief was the symbol and the name.
+
+  Manrope is the same face the web app uses, bundled as a TrueType variable font.
+  Android has no way to reach a variable axis from a layout, so it renders at its
+  default instance; the weight is set in code with a synthetic bold, which is what
+  the site uses for the wordmark anyway.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -19,7 +24,7 @@
         android:layout_height="46dp"
         android:src="@drawable/splash_icon"
         android:contentDescription="@null"
-        android:layout_marginBottom="14dp" />
+        android:layout_marginBottom="13dp" />
 
     <TextView
         android:id="@+id/splash_wordmark"
@@ -28,20 +33,9 @@
         android:text="@string/app_name"
         android:textColor="#FFFFFF"
         android:textSize="21sp"
-        android:letterSpacing="-0.02"
-        android:fontFamily="sans-serif"
+        android:fontFamily="@font/manrope"
         android:textStyle="bold"
-        android:includeFontPadding="false" />
-
-    <TextView
-        android:id="@+id/splash_tagline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="7dp"
-        android:text="@string/splash_tagline"
-        android:textColor="#D8ECF0"
-        android:textSize="12.5sp"
-        android:letterSpacing="0.06"
+        android:letterSpacing="-0.02"
         android:includeFontPadding="false" />
 
 </LinearLayout>
