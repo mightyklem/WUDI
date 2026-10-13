@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12 (API 31+) replaced the old windowBackground splash with the
+  SplashScreen API. Without this, a modern phone shows a flat colour for a beat
+  with no mark at all, which reads as a crash rather than a launch.
+
+  targetSdk is 34, so every current device takes this path. The values-v31
+  qualifier keeps the attributes out of older builds, where they are unknown.
+-->
+<resources>
+    <style name="Theme.Learnovize" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/colorPrimary</item>
+        <item name="android:navigationBarColor">@color/colorPrimary</item>
+        <item name="android:windowBackground">@color/splashBackground</item>
+        <item name="android:windowSplashScreenBackground">@color/splashBackground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splashBackground</item>
+    </style>
+
+    <style name="Theme.Learnovize.Launcher" parent="Theme.Learnovize">
+        <item name="android:windowBackground">@color/splashBackground</item>
+    </style>
+</resources>

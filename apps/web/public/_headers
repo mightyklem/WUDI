@@ -1,0 +1,27 @@
+# Netlify header rules.
+#
+# The web app manifest was being served as application/octet-stream, which is
+# technically wrong. Chrome tolerates it, but a manifest with no declared type
+# is not guaranteed to be read -- and this file is what makes an installed PWA
+# behave correctly on a device that is stricter than a desktop browser.
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# The service worker itself is served from /sw.js. It must never be cached, or a
+# stale copy keeps serving an old app shell after a deploy.
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Fingerprints and assets are content-hashed by the build, so they are safe to
+# cache hard. Without this the icons and PWA assets are re-fetched on every load.
+/favicon.ico
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo.svg
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.png
+  Cache-Control: public, max-age=31536000, immutable

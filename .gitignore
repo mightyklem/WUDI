@@ -16,6 +16,12 @@ tsconfig.tsbuildinfo
 # local debug keystores and Gradle outputs stay out of version control too.
 *.jks
 *.keystore
+
+# The one-time output of apps/android/setup-signing.ps1. It holds the four
+# signing secrets in plain text so they can be copied into GitHub Actions
+# without being pasted into a chat window. It must never be committed.
+android-signing-secrets.txt
+**/android-signing-secrets.txt
 apps/android/local.properties
 apps/android/.gradle/
 apps/android/build/
