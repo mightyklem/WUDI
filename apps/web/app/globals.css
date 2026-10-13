@@ -595,6 +595,21 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
 .navicon[aria-current='page'] { background: var(--accent); color: #fff; }
 .navicon[aria-current='page']:hover { background: var(--accent-deep); color: #fff; }
 
+/* Tapping a nav icon on a phone selects it. The glyph and its label flash with
+   the platform selection colour, and on a slow connection the flash outlives the
+   tap, so the icon looks broken rather than busy. Chrome's tap highlight adds a
+   second grey flash on top of the selection one.
+
+   The header is chrome, not content: there is nothing in it anyone would want to
+   copy or paste. Scoped to .topbar rather than set on body, because article and
+   certificate text elsewhere still has to stay selectable. */
+.topbar,
+.topbar * {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* An action that carries both a label and an icon. The label is the first
    thing to go; the icon keeps the target, and the accessible name is the
    aria-label, so nothing is lost. */
