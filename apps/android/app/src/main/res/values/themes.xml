@@ -1,12 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  No statusBarColor or navigationBarColor here on purpose.
+
+  LauncherActivity.launchTwa() reads the system bar colours from the theme and
+  then resolves them a second time as if they were resource ids. Our
+  colorPrimary resolves to the literal 0xFF1B7E8D, and asking the platform to
+  look up "resource id 0xff1b7e8d" throws Resources$NotFoundException, so the app
+  died on launch before a web view was ever created:
+
+    Resources$NotFoundException: Resource ID #0xff1b7e8d
+        at LauncherActivity.getColorCompat(LauncherActivity.java:302)
+        at LauncherActivity.launchTwa(LauncherActivity.java:197)
+
+  The colours are already supplied the supported way, by the trusted.customtabs
+  meta-data in AndroidManifest.xml, so removing them here loses nothing.
+-->
 <resources>
-    <!-- Framework theme only: no Material dependency is needed for a TWA shell,
-         and the in-app splash comes from the web manifest's theme/background. -->
     <style name="Theme.Learnovize" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">@color/colorPrimary</item>
-        <item name="android:navigationBarColor">@color/colorPrimary</item>
         <item name="android:windowBackground">@color/splashBackground</item>
     </style>
+
     <style name="Theme.Learnovize.Launcher" parent="Theme.Learnovize">
         <item name="android:windowBackground">@color/splashBackground</item>
     </style>
