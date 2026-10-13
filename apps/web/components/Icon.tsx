@@ -17,7 +17,7 @@ export type IconName =
   | 'clock' | 'calendar' | 'star' | 'heart' | 'lightbulb' | 'laughing'
   | 'shield' | 'wallet' | 'badge' | 'search' | 'close' | 'chevron-right'
   | 'chevron-left' | 'arrow-right' | 'play' | 'sparkles' | 'alert'
-  | 'info' | 'link' | 'download' | 'book' | 'grid' | 'expand';
+  | 'info' | 'link' | 'download' | 'book' | 'grid' | 'expand' | 'home' | 'logout';
 
 const P: Record<IconName, string> = {
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
@@ -58,6 +58,8 @@ const P: Record<IconName, string> = {
   book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   expand: 'M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6',
+  home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',
+  logout: 'M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l-5-5 5-5M5 12h11',
 };
 
 /** Icons whose meaning changes with state, paired here so callers stay honest. */

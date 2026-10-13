@@ -47,32 +47,20 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
     <div className="topbar">
       <Link className="logo" href={home} aria-label="Learnovize home">
         <img src="/logo.svg" alt="" width={26} height={26} />
-        Learnovize
+        <span className="logo-text">Learnovize</span>
       </Link>
 
-      <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <nav>
         {ICONS.map((i) => {
           const active = pathname === i.href || pathname.startsWith(i.href + '/');
           return (
             <Link
               key={i.href}
+              className="navicon"
               href={i.href}
               title={i.label}
               aria-label={i.label}
               aria-current={active ? 'page' : undefined}
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 38, height: 38, borderRadius: 'var(--r-sm)',
-                textDecoration: 'none',
-                // A solid teal fill, not a pale tint. The active state was
-                // --accent-soft (#F0F8F8) on a white bar, which is invisible in
-                // practice, plus a 1px inset border nobody could see. So the page
-                // you were on looked exactly like the pages you were not.
-                background: active ? 'var(--accent)' : 'transparent',
-                color: active ? '#fff' : 'var(--mut)',
-                boxShadow: active ? 'none' : 'none',
-                transition: 'background 120ms cubic-bezier(.2,.7,.3,1), color 120ms cubic-bezier(.2,.7,.3,1)',
-              }}
             >
               <Icon name={i.icon} size={19} strokeWidth={active ? 2.3 : 1.9} />
             </Link>
@@ -80,7 +68,7 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
         })}
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+      <div className="topbar-actions">
         {right}
         {signedIn ? (
           <>
@@ -88,17 +76,21 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
                 its own link sit there looking inactive is the clearest way to
                 tell somebody that navigation does not track location. */}
             <Link
-              className={pathname.startsWith('/dashboard') ? 'btn primary' : 'btn'}
+              className={pathname.startsWith('/dashboard') ? 'btn primary topbar-action' : 'btn topbar-action'}
               href="/dashboard"
+              aria-label="Dashboard"
               aria-current={pathname.startsWith('/dashboard') ? 'page' : undefined}
             >
-              Dashboard
+              <span className="topbar-action-icon"><Icon name="home" size={17} /></span>
+              <span className="topbar-action-label">Dashboard</span>
             </Link>
             <button
-              className="btn link"
+              className="btn link topbar-action"
+              aria-label="Log out"
               onClick={() => { clearSession(); window.location.href = '/'; }}
             >
-              Log out
+              <span className="topbar-action-icon"><Icon name="logout" size={17} /></span>
+              <span className="topbar-action-label">Log out</span>
             </button>
           </>
         ) : (

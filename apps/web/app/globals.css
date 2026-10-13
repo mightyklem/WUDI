@@ -510,7 +510,101 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   text-decoration: none;
   white-space: nowrap;
   transition: color var(--dur-1) var(--ease);
+  /* Gives up space before the icons do. Without min-width:0 a flex item refuses
+     to shrink below its content, so a long wordmark pushes the whole bar into
+     a sideways scroll instead of truncating. */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .logo:hover { color: var(--accent-ink); }
 .logo:focus-visible { outline: 3px solid var(--teal-400); outline-offset: 4px; border-radius: var(--r-xs); }
 .logo img { display: block; flex: 0 0 auto; border-radius: 8px; }
+.logo-text { overflow: hidden; text-overflow: ellipsis; }
+
+/* =====================================================================
+   Header, narrow screens
+   =====================================================================
+   The bar was about 495px of content and the narrowest phone is 320px, so it
+   panned sideways. Nothing here overflows -- the content simply did not fit,
+   which is worse, because a page that scrolls sideways has no visual cue that
+   it is doing it.
+
+   Three rules, in the order things give up space:
+
+     1. The action buttons lose their labels first. An icon with an
+        aria-label still says "Dashboard" to anyone who needs it to.
+     2. The logo shrinks and ellipsises.
+     3. The navigation icons never shrink. They are the product's whole
+        navigation; if something has to go, it is not these.
+
+   The icon row is clamp() sized so five targets always fit, and the actions
+   never set overflow so nothing can be clipped.
+   ===================================================================== */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  min-width: 0;
+  /* Deliberately no overflow. The only thing that needs to escape is the
+     dropdown, which is not in this bar, and clipping the header is what
+     caused the panning in the first place. */
+}
+
+.topbar nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+/* Navigation icon target. 10vw at 320px is 32px, so the 36px floor wins there
+   and it grows to 44px on a desktop. */
+.navicon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(36px, 10vw, 44px);
+  height: clamp(36px, 10vw, 44px);
+  flex: 0 0 auto;
+  border-radius: var(--r-sm);
+  text-decoration: none;
+  transition: background 120ms cubic-bezier(.2,.7,.3,1), color 120ms cubic-bezier(.2,.7,.3,1);
+}
+.navicon:hover { background: var(--accent-soft); color: var(--accent-ink); }
+.navicon[aria-current='page'] { background: var(--accent); color: #fff; }
+.navicon[aria-current='page']:hover { background: var(--accent-deep); color: #fff; }
+
+/* An action that carries both a label and an icon. The label is the first
+   thing to go; the icon keeps the target, and the accessible name is the
+   aria-label, so nothing is lost. */
+.topbar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  flex: 0 0 auto;
+}
+.topbar-action-icon { display: none; flex: 0 0 auto; }
+
+@media (max-width: 560px) {
+  .topbar { gap: 6px; }
+  .topbar .logo { font-size: 16px; gap: 7px; }
+  .topbar .logo img { width: 22px; height: 22px; }
+  .topbar-action-label { display: none; }
+  .topbar-action-icon { display: block; }
+  .topbar-action { padding: 0 10px; min-height: 36px; }
+}
