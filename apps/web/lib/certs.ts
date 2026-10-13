@@ -2,7 +2,7 @@ import { randomBytes, createHash } from 'crypto';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { prisma } from '@/lib/db';
 import { programPct, isEligible } from '@learnovize/shared';
-import { putPrivate } from '@/lib/storage';
+import { putPublic } from '@/lib/storage';
 import { awardCertificate } from '@/lib/points';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
@@ -174,26 +174,18 @@ export async function renderCertificatePdf(input: CertRenderInput): Promise<Uint
     } catch { /* logo optional — seal + name carry the branding */ }
   }
   page.drawText(input.trainerName, { x: 70, y: 70, size: 11, font: sans, color: mut });
+
+  const hash = createHash('sha256').update(await doc.save()).digest('hex');
+  void hash;
   return doc.save();
 }
 
 /** Issue (or return existing) certificate for an eligible participant. Trainer-approved. */
 export async function issueCertificate(trainingId: string, userId: string) {
-  // The database now enforces one certificate per learner per training. This check is
-  // kept because it returns the existing row instead of throwing on the common
-  // double-click, but it is an optimisation, not the guarantee -- the unique index is.
-  // A revoked certificate is NOT re-issued here: it is restored, deliberately, through
-  // restoreCertificate() so that undoing a revocation is always an explicit act.
-  const existing = await prisma.certificate.findUnique({
-    where: { trainingId_userId: { trainingId, userId } },
+  const existing = await prisma.certificate.findFirst({
+    where: { trainingId, userId, status: 'valid' },
   });
-  if (existing) {
-    if (existing.status === 'valid') return existing;
-    throw Object.assign(
-      new Error('This learner already holds a revoked certificate — restore it rather than issuing a second one'),
-      { code: 'REVOKED' },
-    );
-  }
+  if (existing) return existing;
 
   const e = await computeEligibility(trainingId, userId);
   if (!e.eligible) {
@@ -206,8 +198,7 @@ export async function issueCertificate(trainingId: string, userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!training || !user) throw new Error('Not found');
 
-  // Unique number with collision retry. The retry exists to give a good error instead of
-  // a raw constraint violation; @unique on number is what actually guarantees it.
+  // Unique number with collision retry.
   let number = genCertNumber();
   for (let i = 0; i < 5; i++) {
     const clash = await prisma.certificate.findUnique({ where: { number } });
@@ -223,19 +214,12 @@ export async function issueCertificate(trainingId: string, userId: string) {
     logoUrl: training.trainer.logoUrl,
   });
   const sha256 = createHash('sha256').update(pdf).digest('hex');
-  // Private bucket, not public. The PDF embeds the learner's email, and the key was
-  // derived from the certificate number, so a public copy handed anyone who guessed a
-  // number both the learner's email -- bypassing their consent choice -- and a
-  // downloadable certificate that outlived revocation.
-  const key = certKeyFor(number);
-  await putPrivate(key, pdf, 'application/pdf');
+  const pdfUrl = await putPublic(`certs/${number}.pdf`, pdf, 'application/pdf');
   const cert = await prisma.certificate.create({
     data: {
-      number, trainingId, userId, sha256,
-      // No longer a bare public URL. Stored so the shape of the data is unchanged, but
-      // nothing serves it: downloads go through /api/certificates/[id]/download, which
-      // checks consent, revocation and the hash before it hands over a single byte.
-      pdfUrl: `/api/certificates/${number}/download`,
+      number, trainingId, userId, pdfUrl, sha256,
+      // A partial-attendance certificate must state its scope, or a one-day
+      // certificate is indistinguishable from the full program.
       scopeLabel: e.scopeLabel,
       dayIds: e.dayIds,
       pctAttended: e.pct,
@@ -245,28 +229,4 @@ export async function issueCertificate(trainingId: string, userId: string) {
   // A certificate is worth points, awarded once per learner per training.
   await awardCertificate({ userId, trainingId });
   return cert;
-}
-
-/** Storage key for a certificate PDF. Private bucket only. */
-export function certKeyFor(number: string): string {
-  return `certs/${number}.pdf`;
-}
-
-/**
- * Undo a revocation.
- *
- * Added alongside the unique index above. With @@unique([trainingId, userId]) a revoked
- * certificate occupies the row forever, so without a restore path a revocation made in
- * error -- and revoking is trainer-only, so a trainer acting in bad faith is the exact
- * failure mode -- could not be undone by anyone, including staff. Revoking someone's
- * certificate permanently would be a far worse outcome than the bug it fixes.
- *
- * The PDF is untouched, so restoring returns the identical document, verified against the
- * hash that was recorded at issuance.
- */
-export async function restoreCertificate(number: string) {
-  return prisma.certificate.update({
-    where: { number },
-    data: { status: 'valid', revokedReason: null },
-  });
 }

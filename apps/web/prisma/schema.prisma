@@ -528,18 +528,6 @@ model Certificate {
   status      String   @default("valid") // valid|revoked
   revokedReason String?
   createdAt   DateTime @default(now())
-
-  // One certificate per learner per training, ever. This was a read-then-write check in
-  // issueCertificate with nothing at the database level behind it, so two issuances
-  // racing -- which the 500-at-once bulk issue makes likely rather than theoretical --
-  // both passed the check and both inserted. That produced two valid, publicly
-  // verifiable credentials for one person, with two different numbers, neither of which
-  // could be told apart from the outside.
-  //
-  // Deliberately not scoped to status='valid'. A revoked certificate stays on the row,
-  // so a partial index would allow a fresh credential to be issued for someone whose
-  // certificate was revoked for fraud. restoreCertificate() is the deliberate way back.
-  @@unique([trainingId, userId])
 }
 
 model Payment {

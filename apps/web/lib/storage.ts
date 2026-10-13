@@ -111,39 +111,6 @@ export async function signPrivate(key: string, seconds = 300): Promise<string> {
   );
 }
 
-/**
- * Read a private object's bytes back.
- *
- * Exists for tamper detection. Certificate PDFs record a SHA-256 at issuance, and a hash
- * that is only ever written and never read cannot detect anything -- an edited or
- * re-uploaded PDF would have looked identical. Callers fetch, hash and compare before
- * handing the bytes to anyone.
- *
- * Returns null when the object is absent rather than throwing, so a caller can tell
- * "deleted" from "access denied" and answer accordingly.
- */
-export async function getPrivate(key: string): Promise<Uint8Array | null> {
-  if (isLocalStorage()) {
-    const target = localPathFor(path.posix.join('private', key));
-    if (!target) return null;
-    const { readFile } = await import('fs/promises');
-    try {
-      return new Uint8Array(await readFile(target));
-    } catch {
-      return null;
-    }
-  }
-  try {
-    const res = await storage().send(
-      new GetObjectCommand({ Bucket: privateBucket(), Key: key }),
-    );
-    if (!res.Body) return null;
-    return new Uint8Array(await res.Body.transformToByteArray());
-  } catch {
-    return null;
-  }
-}
-
 /** Immutable upload — keys contain unique ids, never overwritten. */
 export async function putPublic(key: string, body: Uint8Array, contentType: string): Promise<string> {
   if (isLocalStorage()) {
