@@ -138,6 +138,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.suspended) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  // Staff entering a room leaves a record. The room itself already tells everyone an
+  // admin is watching, but that notice is ephemeral: it is gone once the tab closes, and
+  // the attendance webhook deliberately skips admins so observing costs nobody a
+  // certificate. The consequence was that an admin could sit through an entire class and
+  // there was no evidence afterwards that they had ever been there -- which is precisely
+  // backwards if they were there because someone disputed what happened.
+  //
+  // Written here rather than on the LiveKit join event because this is the moment staff
+  // ask to enter, it is server-side and cannot be bypassed by a client that skips it, and
+  // it fires even if the websocket never connects.
+  if (role === 'admin') {
+    await prisma.auditLog.create({
+      data: { actorId: userId, action: 'admin.observe', target: `session:${id}` },
+    });
+  }
+
   // Re-apply a speech grant the trainer already gave.
   //
   // LiveKit permissions live on the connection, so anyone who was allowed to speak

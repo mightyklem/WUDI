@@ -367,6 +367,10 @@ model Session {
   endsAtUtc   DateTime
   livekitRoom String   @unique
 status      String   @default("scheduled") // scheduled|live|ended|cancelled
+  // When the trainer actually ended the room. Not recorded before, so a dispute about a
+  // class that ended early -- which cuts attendance and therefore certificates -- had
+  // nothing to check against. Who ended it is in the audit log, under session.end.
+  endedAtUtc     DateTime?
     // Webinar framing: a room can open early and hold people in a lobby before the
     // trainer starts. Admitted controls whether people may enter the room itself.
     opensAtUtc     DateTime?

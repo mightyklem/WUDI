@@ -18,8 +18,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const userId = token ? await verifyAccessToken(token) : null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  const { action, identity } = (await req.json().catch(() => ({}))) as {
-    action?: string; identity?: string;
+  const { action, identity, reason: statedReason } = (await req.json().catch(() => ({}))) as {
+    action?: string; identity?: string; reason?: string;
   };
 
   const session = await prisma.session.findUnique({
@@ -61,8 +61,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (action === 'end') {
     if (!isTrainer) return NextResponse.json({ error: 'Only the trainer can end' }, { status: 403 });
     await svc.deleteRoom(session.livekitRoom).catch(() => {});
-    await prisma.session.update({ where: { id }, data: { status: 'ended' } });
-    return NextResponse.json({ ok: true });
+    const endedAt = new Date();
+    await prisma.session.update({ where: { id }, data: { status: 'ended', endedAtUtc: endedAt } });
+    // Ending someone's class is the single most consequential act in the room, and it
+    // used to leave no trace at all: no audit row, and the session carried no record of
+    // when it ended. A dispute about "the trainer ended early and my attendance was cut"
+    // was impossible to answer. Both are now written.
+    await prisma.auditLog.create({
+      data: { actorId: userId, action: 'session.end', target: `session:${id}` },
+    });
+    return NextResponse.json({ ok: true, endedAtUtc: endedAt });
   }
   if (!identity) return NextResponse.json({ error: 'identity required' }, { status: 400 });
   // There is deliberately no "remove" action. Kicking someone out of a session they
@@ -113,6 +121,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Worth recording: who was allowed to speak, and when. Admin actions are audited
     // under the same log as everyone else's, so an intervention in someone's class is
     // always traceable afterwards.
+    //
+    // A mute is an intervention in someone else's paid class, so a reason is required
+    // rather than assumed. ADR-007 says admin actions require one; the code was writing
+    // null for every mute, which made the field decorative. The client supplies it for
+    // the common case; staff acting outside the UI must send one themselves.
+    const reason = String(statedReason || '').trim() || (canPublish ? 'raised hand' : null);
+    if (!reason) {
+      return NextResponse.json({ error: 'A mute needs a reason' }, { status: 400 });
+    }
     await prisma.auditLog.create({
       data: {
         actorId: userId,
@@ -120,7 +137,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           ? `admin.${canPublish ? 'allow-speech' : 'mute'}`
           : canPublish ? 'participant.allow-speech' : 'participant.mute',
         target: `session:${id} user:${identity}`,
-        reason: canPublish ? 'raised hand' : null,
+        reason,
       },
     });
     return NextResponse.json({ ok: true, canPublish });

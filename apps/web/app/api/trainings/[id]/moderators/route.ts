@@ -35,6 +35,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await prisma.notification.create({
     data: { userId: user.id, type: 'moderator-invited', payload: { trainingId: id, title: t.title } },
   });
+  // Handing someone the ability to mute a paying trainer's class is an intervention
+  // capability, so it belongs in the event log like every other one. It was previously
+  // invisible: the invite wrote a row and a notification and nothing recorded who did it.
+  // The actor is the owner, which the guard at the top of this route has already proved.
+  await prisma.auditLog.create({
+    data: {
+      actorId: t.trainerId,
+      action: 'moderator.invite',
+      target: `training:${id} user:${user.id}`,
+    },
+  });
 
   // The invite created a row and an in-app notification but sent no mail, so the
   // moderator heard nothing unless they happened to open the app. Report honestly
@@ -52,12 +63,40 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   );
 }
 
-// GET /api/trainings/[id]/moderators — roster (owner sees all, others see actives)
+// GET /api/trainings/[id]/moderators — roster.
+//
+// The comment above used to say "owner sees all, others see actives" and the handler did
+// neither: it returned every moderator, including their email address, to anybody with a
+// valid session. That handed a signed-in user's roster to anyone who asked, which is both
+// a privacy problem and a way to enumerate trainers' collaborators. Now the owner gets
+// the full roster with emails; everyone else gets the active moderators by name only, and
+// only if they are actually on this training.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const mods = await prisma.moderator.findMany({
-    where: { trainingId: id },
-    include: { user: { select: { email: true } } },
+  const token = getBearer(req);
+  const userId = token ? await verifyAccessToken(token) : null;
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const isOwner = await prisma.training.count({ where: { id, trainerId: userId } }) > 0;
+  if (isOwner) {
+    const moderators = await prisma.moderator.findMany({
+      where: { trainingId: id },
+      include: { user: { select: { email: true, trainerProfile: { select: { displayName: true } } } } },
+    });
+    return NextResponse.json({ moderators, scope: 'owner' });
+  }
+
+  // Not the owner: only people actually moderating, and only their display name.
+  const inRoom = await prisma.registration.findUnique({
+    where: { trainingId_userId: { trainingId: id, userId } },
+    select: { status: true },
   });
-  return NextResponse.json({ moderators: mods });
+  if (!inRoom || inRoom.status !== 'active') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+  const active = await prisma.moderator.findMany({
+    where: { trainingId: id, status: 'active' },
+    include: { user: { select: { trainerProfile: { select: { displayName: true } } } } },
+  });
+  return NextResponse.json({ moderators: active, scope: 'attendee' });
 }

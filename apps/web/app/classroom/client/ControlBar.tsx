@@ -47,7 +47,7 @@ export default function ControlBar({
 }) {
   const [more, setMore] = useState(false);
   const barRef = useRef<HTMLDivElement | null>(null);
-  const isTrainer = role === 'trainer' || role === 'admin';
+  const isTrainer = role === 'trainer';
 
   // A narrow phone cannot fit seven labelled buttons, and a wrapped row pushes
   // the stage up. Secondary actions move into a popover instead.

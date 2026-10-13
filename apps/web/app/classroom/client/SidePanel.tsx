@@ -147,7 +147,7 @@ function Chat({ d, myId }: { d: Data; myId: string }) {
 /* ------------------------------ people ------------------------------ */
 
 function People({ room, role, d, mod }: { room: Room; role: Role; d: Data; mod: Mod }) {
-  const canMod = role === 'trainer' || role === 'moderator';
+  const canMod = role === 'trainer' || role === 'moderator' || role === 'admin';
   const selfId = room.localParticipant.identity;
   const selfName = displayName({ identity: selfId, name: room.localParticipant.name });
 
@@ -257,7 +257,7 @@ function Polls({ room, role, d }: { room: Room; role: Role; d: Data }) {
   const [q, setQ] = useState('Which topic next?');
   const [opts, setOpts] = useState('Pricing, Wiring, Safety');
   const [err, setErr] = useState<string | null>(null);
-  const canMod = role === 'trainer' || role === 'moderator';
+  const canMod = role === 'trainer' || role === 'moderator' || role === 'admin';
   const meId = room.localParticipant.identity;
   const iVoted = !!d.poll && d.poll.seen.has(meId);
 

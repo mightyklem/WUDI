@@ -464,15 +464,48 @@ export function useModeration(sessionId: string) {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const act = useCallback(async (action: 'mute' | 'allowSpeak' | 'remove' | 'end', identity?: string) => {
+  // A mute is an intervention in someone's paid class, so the server now requires a reason.
+// The common case is a participant talking over the trainer or playing something, which
+// is obvious from context and does not need the trainer to type anything -- those map to
+// a fixed reason. Anything else is a genuine judgement call and is asked for.
+  const MUTE_REASONS = [
+    'talking over the trainer',
+    'background noise',
+    'not on topic',
+    'disruptive',
+  ] as const;
+
+  const act = useCallback(async (
+    action: 'mute' | 'allowSpeak' | 'remove' | 'end',
+    identity?: string,
+  ) => {
     setBusy(true);
     try {
+      let reason: string | undefined;
+      if (action === 'mute') {
+        const picked = window.prompt(
+          `Why are you muting this participant?\n\n1. ${MUTE_REASONS[0]}\n2. ${MUTE_REASONS[1]}\n3. ${MUTE_REASONS[2]}\n4. ${MUTE_REASONS[3]}\n\nType a number, or write your own reason:`,
+          '1',
+        );
+        if (picked === null) {
+          setBusy(false);
+          return;
+        }
+        const trimmed = picked.trim();
+        if (!trimmed) {
+          setFeedback({ ok: false, text: 'A mute needs a reason.' });
+          setBusy(false);
+          return;
+        }
+        const byIndex = /^[1-4]$/.test(trimmed) ? MUTE_REASONS[Number(trimmed) - 1] : null;
+        reason = byIndex || trimmed.slice(0, 200);
+      }
       const { getAccess } = await import('@/lib/client-auth');
       const access = getAccess();
       const r = await fetch(`/api/sessions/${sessionId}/moderate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-        body: JSON.stringify({ action, identity }),
+        body: JSON.stringify({ action, identity, reason }),
       });
       const j = await r.json().catch(() => ({}));
       const said = action === 'end' ? 'Session ended.'
