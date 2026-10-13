@@ -96,6 +96,34 @@ export function isEligible({ pct, minPct = DEFAULT_MIN_PCT, certMode = 'none', p
 }
 
 /**
+ * Fold one more attendance window into a learner's running total.
+ *
+ * A learner's stay is not continuous. They drop on a bad network, a phone sleeps, the
+ * app is backgrounded, and they come back. Each of those is a separate window, and the
+ * question that decides a certificate is how much of the session they were actually
+ * present for -- not whether they were connected the entire time.
+ *
+ * So windows ACCUMULATE. The previous behaviour replaced the total on every rejoin, which
+ * meant a learner who attended 40 minutes, dropped, and rejoined for the final 20 was
+ * recorded as having stayed 20: under the 75% threshold, so marked absent, so denied a
+ * certificate they had actually earned. Nobody was cheating; a phone was.
+ *
+ * Capped at the session length. Without it, a session whose end time is wrong, or a
+ * duplicated webhook, could report more time present than the session contains, which
+ * reads as 130% attendance and makes the percentage meaningless.
+ *
+ * Returns the merged total and the resulting presence decision together, so a caller
+ * cannot store one and compute the other.
+ */
+export function mergeAttendanceWindow(priorStayedMs, windowMs, sessionDurationMs) {
+  const prior = Number.isFinite(priorStayedMs) && priorStayedMs > 0 ? priorStayedMs : 0;
+  const window = Number.isFinite(windowMs) && windowMs > 0 ? windowMs : 0;
+  const cap = Number.isFinite(sessionDurationMs) && sessionDurationMs > 0 ? sessionDurationMs : Infinity;
+  const stayedMs = Math.min(prior + window, cap);
+  return { stayedMs, present: isPresent(sessionDurationMs, stayedMs) };
+}
+
+/**
  * FR-9.2: Learnovize commission in kobo-safe integer NGN.
  * Amounts are whole naira; result rounded to nearest naira.
  */

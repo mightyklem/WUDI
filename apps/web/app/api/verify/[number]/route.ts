@@ -34,6 +34,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ number:
     participant: showName ? cert.user.email : null,
     training: cert.training.title,
     trainer: cert.training.trainer.displayName,
-    pdfUrl: cert.pdfUrl,
+    // The document is served by /api/certificates/[number]/download, which re-checks
+    // consent and revocation and verifies the hash before returning it. Only advertise
+    // it to someone who opted into public display; a link handed to an employer is
+    // exactly the case that should work, and handing it to a stranger is exactly the
+    // case that should not.
+    pdfUrl: showName ? `/api/certificates/${cert.number}/download` : null,
+    // Enough to answer "what does this actually prove", which the old payload did not:
+    // a bare title and a trainer name read as a qualification.
+    scope: cert.scopeLabel,
+    pctAttended: cert.pctAttended,
+    issuedAt: cert.createdAt.toISOString(),
   });
 }
