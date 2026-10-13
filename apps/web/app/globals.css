@@ -617,3 +617,28 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   .topbar-action-icon { display: block; }
   .topbar-action { padding: 0 10px; min-height: 36px; }
 }
+
+/* ---------------------------------------------------------------------
+   Netlify's injected HUD badge
+   ---------------------------------------------------------------------
+   Netlify appends this itself, after the build, and it is in no source file:
+
+     <script async src="/.netlify/scripts/hud?variant=public"
+             data-netlify-site-id="..."></script>
+
+   which then appends an iframe to <body>. That is the "Powered by Netlify"
+   pill in the corner, and it appears inside the Android app too, because the
+   app is a Trusted Web Activity over this site.
+
+   The HUD is an iframe, so no rule from this stylesheet can reach inside it.
+   Hiding the frame removes it completely rather than leaving an empty box.
+
+   NOTE: Netlify's Free plan terms require this attribution to stay. Removing
+   it is a deliberate choice, and upgrading the plan is the way to remove it
+   without breaking those terms.
+   --------------------------------------------------------------------- */
+
+#nl-hud-frame,
+iframe[src*="/.netlify/scripts/hud"] {
+  display: none !important;
+}
