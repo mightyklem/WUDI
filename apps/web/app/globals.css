@@ -567,6 +567,10 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
+  /* The nav used to carry this. With the nav hidden for signed-out visitors the
+     buttons would otherwise sit against the wordmark, so it lives here where it
+     works whether or not there is anything to the left of it. */
+  margin-left: auto;
 }
 
 /* Navigation icon target. 10vw at 320px is 32px, so the 36px floor wins there

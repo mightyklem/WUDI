@@ -50,23 +50,29 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
         <span className="logo-text">Learnovize</span>
       </Link>
 
-      <nav>
-        {ICONS.map((i) => {
-          const active = pathname === i.href || pathname.startsWith(i.href + '/');
-          return (
-            <Link
-              key={i.href}
-              className="navicon"
-              href={i.href}
-              title={i.label}
-              aria-label={i.label}
-              aria-current={active ? 'page' : undefined}
-            >
-              <Icon name={i.icon} size={19} strokeWidth={active ? 2.3 : 1.9} />
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Only for someone who can actually use them. A visitor arriving for the
+          first time got three icons leading to pages behind a sign-in, which
+          reads as a broken promise; the landing page now offers the mark and the
+          two things they can actually do. */}
+      {signedIn && (
+        <nav>
+          {ICONS.map((i) => {
+            const active = pathname === i.href || pathname.startsWith(i.href + '/');
+            return (
+              <Link
+                key={i.href}
+                className="navicon"
+                href={i.href}
+                title={i.label}
+                aria-label={i.label}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon name={i.icon} size={19} strokeWidth={active ? 2.3 : 1.9} />
+              </Link>
+            );
+          })}
+        </nav>
+      )}
 
       <div className="topbar-actions">
         {right}
