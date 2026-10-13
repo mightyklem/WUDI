@@ -165,6 +165,13 @@ async function main() {
   writeFileSync(join(publicDir, 'favicon.svg'), svg({ size: 64, radius: 14, live: false }), 'utf8');
   written.push(['favicon.svg', Buffer.byteLength(svg({ size: 64, radius: 14, live: false }))]);
 
+  // Header wordmark glyph. A generous corner radius, because this one is shown at
+  // 26px in the top bar where a near-square corner reads as a blunt box. No arcs
+  // for the same reason as the favicon.
+  const logo = svg({ size: 64, radius: 96, live: false });
+  writeFileSync(join(publicDir, 'logo.svg'), logo, 'utf8');
+  written.push(['logo.svg', Buffer.byteLength(logo)]);
+
   // Raster sizes.
   const detail = svg({ size: 512, radius: 112, live: true });
   const simple = svg({ size: 512, radius: 112, live: false });

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clearSession, getAccess } from '@/lib/client-auth';
+import Icon, { type IconName } from '@/components/Icon';
 
 /**
  * The one navigation bar.
@@ -21,10 +22,10 @@ import { clearSession, getAccess } from '@/lib/client-auth';
  * already says. Titles and aria-labels carry the real names for screen readers.
  */
 
-const ICONS = [
-  { href: '/feed', icon: '🧭', label: 'Explore' },
-  { href: '/trainers', icon: '👥', label: 'Trainers' },
-  { href: '/me/registrations', icon: '🎫', label: 'My seats' },
+const ICONS: { href: string; icon: IconName; label: string }[] = [
+  { href: '/feed', icon: 'grid', label: 'Explore' },
+  { href: '/trainers', icon: 'people', label: 'Trainers' },
+  { href: '/me/registrations', icon: 'book', label: 'My seats' },
 ];
 
 export default function SiteNav({ right }: { right?: React.ReactNode }) {
@@ -45,6 +46,7 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
   return (
     <div className="topbar">
       <Link className="logo" href={home} aria-label="Learnovize home">
+        <img src="/logo.svg" alt="" width={26} height={26} />
         Learnovize
       </Link>
 
@@ -61,13 +63,18 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 38, height: 38, borderRadius: 'var(--r-sm)',
-                fontSize: 18, textDecoration: 'none',
-                background: active ? 'var(--accent-soft)' : 'transparent',
-                // The active icon has to read as selected, not just as a colour change.
-                boxShadow: active ? 'inset 0 0 0 1px var(--accent)' : 'none',
+                textDecoration: 'none',
+                // A solid teal fill, not a pale tint. The active state was
+                // --accent-soft (#F0F8F8) on a white bar, which is invisible in
+                // practice, plus a 1px inset border nobody could see. So the page
+                // you were on looked exactly like the pages you were not.
+                background: active ? 'var(--accent)' : 'transparent',
+                color: active ? '#fff' : 'var(--mut)',
+                boxShadow: active ? 'none' : 'none',
+                transition: 'background 120ms cubic-bezier(.2,.7,.3,1), color 120ms cubic-bezier(.2,.7,.3,1)',
               }}
             >
-              <span aria-hidden>{i.icon}</span>
+              <Icon name={i.icon} size={19} strokeWidth={active ? 2.3 : 1.9} />
             </Link>
           );
         })}
@@ -77,7 +84,16 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
         {right}
         {signedIn ? (
           <>
-            <Link className="btn" href="/dashboard">Dashboard</Link>
+            {/* Filled when you are already on it. Standing on a page and seeing
+                its own link sit there looking inactive is the clearest way to
+                tell somebody that navigation does not track location. */}
+            <Link
+              className={pathname.startsWith('/dashboard') ? 'btn primary' : 'btn'}
+              href="/dashboard"
+              aria-current={pathname.startsWith('/dashboard') ? 'page' : undefined}
+            >
+              Dashboard
+            </Link>
             <button
               className="btn link"
               onClick={() => { clearSession(); window.location.href = '/'; }}
