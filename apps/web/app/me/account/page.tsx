@@ -40,8 +40,8 @@ export default function DeleteAccount() {
   }
 
   return (
-    <div className="card" style={{ marginTop: 12, borderColor: '#E4C7C7' }}>
-      <h2 className="sec" style={{ color: '#8C2F2F' }}>Delete my account</h2>
+    <div className="card" style={{ marginTop: 12, borderColor: 'var(--bad-line)' }}>
+      <h2 className="sec" style={{ color: 'var(--bad)' }}>Delete my account</h2>
       <p className="muted" style={{ fontSize: 14 }}>
         Under the NDPA you can ask us to erase your account. Your email, phone, password,
         identity documents and published posts are destroyed, and you are signed out
@@ -66,7 +66,7 @@ export default function DeleteAccount() {
             onChange={(e) => setPw(e.target.value)}
           />
           <div className="btnrow" style={{ marginTop: 12 }}>
-            <button className="btn" style={{ borderColor: '#8C2F2F', color: '#8C2F2F' }}
+            <button className="btn" style={{ borderColor: 'var(--bad)', color: 'var(--bad)' }}
               type="submit" disabled={busy}>
               {busy ? 'Erasing…' : 'Permanently delete my account'}
             </button>

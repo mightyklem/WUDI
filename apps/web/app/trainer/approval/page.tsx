@@ -92,8 +92,8 @@ export default function Approval() {
           htmlFor="id-consent"
           style={{
             display: 'flex', gap: 9, alignItems: 'flex-start', marginBottom: 14,
-            padding: '12px', border: '1px solid var(--line-2, #E7E0D5)',
-            borderRadius: 'var(--r-sm)', background: 'var(--surface-2, #F7F4EF)',
+            padding: '12px', border: '1px solid var(--line-2)',
+            borderRadius: 'var(--r-sm)', background: 'var(--surface-2)',
             cursor: 'pointer', fontSize: 13, lineHeight: 1.55,
           }}
         >

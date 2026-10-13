@@ -98,7 +98,7 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
               }}
             >
               <input type="checkbox" checked={on} onChange={() => toggle(d.id)} style={{ width: 18, height: 18 }} />
-              <span className="ibadge" style={{ background: '#EEF1F4', color: '#1C2430' }} aria-hidden>
+              <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>
                 {d.dayIndex}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>

@@ -15,8 +15,8 @@ export type Tile = {
 
 export type Badges = { seats?: number | null; certs?: number | null };
 
-const INK = '#1C2430';
-const MUTED_TILE = { bg: '#EEF1F4', fg: INK };
+const INK = 'var(--ink)';
+const MUTED_TILE = { bg: 'var(--pill)', fg: INK };
 
 export function roleOf(user: { isAdmin: boolean; isTrainer: boolean }): Role {
   if (user.isAdmin) return 'admin';
@@ -37,33 +37,33 @@ export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
   const certs = count(badges.certs);
 
   const participant: Tile[] = [
-    { href: '/feed', icon: '◎', label: 'Explore', bg: '#E9F3F6', fg: '#156B78' },
+    { href: '/feed', icon: '◎', label: 'Explore', bg: '#E9F3F6', fg: 'var(--accent)' },
     // Browsing classes is how a learner finds something to attend; Explore alone
     // only shows what a trainer chose to post about.
-    { href: '/classes', icon: '📚', label: 'Classes', bg: '#E9F3F6', fg: '#156B78' },
+    { href: '/classes', icon: '📚', label: 'Classes', bg: '#E9F3F6', fg: 'var(--accent)' },
     { href: '/me/registrations', icon: '🎟', label: 'My seats', ...MUTED_TILE, badge: seats },
-    { href: '/me/certificates', icon: '🏅', label: 'Certificates', bg: '#FDF0E3', fg: '#9A5B12', badge: certs },
-    { href: '/trainers', icon: '🤝', label: 'Follow', bg: '#E4F5EA', fg: '#0B5E2E' },
+    { href: '/me/certificates', icon: '🏅', label: 'Certificates', bg: 'var(--warn-soft)', fg: 'var(--warn)', badge: certs },
+    { href: '/trainers', icon: '🤝', label: 'Follow', bg: '#E4F5EA', fg: 'var(--leaf)' },
     { href: '/me/notifications', icon: '🔔', label: 'Alerts', ...MUTED_TILE },
   ];
 
   // Trainers live here too, so they can still sit in on sessions.
   const trainer: Tile[] = [
-    { href: '/trainings/new', icon: '＋', label: 'New training', bg: '#E9F3F6', fg: '#156B78' },
-    { href: '/classes', icon: '📚', label: 'Classes', bg: '#E9F3F6', fg: '#156B78' },
+    { href: '/trainings/new', icon: '＋', label: 'New training', bg: '#E9F3F6', fg: 'var(--accent)' },
+    { href: '/classes', icon: '📚', label: 'Classes', bg: '#E9F3F6', fg: 'var(--accent)' },
     { href: '/feed', icon: '◎', label: 'Explore', ...MUTED_TILE },
     { href: '/me/registrations', icon: '🎟', label: 'Attend', ...MUTED_TILE },
-    { href: '/me/certificates', icon: '🏅', label: 'Certificates', bg: '#FDF0E3', fg: '#9A5B12', badge: certs },
+    { href: '/me/certificates', icon: '🏅', label: 'Certificates', bg: 'var(--warn-soft)', fg: 'var(--warn)', badge: certs },
     { href: '/me/notifications', icon: '🔔', label: 'Alerts', ...MUTED_TILE },
   ];
 
   const admin: Tile[] = [
     { href: '/admin', icon: '🛡', label: 'Review queue', bg: '#FDECEC', fg: '#8F1D1D' },
-    { href: '/admin/approvals', icon: '✓', label: 'Approvals', bg: '#E9F3F6', fg: '#156B78' },
+    { href: '/admin/approvals', icon: '✓', label: 'Approvals', bg: '#E9F3F6', fg: 'var(--accent)' },
     // Only /admin/reports exists today. Pointing a tile at a route that does not
     // exist is a 404 the user has to find, so reports live inside the console for now.
     { href: '/admin', icon: '⚑', label: 'Reports', bg: '#FDECEC', fg: '#8F1D1D' },
-    { href: '/admin/approvals', icon: '₦', label: 'Payouts', bg: '#E4F5EA', fg: '#0B5E2E' },
+    { href: '/admin/approvals', icon: '₦', label: 'Payouts', bg: '#E4F5EA', fg: 'var(--leaf)' },
   ];
 
   if (role === 'admin') return admin;

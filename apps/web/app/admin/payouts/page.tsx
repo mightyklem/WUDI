@@ -97,7 +97,7 @@ export default function AdminPayouts() {
               {row.blockers.length > 0 && (
                 <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13 }}>
                   {row.blockers.map((b) => (
-                    <li key={b.code} style={{ color: '#8C5A2F' }}>{b.message}</li>
+                    <li key={b.code} style={{ color: 'var(--warn)' }}>{b.message}</li>
                   ))}
                 </ul>
               )}

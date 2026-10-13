@@ -77,7 +77,7 @@ export default function PayoutSettings() {
       </p>
 
       {account && (
-        <div className="card" style={{ marginTop: 14, borderColor: 'var(--line-2, #E7E0D5)' }}>
+        <div className="card" style={{ marginTop: 14, borderColor: 'var(--line-2)' }}>
           <p className="eyebrow" style={{ marginBottom: 6 }}>On file</p>
           <p style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{account.accountName}</p>
           <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>

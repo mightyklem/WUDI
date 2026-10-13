@@ -90,7 +90,7 @@ export default function Dashboard() {
         >
           <span
             className="ibadge"
-            style={{ background: '#FDF0E3', color: '#9A5B12', fontSize: 24 }}
+            style={{ background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 24 }}
             aria-hidden
           >
             {points.rank.icon}
@@ -123,9 +123,9 @@ export default function Dashboard() {
       )}
 
       {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
-        <div className="card" style={{ marginTop: 16, borderLeft: '4px solid #9A5B12' }}>
+        <div className="card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
           <div className="u-flex">
-            <span className="ibadge" style={{ background: '#FDF0E3', color: '#9A5B12', fontSize: 18 }} aria-hidden>⏳</span>
+            <span className="ibadge" style={{ background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 18 }} aria-hidden>⏳</span>
             <div>
               <p className="u-h">Free trainings: unlocked now</p>
               <p className="muted u-sub">
@@ -138,9 +138,9 @@ export default function Dashboard() {
       )}
 
       {role === 'trainer' && pendingTotal > 0 && (
-        <div className="card" style={{ marginTop: 12, borderLeft: '4px solid #0B5E2E' }}>
+        <div className="card" style={{ marginTop: 12, borderLeft: '4px solid var(--leaf)' }}>
           <div className="u-flex">
-            <span className="ibadge" style={{ background: '#E4F5EA', color: '#0B5E2E', fontSize: 18 }} aria-hidden>✓</span>
+            <span className="ibadge" style={{ background: 'var(--ok-soft)', color: 'var(--leaf)', fontSize: 18 }} aria-hidden>✓</span>
             <div style={{ flex: 1 }}>
               <p className="u-h">{pendingTotal} awaiting your approval</p>
               <p className="muted u-sub">Attendees who met the bar</p>
@@ -151,9 +151,9 @@ export default function Dashboard() {
       )}
 
       {role === 'trainer' && nextUp && (
-        <div className="card" style={{ marginTop: 12, borderLeft: '4px solid #156B78' }}>
+        <div className="card" style={{ marginTop: 12, borderLeft: '4px solid var(--accent)' }}>
           <div className="u-flex">
-            <span className="ibadge" style={{ background: '#E9F3F6', color: '#156B78', fontSize: 18 }} aria-hidden>▶</span>
+            <span className="ibadge" style={{ background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: 18 }} aria-hidden>▶</span>
             <div className="u-grow">
               <p className="u-h">{nextUp.title}</p>
               <p className="muted u-sub">

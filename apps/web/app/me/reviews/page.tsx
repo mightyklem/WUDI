@@ -92,7 +92,7 @@ export default function MyReviews() {
                       aria-label={`${n} star${n === 1 ? '' : 's'}`}
                       style={{
                         fontSize: 18, padding: '4px 10px',
-                        background: picks[r.sessionId] === n ? 'var(--gold-soft, #FFF3D6)' : undefined,
+                        background: picks[r.sessionId] === n ? 'var(--gold-soft)' : undefined,
                       }}
                       onClick={() => setPicks((p) => ({ ...p, [r.sessionId]: n }))}
                     >

@@ -85,7 +85,7 @@ export default async function Home() {
             padding: 22,
             borderRadius: 'var(--radius)',
             color: '#fff',
-            background: 'linear-gradient(135deg, #1B7E8D 0%, #156B78 60%, #0F5C68 100%)',
+            background: 'linear-gradient(135deg, var(--teal-500) 0%, var(--accent) 60%, var(--accent-ink) 100%)',
             boxShadow: 'var(--sh-3)',
           }}
         >
@@ -101,7 +101,7 @@ export default async function Home() {
                     {s.training.trainer.displayName} · ends {lagosWhenLabel(s.endsAtUtc)}
                   </div>
                 </div>
-                <Link className="btn" href={`/classroom/${s.id}`} style={{ background: '#fff', color: '#0F5C68', borderColor: '#fff' }}>
+                <Link className="btn" href={`/classroom/${s.id}`} style={{ background: '#fff', color: 'var(--accent-ink)', borderColor: '#fff' }}>
                   Join now
                 </Link>
               </div>

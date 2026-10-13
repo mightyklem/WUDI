@@ -90,12 +90,12 @@ export default function Signup() {
   if (stage === 'verify') {
     return (
       <div className="wrap">
-        <div className="surface surface-hero pat-dots fade" style={{ marginTop: 18 }}>
+        <div className="surface surface-hero pat-dots fade u-mt-3">
           <span className="tile-icon tint-accent" aria-hidden>✉️</span>
-          <h1 style={{ marginTop: 14 }}>Check your inbox.</h1>
+          <h1 className="u-mt-2">Check your inbox.</h1>
           <p className="sub">We sent a 6-digit code to <b>{email}</b>. It expires in 15 minutes.</p>
         </div>
-        <form onSubmit={verify} className="card" style={{ marginTop: 14 }}>
+        <form onSubmit={verify} className="card u-mt-2">
           <label className="fl">6-digit code</label>
           <input
             inputMode="numeric"
@@ -133,7 +133,7 @@ export default function Signup() {
     return (
       <div className="wrap">
         <div className="surface surface-hero pat-weave rise" style={{ marginTop: 18, padding: 'var(--s-6) var(--s-5)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="u-flex">
             <span className={`tile-icon ${s.tint}`} aria-hidden>{s.icon}</span>
             <span style={{ fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
               Step {step + 1} of {STEPS.length}
@@ -148,7 +148,7 @@ export default function Signup() {
               <div key={pt} className={`rise rise-${i + 1}`} style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
                 <span className="tile-icon tint-neutral" aria-hidden
                   style={{ width: 28, height: 28, borderRadius: 'var(--r-xs)', fontSize: 14 }}>✓</span>
-                <span style={{ fontSize: 15 }}>{pt}</span>
+                <span style={{ fontSize: 'var(--t-base)' }}>{pt}</span>
               </div>
             ))}
           </div>
@@ -182,13 +182,13 @@ export default function Signup() {
 
   return (
     <div className="wrap">
-      <div className="surface surface-hero pat-arcs fade" style={{ marginTop: 18 }}>
+      <div className="surface surface-hero pat-arcs fade u-mt-3">
         <span className="tile-icon tint-leaf" aria-hidden>🙂</span>
-        <h1 style={{ marginTop: 14 }}>Create your account.</h1>
+        <h1 className="u-mt-2">Create your account.</h1>
         <p className="sub">Email and a password. That is all.</p>
       </div>
 
-      <form onSubmit={submit} className="card rise" style={{ marginTop: 14 }}>
+      <form onSubmit={submit} className="card rise u-mt-2">
         <label className="fl">Email</label>
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
         <label className="fl">Password (8+ characters)</label>
@@ -200,10 +200,10 @@ export default function Signup() {
           <button className="btn link" type="button" onClick={() => setStep(0)}>Back</button>
         </div>
         {msg && <div className={msg.ok ? 'okmsg' : 'err'}>{msg.text}</div>}
-        <p className="muted" style={{ fontSize: 13, marginTop: 14, marginBottom: 0 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-xs)', marginTop: 14, marginBottom: 0 }}>
           Any account can attend. Complete a trainer profile later to host.
         </p>
-        <div className="btnrow" style={{ marginTop: 8 }}>
+        <div className="btnrow u-mt-1">
           <Link className="btn link" href="/login">Already have an account? Log in</Link>
         </div>
       </form>

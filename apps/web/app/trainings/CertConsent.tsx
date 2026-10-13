@@ -30,8 +30,8 @@ export default function CertConsent({
       style={{
         display: 'flex', gap: 9, alignItems: 'flex-start',
         padding: '10px 12px', marginTop: 10,
-        border: '1px solid var(--line-2, #E7E0D5)', borderRadius: 'var(--r-sm)',
-        background: 'var(--surface-2, #F7F4EF)', cursor: 'pointer',
+        border: '1px solid var(--line-2)', borderRadius: 'var(--r-sm)',
+        background: 'var(--surface-2)', cursor: 'pointer',
         fontSize: 13, lineHeight: 1.5,
       }}
     >

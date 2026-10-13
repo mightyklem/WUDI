@@ -78,7 +78,7 @@ export default function PaymentDueBanner() {
       className="rise"
       style={{
         marginTop: 14, padding: '14px 16px', borderRadius: 'var(--r-md)',
-        background: '#FFF8EC', border: '1px solid #EAD3A4',
+        background: 'var(--warn-soft)', border: '1px solid var(--warn-line)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

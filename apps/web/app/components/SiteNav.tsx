@@ -62,9 +62,9 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 38, height: 38, borderRadius: 'var(--r-sm)',
                 fontSize: 18, textDecoration: 'none',
-                background: active ? 'var(--accent-soft, #E7F2F3)' : 'transparent',
+                background: active ? 'var(--accent-soft)' : 'transparent',
                 // The active icon has to read as selected, not just as a colour change.
-                boxShadow: active ? 'inset 0 0 0 1px var(--accent, #0F5C68)' : 'none',
+                boxShadow: active ? 'inset 0 0 0 1px var(--accent)' : 'none',
               }}
             >
               <span aria-hidden>{i.icon}</span>

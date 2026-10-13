@@ -128,7 +128,7 @@ export default function Feed() {
                 ? 'Try widening your search, or clear the filters to see everything that is live.'
                 : 'Trainers are being onboarded now. Follow the ones you like and you will be notified the moment they go live.'}
           </p>
-          <div className="btnrow" style={{ justifyContent: 'center' }}>
+          <div className="btnrow u-center">
             {followingEmpty ? (
               <>
                 <Link className="btn primary" href="/trainers">Browse trainers</Link>
@@ -164,19 +164,19 @@ export default function Feed() {
             )}
             {p.kind !== 'training' && (
               <>
-                {p.title && <h3 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800 }}>{p.title}</h3>}
+                {p.title && <h3 style={{ margin: '0 0 4px', fontSize: 'var(--t-xl)', fontWeight: 800 }}>{p.title}</h3>}
                 {p.body && <p className="muted" style={{ margin: '0 0 12px', fontSize: 14 }}>{p.body}</p>}
               </>
             )}
             {/* Official and ad posts are content, not classes — no seat or price row. */}
             {p.training && (
               <>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="u-flex u-wrap">
               <b>{p.training.trainer}</b>
               {p.training.topic && <span className="badge">{p.training.topic}</span>}
               {full && <span className="badge rev">Full</span>}
             </div>
-            <h3 style={{ margin: '10px 0 4px', fontSize: 20, fontWeight: 800 }}>{p.training.title}</h3>
+            <h3 style={{ margin: '10px 0 4px', fontSize: 'var(--t-xl)', fontWeight: 800 }}>{p.training.title}</h3>
             <p className="muted" style={{ margin: '0 0 14px', fontSize: 14 }}>
               {p.training.firstSession ? lagosWhenLabel(p.training.firstSession) : 'Date to be announced'}
               {' · '}

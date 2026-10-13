@@ -278,9 +278,16 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
   --accent-ink: var(--teal-700);
   --accent-deep: var(--teal-800);
   --accent-soft: var(--teal-50);
-  --gold: var(--warn);  --gold-ink: #7E4F0C;  --gold-soft: var(--warn-soft);
+--gold: var(--warn);  --gold-ink: #7E4F0C;  --gold-soft: var(--warn-soft);
   --leaf: var(--ok);    --leaf-ink: #235334;  --leaf-soft: var(--ok-soft);
   --clay: var(--bad);   --clay-ink: #93421F;  --clay-soft: var(--bad-soft);
+
+  /* These two were being invented at every call site as var(--line-2, #E7E0D5)
+     and var(--surface-2, #F7F4EF) because they had never been declared. Nine
+     different components were carrying their own copy of the same fallback, so
+     the fallback had quietly become the definition. */
+  --line-2: var(--n-300);
+  --surface-2: var(--n-50);
 
   --radius: var(--r-md);
 

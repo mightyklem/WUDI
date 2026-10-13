@@ -41,7 +41,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   // Matches the manifest, so the browser chrome and the installed app agree.
-  themeColor: '#0E4A55',
+  themeColor: 'var(--accent-deep)',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

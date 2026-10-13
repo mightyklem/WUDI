@@ -57,7 +57,7 @@ export default function QuestionForm({
                     maxLength={q.maxLength}
                     value={(value as string) || ''}
                     onChange={(e) => onChange(q.id, e.target.value)}
-                    style={err ? { borderColor: 'var(--clay-ink, #B4543A)' } : undefined}
+                    style={err ? { borderColor: 'var(--clay-ink)' } : undefined}
                   />
                 )}
 

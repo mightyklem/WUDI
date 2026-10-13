@@ -12,18 +12,18 @@ export const metadata: Metadata = { title: 'Design system — Learnovize' };
 
 const PALETTE = [
   { group: 'Warm base', items: [
-    { name: 'Canvas', token: '--bg', hex: '#FBF6EE', use: 'Page background' },
+    { name: 'Canvas', token: '--bg', hex: 'var(--n-50)', use: 'Page background' },
     { name: 'Card', token: '--card', hex: '#FFFFFF', use: 'Raised surfaces' },
-    { name: 'Ink', token: '--ink', hex: '#241C15', use: 'Headings, body' },
-    { name: 'Muted', token: '--mut', hex: '#7A6A5C', use: 'Secondary text' },
-    { name: 'Line', token: '--line', hex: '#ECE1D3', use: 'Hairlines' },
+    { name: 'Ink', token: '--ink', hex: 'var(--ink)', use: 'Headings, body' },
+    { name: 'Muted', token: '--mut', hex: 'var(--mut)', use: 'Secondary text' },
+    { name: 'Line', token: '--line', hex: 'var(--line)', use: 'Hairlines' },
   ]},
   { group: 'Semantic', items: [
-    { name: 'Teal', token: '--accent', hex: '#1B7E8D', use: 'Lead, actions' },
-    { name: 'Teal ink', token: '--accent-ink', hex: '#14616E', use: 'Text on light' },
-    { name: 'Amber', token: '--gold', hex: '#9A6212', use: 'Paid, money' },
-    { name: 'Green', token: '--leaf', hex: '#2F6B41', use: 'Earned, confirmed' },
-    { name: 'Clay', token: '--clay', hex: '#B4552F', use: 'Warm secondary' },
+    { name: 'Teal', token: '--accent', hex: 'var(--accent)', use: 'Lead, actions' },
+    { name: 'Teal ink', token: '--accent-ink', hex: 'var(--accent-ink)', use: 'Text on light' },
+    { name: 'Amber', token: '--gold', hex: 'var(--warn)', use: 'Paid, money' },
+    { name: 'Green', token: '--leaf', hex: 'var(--leaf)', use: 'Earned, confirmed' },
+    { name: 'Clay', token: '--clay', hex: 'var(--clay)', use: 'Warm secondary' },
   ]},
 ];
 

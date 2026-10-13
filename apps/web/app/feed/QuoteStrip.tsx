@@ -39,13 +39,13 @@ export function QuoteStrip() {
         marginTop: 16,
         padding: '22px 24px',
         background: '#fff',
-        border: '1px solid #dfe5e8',
+        border: '1px solid var(--n-200)',
         borderRadius: 14,
-        borderLeft: '4px solid #1B7E8D',
+        borderLeft: '4px solid var(--accent)',
       }}
     >
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <span aria-hidden style={{ fontSize: 30, lineHeight: 1, color: '#1B7E8D' }}>&ldquo;</span>
+        <span aria-hidden style={{ fontSize: 30, lineHeight: 1, color: 'var(--accent)' }}>&ldquo;</span>
         <div style={{ flex: 1 }}>
           <p
             style={{
@@ -53,12 +53,12 @@ export function QuoteStrip() {
               fontSize: 19,
               lineHeight: 1.45,
               fontWeight: 600,
-              color: '#1C2B33',
+              color: 'var(--ink)',
             }}
           >
             {q.text}
           </p>
-          <p style={{ margin: '10px 0 0', fontSize: 13, color: '#6B7378', letterSpacing: '.02em' }}>
+          <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--mut)', letterSpacing: '.02em' }}>
             &mdash; {q.author}
           </p>
         </div>
@@ -79,9 +79,9 @@ export function QuoteStrip() {
               padding: 0,
               borderRadius: 4,
               cursor: 'pointer',
-              background: n === i ? '#1B7E8D' : '#dfe5e8',
+              background: n === i ? 'var(--accent)' : 'var(--n-200)',
               border: '1px solid',
-              borderColor: n === i ? '#1B7E8D' : '#c9d3d7',
+              borderColor: n === i ? 'var(--accent)' : 'var(--n-300)',
             }}
           />
         ))}

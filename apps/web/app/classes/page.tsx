@@ -129,7 +129,7 @@ export default async function ClassesPage({ searchParams }: { searchParams: Prom
           <p className="muted" style={{ margin: '6px 0 0', fontSize: 14 }}>
             Try a wider search, or follow a trainer to hear when they open a class.
           </p>
-          <div className="btnrow" style={{ justifyContent: 'center' }}>
+          <div className="btnrow u-center">
             <Link className="btn primary" href="/classes">Clear filters</Link>
             <Link className="btn" href="/trainers">Browse trainers</Link>
           </div>
@@ -140,11 +140,11 @@ export default async function ClassesPage({ searchParams }: { searchParams: Prom
             const left = Math.max(0, t.cap - t.seatsTaken);
             const full = left <= 0 || t.status === 'full';
             return (
-              <div key={t.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span className="ibadge" style={{ background: '#EEF1F4', color: '#1C2430' }} aria-hidden>📘</span>
+              <div key={t.id} className="card u-flex u-wrap">
+                <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
                 <div style={{ flex: 1, minWidth: 220 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <b style={{ fontSize: 16 }}>{t.title}</b>
+                  <div className="u-flex u-wrap">
+                    <b style={{ fontSize: 'var(--t-md)' }}>{t.title}</b>
                     {live && <span className="badge ok">Live now</span>}
                     {full && <span className="badge rev">Full</span>}
                     {t.topic && <span className="badge">{t.topic}</span>}

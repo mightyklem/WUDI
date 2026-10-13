@@ -102,7 +102,7 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType }:
               style={{ border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span className="ibadge" style={{ background: '#EEF1F4', color: '#1C2430' }} aria-hidden>
+                <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>
                   {d.dayIndex}
                 </span>
                 <input
@@ -174,7 +174,7 @@ function DayList({ rows, onTopic }: { rows: EditableDay[]; onTopic?: (id: string
     <div style={{ display: 'grid', gap: 10 }}>
       {rows.map((d) => (
         <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span className="ibadge" style={{ background: '#EEF1F4', color: '#1C2430' }} aria-hidden>{d.dayIndex}</span>
+          <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>{d.dayIndex}</span>
           {onTopic ? (
             <input
               type="text"
