@@ -610,6 +610,32 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   -webkit-user-select: none;
 }
 
+/* The same problem, everywhere else: tapping a control selects it, and the flash
+   outlives the tap on a slow connection so the control looks broken rather than
+   busy. Chrome adds a second grey tap highlight on top of the selection one.
+
+   Scoped to things that ARE controls -- button, .btn (which is often an <a>),
+   and anything carrying role="button". None of these hold text anybody needs to
+   copy.
+
+   Deliberately NOT applied to .card, .course or .rowitem. Those are plain <div>
+   containers holding real content: course titles, trainer bios, certificate
+   details. They are not clickable, so the flash does not happen there, and a
+   blanket rule would take away text people legitimately want to select and copy.
+   Plain <a> links in body copy are left alone for the same reason. */
+button,
+button *,
+.btn,
+.btn *,
+.chip,
+.chip *,
+[role='button'],
+[role='button'] * {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* An action that carries both a label and an icon. The label is the first
    thing to go; the icon keeps the target, and the accessible name is the
    aria-label, so nothing is lost. */
