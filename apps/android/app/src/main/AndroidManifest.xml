@@ -23,6 +23,21 @@
         android:allowBackup="true"
         android:supportsRtl="true">
 
+        <!--
+          The branded launch screen: the mark and wordmark on teal, held briefly,
+          then handing over to the Trusted Web Activity below.
+        -->
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Learnovize.Launcher"
+            android:noHistory="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
             android:exported="true"
@@ -54,14 +69,9 @@
                 android:name="asset_statements"
                 android:resource="@string/asset_statements" />
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <!-- App Links: learnovize.com URLs open in the app once assetlinks.json
-                 verifies. Until the fingerprint is configured the app still works;
-                 links just keep the browser address bar. -->
+            <!-- No MAIN/LAUNCHER filter here on purpose. It belongs to SplashActivity, and
+                  leaving a second launcher entry on this one lets the system skip
+                  the branded splash entirely by starting this activity directly. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

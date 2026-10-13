@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Learnovize</string>
+      <string name="splash_tagline">Live trainings that count</string>
     <!-- Must match the statement served at
          https://learnovize.com/.well-known/assetlinks.json or the app opens
          links with the browser chrome instead of fullscreen. -->

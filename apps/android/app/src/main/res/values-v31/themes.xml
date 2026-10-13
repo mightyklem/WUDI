@@ -17,13 +17,13 @@ The teal is deliberate. The splash icon is the white play mark, so a teal
 -->
 <resources>
     <style name="Theme.Learnovize" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/splashBackground</item>
+        <item name="android:windowBackground">@drawable/splash_screen</item>
         <item name="android:windowSplashScreenBackground">@color/splashBackground</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/splashBackground</item>
     </style>
 
     <style name="Theme.Learnovize.Launcher" parent="Theme.Learnovize">
-        <item name="android:windowBackground">@color/splashBackground</item>
+        <item name="android:windowBackground">@drawable/splash_screen</item>
     </style>
 </resources>

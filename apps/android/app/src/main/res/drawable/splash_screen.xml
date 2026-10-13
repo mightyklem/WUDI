@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launch screen: the Learnovize mark with the wordmark under it, on the brand
+  teal, held briefly before the classroom site appears.
+
+  This exists as a real Activity rather than as the Android 12+ SplashScreen
+  attributes for one unavoidable reason: the system owns that screen. It shows
+  for about a second, it accepts a single icon and no text, and
+  windowSplashScreenAnimationDuration is capped at 1000ms. A logo plus the word
+  name held for five seconds cannot be done through it. So the system splash
+  still runs first for instant paint, and this Activity carries the branded hold.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/splashBackground" />
+        </shape>
+    </item>
+
+    <!--
+      Centred lockup. Both parts are deliberately small: this is a mark the eye
+      lands on and then moves away from, not a title screen. Sized in dp rather
+      than sp so it holds its proportion on any screen density.
+    -->
+    <item
+        android:gravity="center"
+        android:width="132dp"
+        android:height="132dp">
+        <layer-list>
+            <item
+                android:drawable="@drawable/splash_icon"
+                android:gravity="center"
+                android:width="44dp"
+                android:height="44dp" />
+        </layer-list>
+    </item>
+
+</layer-list>

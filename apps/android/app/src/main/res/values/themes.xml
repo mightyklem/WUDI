@@ -17,10 +17,10 @@
 -->
 <resources>
     <style name="Theme.Learnovize" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/splashBackground</item>
+        <item name="android:windowBackground">@drawable/splash_screen</item>
     </style>
 
     <style name="Theme.Learnovize.Launcher" parent="Theme.Learnovize">
-        <item name="android:windowBackground">@color/splashBackground</item>
+        <item name="android:windowBackground">@drawable/splash_screen</item>
     </style>
 </resources>
