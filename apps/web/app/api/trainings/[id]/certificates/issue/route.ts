@@ -27,6 +27,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     try {
       const cert = await issueCertificate(id, userId);
       issued.push({ userId, number: cert.number });
+      // Granting a credential is the act that needs defending in a dispute, and it was
+      // the only certificate action with no audit row -- revoking had one, handing one
+      // out did not. Which trainer issued what, to whom, and on what evidence is the
+      // first question anyone asks when a certificate is disputed. The attendance
+      // percentage rides along in the reason because eligibility is derived from it: a
+      // batch approved at a 100% rate is the anomaly worth spotting later.
+      await prisma.auditLog.create({
+        data: {
+          actorId,
+          action: 'certificate.issue',
+          target: `certificate:${cert.number}`,
+          reason: `issued to ${userId} at ${cert.pctAttended}% attendance, scope "${cert.scopeLabel}"`,
+        },
+      });
       await prisma.notification.create({
         data: { userId, type: 'certificate-issued', payload: { trainingId: id, number: cert.number } },
       });

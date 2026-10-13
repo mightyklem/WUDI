@@ -230,3 +230,20 @@ export async function issueCertificate(trainingId: string, userId: string) {
   await awardCertificate({ userId, trainingId });
   return cert;
 }
+
+/**
+ * Undo a revocation.
+ *
+ * Revocation is trainer-only, so a trainer acting in bad faith can take a learner's
+ * certificate away -- and until now could not be undone by anyone, including staff. That
+ * is a worse failure than the one restore is being introduced alongside: a revocation
+ * made in error, or made deliberately to spite a learner, is permanent.
+ *
+ * The stored PDF is untouched, so a restored certificate is the identical document.
+ */
+export async function restoreCertificate(number: string) {
+  return prisma.certificate.update({
+    where: { number },
+    data: { status: 'valid', revokedReason: null },
+  });
+}
