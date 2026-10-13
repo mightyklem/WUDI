@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
-import { validateTrainingInput } from '@/lib/trainings';
+import { validateTrainingInput, capOverPlanError } from '@/lib/trainings';
 import { billableDays, quote } from '@learnovize/shared';
 import { quoteFor } from '@/lib/pricing';
 
@@ -52,9 +52,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
       minPct: body.minPct ?? t.minPct, cap: body.cap ?? t.cap,
       sessions: body.sessions ?? (await prisma.session.findMany({ where: { trainingId: id } }))
         .map((s) => ({ startsAtUtc: s.startsAtUtc.toISOString(), endsAtUtc: s.endsAtUtc.toISOString() })) },
-    profile?.paidCertApproved === true,
   );
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
+  // Checked here as well as on create. Without it a free-plan trainer could
+  // create a class at 50 seats and then PATCH the cap up to 500, which would
+  // make the create-time ceiling a suggestion rather than a rule.
+  const overPlan = capOverPlanError(v.data.cap, profile?.plan);
+  if (overPlan) return NextResponse.json({ error: overPlan }, { status: 403 });
   if (v.data.cap < t.seatsTaken) {
     return NextResponse.json({ error: `Cap cannot go below ${t.seatsTaken} taken seats` }, { status: 409 });
   }

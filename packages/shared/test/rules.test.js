@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   isPresent, programPct, clampMinPct, isEligible,
   commission, trainerNet, tryClaimSeat, refundDecision, isCertNumber,
+  planCapCeiling, capOverPlanError,
 } from '../src/rules.js';
 
 describe('attendance (FR-7)', () => {
@@ -72,5 +73,34 @@ describe('seats (FR-3.3/5.4)', () => {
   it('claims until cap, then full', () => {
     assert.deepEqual(tryClaimSeat(49, 50), { ok: true, seatsTaken: 50 });
     assert.deepEqual(tryClaimSeat(50, 50), { ok: false, seatsTaken: 50 });
+  });
+});
+
+describe('class size is bounded by plan, not by whether the class is paid', () => {
+  it('free plan tops out at 50 seats', () => {
+    assert.equal(planCapCeiling('free'), 50);
+    assert.equal(capOverPlanError(1, 'free'), null);
+    assert.equal(capOverPlanError(50, 'free'), null);
+    assert.ok(capOverPlanError(51, 'free'));
+  });
+
+  it('the boundary is exactly 50/51 on every plan', () => {
+    for (const [plan, ceiling] of [['free', 50], ['pro', 200], ['business', 500]]) {
+      assert.equal(planCapCeiling(plan), ceiling);
+      assert.equal(capOverPlanError(ceiling, plan), null, `${plan} should allow ${ceiling}`);
+      assert.ok(capOverPlanError(ceiling + 1, plan), `${plan} should reject ${ceiling + 1}`);
+    }
+  });
+
+  it('a missing or unknown plan can never widen the ceiling', () => {
+    for (const plan of [undefined, null, '', 'PRO', 'enterprise', 'admin', 0]) {
+      assert.equal(planCapCeiling(plan), 50, `plan ${JSON.stringify(plan)} must not be trusted`);
+      assert.ok(capOverPlanError(51, plan));
+    }
+  });
+
+  it('the rejection names the plan and the ceiling so the trainer can act', () => {
+    assert.equal(capOverPlanError(51, 'free'), 'Cap 51 exceeds your free plan (50). Upgrade to raise it.');
+    assert.equal(capOverPlanError(500, null), 'Cap 500 exceeds your free plan (50). Upgrade to raise it.');
   });
 });

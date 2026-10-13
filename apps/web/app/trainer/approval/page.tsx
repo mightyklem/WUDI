@@ -58,11 +58,14 @@ export default function Approval() {
   return (
     <div className="wrap">
       <SiteNav />
-      <h1>Paid approval.</h1>
-      <p className="sub">Free trainings need no approval. Paid certification does — ID + proof of expertise, reviewed by staff.</p>
+      <h1>Teaching verification.</h1>
+      <p className="sub">
+        Free and paid classes are both open to you — this review does not gate what you can
+        teach. It verifies who you are, so payout accounts can be trusted.
+      </p>
       {state && (
         <div className="card" style={{ marginTop: 12 }}>
-          <p style={{ margin: 0 }}>Status: <b>{state.approvalState}</b> · paid certs: {state.paidCertApproved ? 'allowed' : 'blocked'}
+          <p style={{ margin: 0 }}>Status: <b>{state.approvalState}</b>
           {state.rejectionReason && <> · reason: {state.rejectionReason}</>}</p>
         </div>
       )}

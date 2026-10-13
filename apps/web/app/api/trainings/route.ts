@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
-import { makeSlug, validateTrainingInput } from '@/lib/trainings';
+import { makeSlug, validateTrainingInput, capOverPlanError } from '@/lib/trainings';
 import { notify } from '@/lib/notify';
 import { trainingAnnouncedEmail } from '@/lib/email';
-import { PLAN_CAPS } from '@learnovize/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +38,10 @@ export async function POST(req: Request) {
   const profile = await prisma.trainerProfile.findUnique({ where: { userId: tid } });
   const plan = profile?.plan === 'pro' || profile?.plan === 'business' ? profile.plan : 'free';
   const body = await req.json().catch(() => ({}));
-  const v = validateTrainingInput(body, profile?.paidCertApproved === true);
+  const v = validateTrainingInput(body);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
-  if (v.data.cap > PLAN_CAPS[plan]) {
-    return NextResponse.json({ error: `Cap ${v.data.cap} exceeds your ${plan} plan (${PLAN_CAPS[plan]}). Upgrade to raise it.` }, { status: 403 });
-  }
+  const overPlan = capOverPlanError(v.data.cap, plan);
+  if (overPlan) return NextResponse.json({ error: overPlan }, { status: 403 });
 
   const training = await prisma.training.create({
     data: {

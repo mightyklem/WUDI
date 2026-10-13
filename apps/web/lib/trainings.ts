@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import {
+  capOverPlanError,
   clampMinPct,
   isTier,
   PLAN_CAPS,
@@ -7,6 +8,12 @@ import {
   validateDayPrice,
 } from '@learnovize/shared';
 import { planDays, validateDayPricing } from '@/lib/days';
+
+// The plan-to-seat-ceiling rule lives in @learnovize/shared so it is testable
+// alongside PLAN_CAPS itself, and so the web app, the mobile clients and any
+// future script all read the same number. Re-exported here because callers
+// already import validation from this module.
+export { capOverPlanError, planCapCeiling } from '@learnovize/shared';
 
 /** URL-safe slug: title-slug + 6 random chars, e.g. solar-101-4f8k2q */
 export function makeSlug(title: string): string {
@@ -35,16 +42,16 @@ export type TrainingInput = {
 };
 
 /** Validate create/update input. Returns { ok, data } or { ok: false, error }. */
-export function validateTrainingInput(body: TrainingInput, isPaidApproved = false) {
+export function validateTrainingInput(body: TrainingInput) {
   const title = (body.title || '').trim();
   if (title.length < 3 || title.length > 120) return { ok: false as const, error: 'Title must be 3–120 chars' };
   const format = body.format === 'audio' ? 'audio' : 'video';
 
-  // Free or paid. Paid certification still needs the existing admin approval.
+  // Free or paid. Paid classes no longer need admin approval: a trainer whose
+  // application to teach was verified may sell either. What still bounds a class
+  // is the seat ceiling for the trainer's plan, checked by capOverPlanError in
+  // the route, because only the route knows which plan the trainer is on.
   const accessType = body.accessType === 'paid' ? 'paid' : 'free';
-  if (accessType === 'paid' && !isPaidApproved) {
-    return { ok: false as const, error: 'Paid classes need admin approval first' };
-  }
 
   const cap = body.cap === undefined ? PLAN_CAPS.free : Math.round(Number(body.cap));
   if (!Number.isInteger(cap) || cap < 1 || cap > PLAN_CAPS.business) {

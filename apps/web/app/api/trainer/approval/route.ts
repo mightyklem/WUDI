@@ -7,7 +7,7 @@ import { describeAccess, idAccessQueryFor } from '@/lib/id-access';
 export const dynamic = 'force-dynamic';
 
 // POST /api/trainer/approval { idDocKeys: string[], evidence?: string, consent?: boolean }
-// Any trainer can request paid-certification approval (FR-2.3).
+// Any trainer can request teaching verification (FR-2.3).
 export async function POST(req: Request) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     );
   }
   if (!Array.isArray(idDocKeys) || idDocKeys.length < 1 || idDocKeys.length > 5) {
-    return NextResponse.json({ error: 'Upload 1–5 ID documents first (kind=id)' }, { status: 400 });
+    return NextResponse.json({ error: 'Upload 1â€“5 ID documents first (kind=id)' }, { status: 400 });
   }
   if (idDocKeys.some((k) => typeof k !== 'string' || !k.startsWith(`id/${userId}/`))) {
     return NextResponse.json({ error: 'ID keys must be your own uploads' }, { status: 400 });
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ approval }, { status: 201 });
 }
 
-// GET /api/trainer/approval — my latest request + state
+// GET /api/trainer/approval â€” my latest request + state
 //
 // Also returns who has opened my identity documents. The consent text says staff access
 // is recorded, which is only a real commitment if the trainer can actually see it --

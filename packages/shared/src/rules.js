@@ -13,6 +13,34 @@ export const MIN_PCT_CEIL = 100;
 export const PLAN_CAPS = Object.freeze({ free: 50, pro: 200, business: 500 });
 
 /**
+ * Seat ceiling for a trainer's plan.
+ *
+ * Free is 50, which is where a class stops being self-serve: 51 and above is
+ * reached by upgrading the plan. This is the only thing that bounds class size —
+ * paid classes are not separately gated, so a verified trainer may run a free or
+ * a paid class up to their ceiling.
+ *
+ * Anything that is not exactly 'pro' or 'business' resolves to the free ceiling,
+ * so an unknown, missing or tampered plan value can never widen it.
+ */
+export function planCapCeiling(plan) {
+  return plan === 'pro' || plan === 'business' ? PLAN_CAPS[plan] : PLAN_CAPS.free;
+}
+
+/**
+ * The governing rule for how many seats a class may hold.
+ *
+ * Returns an error message when the cap is above the trainer's plan ceiling,
+ * otherwise null. Both the create and the update route must call this: a ceiling
+ * enforced only on create is one a trainer can walk past with a follow-up edit.
+ */
+export function capOverPlanError(cap, plan) {
+  const ceiling = planCapCeiling(plan);
+  if (cap <= ceiling) return null;
+  return `Cap ${cap} exceeds your ${plan || 'free'} plan (${ceiling}). Upgrade to raise it.`;
+}
+
+/**
  * Learnovize's commission: a flat 25%.
  *
  * Where this number comes from. Live-class marketplaces charge roughly 18-33% for

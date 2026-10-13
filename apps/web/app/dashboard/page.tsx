@@ -122,15 +122,17 @@ export default function Dashboard() {
         </div>
       )}
 
-      {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
+{role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
         <div className="card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
           <div className="u-flex">
             <span className="ibadge" style={{ background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 18 }} aria-hidden>⏳</span>
             <div>
-              <p className="u-h">Free trainings: unlocked now</p>
+              <p className="u-h">
+                Teaching verification: {String(me.trainer.approvalState || 'none').toLowerCase()}
+              </p>
               <p className="muted u-sub">
-                Paid certificates need platform approval.
-                {me.trainer.approvalState === 'pending' ? ' Yours is under review.' : ''}
+                Free and paid classes are both open to you. How many seats a class
+                can hold comes from your plan, not from this review.
               </p>
             </div>
           </div>
