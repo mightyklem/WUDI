@@ -528,6 +528,19 @@ model Certificate {
   status      String   @default("valid") // valid|revoked
   revokedReason String?
   createdAt   DateTime @default(now())
+
+  // One certificate per learner per training, ever. issueCertificate checked with
+  // findFirst and inserted with nothing behind it, so two issuances racing both saw an
+  // empty table. Auto-issue raised the stakes: it can be reached from three independent
+  // triggers (room_ended, the last participant leaving after the scheduled end, and the
+  // trainer pressing End), any two of which can overlap.
+  //
+  // Not scoped to status='valid': a revoked certificate keeps its row, so a partial index
+  // would let a fresh credential be issued to someone whose certificate was revoked for
+  // fraud. Restoring is deliberate, through restoreCertificate().
+  //
+  // Verified to apply cleanly against production -- db push reported the schema in sync.
+  @@unique([trainingId, userId])
 }
 
 model Payment {

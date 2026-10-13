@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { programPct, isEligible } from '@learnovize/shared';
 import { putPublic } from '@/lib/storage';
 import { awardCertificate } from '@/lib/points';
+import { certificateReadyEmail, emailEnabled, sendEmail } from '@/lib/email';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
 
@@ -180,12 +181,21 @@ export async function renderCertificatePdf(input: CertRenderInput): Promise<Uint
   return doc.save();
 }
 
-/** Issue (or return existing) certificate for an eligible participant. Trainer-approved. */
+/** Issue (or return existing) certificate for an eligible participant. */
 export async function issueCertificate(trainingId: string, userId: string) {
-  const existing = await prisma.certificate.findFirst({
-    where: { trainingId, userId, status: 'valid' },
-  });
-  if (existing) return existing;
+  // Matched on the pair, not on status='valid', because a REVOKED certificate must not
+  // be quietly replaced by a fresh one. With auto-issue now running on its own, the old
+  // query would re-issue for every revoked learner the moment their session ended --
+  // turning a deliberate revocation into a certificate that reappears on the next run.
+  // Revocation has to be terminal unless someone restores it deliberately.
+  const existing = await prisma.certificate.findFirst({ where: { trainingId, userId } });
+  if (existing) {
+    if (existing.status === 'valid') return existing;
+    throw Object.assign(
+      new Error('This learner holds a revoked certificate — restore it rather than issuing another'),
+      { code: 'REVOKED' },
+    );
+  }
 
   const e = await computeEligibility(trainingId, userId);
   if (!e.eligible) {
@@ -229,6 +239,143 @@ export async function issueCertificate(trainingId: string, userId: string) {
   // A certificate is worth points, awarded once per learner per training.
   await awardCertificate({ userId, trainingId });
   return cert;
+}
+
+/** Upper bound per auto-issue run, so one trigger cannot try to render 5,000 PDFs. */
+const AUTO_ISSUE_CAP = 200;
+
+export type AutoIssueResult = {
+  issued: { userId: string; number: string }[];
+  alreadyHeld: number;
+  notEligible: number;
+  revoked: number;
+  failed: number;
+  truncated: boolean;
+};
+
+/**
+ * Issue certificates to everyone entitled to one, with no trainer action.
+ *
+ * This exists because of a real outcome, not a hypothetical. A learner paid N1,500 for a
+ * live class on 13 Oct, attended, gave consent, and had their session finish -- and
+ * received nothing, because a certificate was only ever minted when the trainer opened
+ * the training and pressed a button. Across the whole platform exactly one certificate
+ * had ever been issued. The reward for paying depended on a stranger's diligence, and a
+ * trainer who never logged in again silently withheld it from every learner forever.
+ *
+ * So issuance moves to the data. A trainer still holds a veto -- revoke, with a reason --
+ * but the default is that an eligible learner is issued to.
+ *
+ * Two deliberate design calls, both of which differ from a literal reading of the ops
+ * plan:
+ *
+ * 1. It issues IMMEDIATELY rather than after a 72-hour trainer review window. A window
+ *    before issuance means the learner waits three days for something they already paid
+ *    for and attended, and a trainer who never opens the platform means they wait
+ *    forever. The trainer's power is kept, but as a bounded VETO rather than a gate:
+ *    revoke within any window, with a reason. That is a smaller, more meaningful power
+ *    than issuing, and it cannot be exercised by inaction.
+ *
+ * 2. Eligibility is re-derived per learner here rather than trusting the trainer's view
+ *    of it. The trainer's button remains for issuing someone the moment they are ready,
+ *    and both paths go through the same server-side check, so auto-issue can never grant
+ *    what a manual issue would refuse.
+ *
+ * Safe to call repeatedly: issueCertificate is idempotent per learner, and a revoked
+ * certificate is refused rather than replaced.
+ */
+export async function autoIssueForSession(sessionId: string): Promise<AutoIssueResult> {
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { trainingId: true, endsAtUtc: true, status: true },
+  });
+  if (!session) {
+    return { issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated: false };
+  }
+  // A cancelled session taught nobody anything, so nobody is entitled to a certificate
+  // for it. Ending early is different: people attended the part that happened, and
+  // eligibility is measured against sessions they actually turned up to.
+  if (session.status === 'cancelled') {
+    return { issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated: false };
+  }
+
+  const registrations = await prisma.registration.findMany({
+    where: { trainingId: session.trainingId, status: 'active' },
+    select: { userId: true },
+    take: AUTO_ISSUE_CAP + 1,
+  });
+  const truncated = registrations.length > AUTO_ISSUE_CAP;
+  const batch = truncated ? registrations.slice(0, AUTO_ISSUE_CAP) : registrations;
+
+  // Read what is already held BEFORE issuing, in one query. Deciding per learner by
+  // inspecting what issueCertificate returned is not possible -- it returns the existing
+  // row just as happily as a new one, and the two are the same shape. So the existing
+  // state is known up front and the loop is unambiguous.
+  const held = await prisma.certificate.findMany({
+    where: { trainingId: session.trainingId, userId: { in: batch.map((r) => r.userId) } },
+    select: { userId: true, number: true, status: true },
+  });
+  const valid = new Map(held.filter((c) => c.status === 'valid').map((c) => [c.userId, c.number]));
+  const revoked = new Set(held.filter((c) => c.status === 'revoked').map((c) => c.userId));
+
+  const result: AutoIssueResult = {
+    issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated,
+  };
+
+  for (const r of batch) {
+    if (revoked.has(r.userId)) {
+      // A deliberate revocation is terminal. Re-issuing here would undo it silently on
+      // every trigger, which is the opposite of what revoking is for.
+      result.revoked += 1;
+      continue;
+    }
+    if (valid.has(r.userId)) {
+      result.alreadyHeld += 1;
+      continue;
+    }
+    try {
+      const cert = await issueCertificate(session.trainingId, r.userId);
+      result.issued.push({ userId: r.userId, number: cert.number });
+      // Tell them. An issue that nobody is told about has not happened as far as the
+      // learner is concerned -- which is the original failure all over again, one layer
+      // down. Best effort: a mail failure must never un-issue a certificate.
+      await prisma.notification.create({
+        data: {
+          userId: r.userId,
+          type: 'certificate-issued',
+          payload: { trainingId: session.trainingId, number: cert.number, automatic: true },
+        },
+      });
+      try {
+        const recipient = await prisma.user.findUnique({
+          where: { id: r.userId }, select: { email: true },
+        });
+        if (recipient && emailEnabled()) {
+          const training = await prisma.training.findUnique({
+            where: { id: session.trainingId }, select: { title: true },
+          });
+          await sendEmail({
+            ...certificateReadyEmail({
+              trainingTitle: training?.title ?? 'your class',
+              number: cert.number,
+              certsPath: '/me/certificates',
+            }),
+            to: recipient.email,
+          });
+        }
+      } catch {
+        // Swallowed on purpose: the certificate exists and the notification row is
+        // written. A bounced email is a support ticket, not a reason to pretend the
+        // certificate was not issued.
+      }
+    } catch (e) {
+      const code = (e as { code?: string })?.code;
+      if (code === 'INELIGIBLE') result.notEligible += 1;
+      else if (code === 'REVOKED') result.revoked += 1;
+      else result.failed += 1;
+    }
+  }
+  return result;
 }
 
 /**

@@ -1,0 +1,26 @@
+-- One certificate per learner per training, ever.
+--
+-- issueCertificate checked for an existing certificate and then inserted, with nothing at
+-- the database level behind it. Auto-issue makes that race reachable in practice rather
+-- than in theory: certificates are now minted from three independent triggers --
+-- room_ended, the last participant leaving after the scheduled end time, and the trainer
+-- pressing End -- and any two of them can overlap on the same session.
+--
+-- Applied cleanly against production already (prisma db push reported the schema in sync
+-- at 2026-10-13), which is how we know no duplicate certificates exist. If that ever
+-- stops being true, this fails loudly rather than silently admitting the duplicate:
+--
+--   SELECT "trainingId", "userId", COUNT(*)
+--   FROM "Certificate"
+--   GROUP BY "trainingId", "userId"
+--   HAVING COUNT(*) > 1;
+--
+-- Every duplicate is a real, separately issued, publicly verifiable credential. Decide
+-- per case: keep one, REVOKE the rest, notify the holders. Do not delete -- a deleted
+-- number stops resolving and the holder cannot tell why it vanished.
+--
+-- Deliberately not scoped to status = 'valid'. A revoked certificate stays on its row,
+-- so a partial index would allow a brand new credential for someone whose certificate was
+-- revoked for fraud. Restoring goes through restoreCertificate() instead.
+ALTER TABLE "Certificate"
+  ADD CONSTRAINT "Certificate_trainingId_userId_key" UNIQUE ("trainingId", "userId");

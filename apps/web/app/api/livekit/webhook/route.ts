@@ -4,7 +4,7 @@ import { verifyWebhook } from '@/lib/livekit';
 import { isPresent } from '@learnovize/shared';
 import { awardAttendance, revokeAttendance } from '@/lib/points';
 import { isAdmin } from '@/lib/admin';
-import { computeEligibility } from '@/lib/certs';
+import { computeEligibility, autoIssueForSession } from '@/lib/certs';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +28,14 @@ export async function POST(req: Request) {
   // attendance_logs, awarded points, and could later earn a certificate for a class they
   // only watched. Observing is not attending.
   if (await isAdmin(evt.identity)) return NextResponse.json({ ok: true, skipped: 'admin' });
+
+  // The room ending is the signal that this session is over, so anyone still owed a
+  // certificate for it gets one. This is the whole point of auto-issue: nothing here
+  // waits for a trainer to open a screen.
+  if (evt.event === 'room_ended') {
+    const r = await autoIssueForSession(session.id);
+    return NextResponse.json({ ok: true, autoIssued: r.issued.length, ...r });
+  }
 
   if (evt.event === 'participant_joined') {
     // A rejoin starts a new attendance window, so the previous exit has to be
@@ -81,6 +89,19 @@ export async function POST(req: Request) {
               payload: { trainingId: session.trainingId, pct: e.pct, minPct: training.minPct, remaining },
             },
           });
+        }
+        // Catch-all. room_ended is the clean signal, but a room that is simply never
+        // closed -- the trainer closes the tab and walks away, or the platform drops the
+        // connection -- never sends one. When the last person leaves after the scheduled
+        // end, treat the session as over. Without this, a trainer who never presses End
+        // withholds every certificate forever, which is precisely the failure auto-issue
+        // exists to remove.
+        const unfinished = training.sessions.filter(
+          (s) => s.endsAtUtc.getTime() <= Date.now() && s.id !== session.id,
+        ).length;
+        if (unfinished === 0 && session.endsAtUtc.getTime() <= Date.now()) {
+          const r = await autoIssueForSession(session.id);
+          return NextResponse.json({ ok: true, autoIssued: r.issued.length, ...r });
         }
       }
     }

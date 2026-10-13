@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { roomService } from '@/lib/livekit';
 import { isAdmin } from '@/lib/admin';
+import { autoIssueForSession } from '@/lib/certs';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,16 +62,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (action === 'end') {
     if (!isTrainer) return NextResponse.json({ error: 'Only the trainer can end' }, { status: 403 });
     await svc.deleteRoom(session.livekitRoom).catch(() => {});
-    const endedAt = new Date();
-    await prisma.session.update({ where: { id }, data: { status: 'ended', endedAtUtc: endedAt } });
-    // Ending someone's class is the single most consequential act in the room, and it
-    // used to leave no trace at all: no audit row, and the session carried no record of
-    // when it ended. A dispute about "the trainer ended early and my attendance was cut"
-    // was impossible to answer. Both are now written.
+    await prisma.session.update({ where: { id }, data: { status: 'ended', endedAtUtc: new Date() } });
+    // Ending a class is the most reliable moment there is to hand out what people are
+    // owed, and it is the moment a trainer is actually present to have done it by hand.
+    // Doing it here means the common path -- a trainer who runs their class properly --
+    // issues certificates without them ever visiting a screen.
+    const auto = await autoIssueForSession(id);
     await prisma.auditLog.create({
-      data: { actorId: userId, action: 'session.end', target: `session:${id}` },
+      data: {
+        actorId: userId,
+        action: 'session.end',
+        target: `session:${id}`,
+        reason: `auto-issued ${auto.issued.length} certificate(s)`,
+      },
     });
-    return NextResponse.json({ ok: true, endedAtUtc: endedAt });
+    return NextResponse.json({ ok: true, autoIssued: auto.issued.length, ...auto });
   }
   if (!identity) return NextResponse.json({ error: 'identity required' }, { status: 400 });
   // There is deliberately no "remove" action. Kicking someone out of a session they
