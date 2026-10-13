@@ -8,6 +8,12 @@
 
   The versioned qualifier keeps these attributes out of older builds, which do
   not know them.
+The teal is deliberate. The splash icon is the white play mark, so a teal
+  background plus a white mark reproduces the Learnovize logo at launch scale.
+  Against the previous near-white background the white play was very nearly
+  invisible, which is the opposite of what a splash is for.
+
+  Icon background is set to the same teal so no disc is drawn behind the mark.
 -->
 <resources>
     <style name="Theme.Learnovize" parent="android:Theme.Material.NoActionBar">
