@@ -34,15 +34,22 @@
             <meta-data
                 android:name="android.support.customtabs.trusted.DEFAULT_URL"
                 android:value="https://learnovize.com/dashboard" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                android:value="@color/colorPrimary" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-                android:value="@color/colorPrimary" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_DIVIDER_COLOR"
-                android:value="@color/colorPrimaryDark" />
+            <!--
+              Deliberately no STATUS_BAR_COLOR or NAVIGATION_BAR_COLOR here.
+              Both are read by LauncherActivity, resolved to the literal colour,
+              and then looked up again as if the result were a resource id. Our
+              colorPrimary resolves to 0xFF1B7E8D, so the platform was asked for
+              "resource id 0xff1b7e8d" and the app died on launch before any web
+              view was created:
+
+                Resources$NotFoundException: Resource ID #0xff1b7e8d
+                    at LauncherActivity.getColorCompat(LauncherActivity.java:302)
+                    at LauncherActivity.launchTwa(LauncherActivity.java:197)
+
+              The library supplies sensible defaults when these are absent, and
+              the theme no longer sets them either.
+            -->
+
             <meta-data
                 android:name="asset_statements"
                 android:resource="@string/asset_statements" />
