@@ -1,90 +1,37 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
-import { initCheckout, newReference, provider } from '@/lib/payments';
-import { VERIFICATION_FEE_NGN, canPurchaseBadge } from '@/lib/verification';
-import { VERIFICATION_PREFIX } from '@/lib/verification-settle';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/trainer/verification/checkout — buy the right to be reviewed.
+ * POST /api/trainer/verification/checkout â€” RETIRED. Always refuses.
  *
- * This charges money and grants nothing. The badge is issued by a reviewer, not by a
- * successful charge; see lib/verification.ts for why the two are kept apart.
+ * The paid badge is gone. It charged N10,000 to open a review, then unlocked nothing:
+ * after the rule change that stopped paid classes needing approval, the badge's stated
+ * benefit ("does not unlock paid classes or payouts") became literally true, and
+ * charging money for a signal that gates nothing is not defensible.
+ *
+ * The route is kept as a refusal rather than deleted, and it refuses BEFORE touching
+ * Paystack. Deleting the file would make any caller 404, which is ambiguous -- it looks
+ * like a broken link rather than a retired feature, and a 404 invites people to keep
+ * retrying. Anyone with a stale tab or a bookmark gets a plain sentence instead.
+ *
+ * Identity verification is free, has a real purpose, and lives at /trainer/approval.
  */
 export async function POST(req: Request) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const profile = await prisma.trainerProfile.findUnique({ where: { userId }, select: { userId: true } });
-  if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
-
-  // provider() deliberately throws in production when it is misconfigured. That is
-  // the right behaviour -- mock payments must never settle anything by accident --
-  // but an uncaught throw becomes a 500 with an empty body, and the browser sees no
-  // message at all. It just said "Could not start checkout", which tells neither
-  // the trainer nor whoever is trying to help them.
-  //
-  // So the throw is turned into an answer here, naming the setting that is missing.
-  let paystack = false;
-  try {
-    paystack = provider() === 'paystack';
-  } catch (e) {
-    const detail = e instanceof Error ? e.message : String(e);
-    console.error('[verification/checkout] payments provider misconfigured:', detail);
-    return NextResponse.json(
-      {
-        error: 'Payments are not configured on this deployment.',
-        detail:
-          'Set PAYMENTS_PROVIDER to "paystack" and PAYSTACK_SECRET_KEY in the environment, ' +
-          'then redeploy. Nothing was charged.',
-      },
-      { status: 503 },
-    );
-  }
-  if (!paystack) {
-    return NextResponse.json({ error: 'Verification is only available on Paystack' }, { status: 404 });
-  }
-
-  const app = await prisma.trainerApplication.findUnique({ where: { trainerId: userId } });
-  const gate = canPurchaseBadge(app);
-  if (!gate.ok) {
-    return NextResponse.json({ error: 'Verification already purchased for this application' }, { status: 409 });
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-  if (!user?.email) return NextResponse.json({ error: 'No email on file' }, { status: 400 });
-
-  // A rejected applicant retrying gets a fresh reference; the old one is dead and its
-  // refund is tracked separately so the two cannot be confused.
-  const reference = newReference(VERIFICATION_PREFIX);
-  const created = app
-    ? await prisma.trainerApplication.update({
-        where: { id: app.id },
-        data: { paymentRef: reference, refundedAt: null, refundPending: false },
-      })
-    : await prisma.trainerApplication.create({
-        data: { trainerId: userId, answers: {}, paymentRef: reference },
-      });
-
-  const result = await initCheckout({
-    email: user.email,
-    amountNgn: VERIFICATION_FEE_NGN,
-    reference,
-  });
-
-  if (!result.payUrl) {
-    // Nothing was charged, so release the reference rather than leaving the
-    // application looking paid-but-unpaid.
-    await prisma.trainerApplication.update({ where: { id: created.id }, data: { paymentRef: null } });
-    return NextResponse.json({ error: 'Paystack did not return a checkout link' }, { status: 502 });
-  }
-
-  return NextResponse.json({
-    url: result.payUrl,
-    reference,
-    amountNgn: VERIFICATION_FEE_NGN,
-  });
+  return NextResponse.json(
+    {
+      error: 'The paid verification badge has been retired.',
+      detail:
+        'It is no longer charged for, and nothing was taken from your account. ' +
+        'Identity verification is free and unlocks your first payout â€” start it at ' +
+        '/trainer/approval.',
+      retired: true,
+    },
+    { status: 410 },
+  );
 }

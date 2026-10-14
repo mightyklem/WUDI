@@ -42,7 +42,10 @@ export async function payoutQueue(): Promise<EligiblePayout[]> {
   // separately rather than joined. Two queries beat re-modelling the table here.
   const profiles = await prisma.trainerProfile.findMany({
     where: { userId: { in: [...new Set(held.map((p) => p.trainerId))] } },
-    select: { userId: true, displayName: true, payoutAccounts: true },
+    select: {
+      userId: true, displayName: true, payoutAccounts: true,
+      approvalState: true, paidCertApproved: true,
+    },
   });
   const byId = new Map(profiles.map((p) => [p.userId, p]));
 
@@ -63,6 +66,24 @@ export async function payoutQueue(): Promise<EligiblePayout[]> {
         message: `Held until ${p.holdUntil.toISOString().slice(0, 10)}`,
       });
     }
+
+    // Identity, before money.
+    //
+    // A verified bank account says the account exists. It says nothing about whose it
+    // is: PayoutAccount has no link to any identity record, so anyone who can enter a
+    // Nigerian account number -- including one belonging to someone else -- can receive
+    // a transfer of other people's money. Checking the bank was never an identity check.
+    //
+    // This is what gives the ID-document flow a purpose. Without it, identity
+    // verification gates nothing at all, which is why the paid badge page had started
+    // advertising a benefit that no longer existed.
+    if (profile?.approvalState !== 'approved') {
+      blockers.push({
+        code: 'identity-unverified',
+        message: 'Trainer identity is not verified yet — an approved ID document is required before payout',
+      });
+    }
+
     if (!account) {
       blockers.push({ code: 'no-account', message: 'Trainer has not set a payout account' });
     } else if (!account.verifiedAt) {
@@ -127,8 +148,17 @@ export async function releasePayout(payoutId: string, adminId: string): Promise<
 
   const profile = await prisma.trainerProfile.findUnique({
     where: { userId: payout.trainerId },
-    select: { payoutAccounts: true },
+    select: { payoutAccounts: true, approvalState: true },
   });
+  // Re-checked here, not only in the blocker list. The list is what the admin sees; this
+  // is what actually stops the money, and the two have to agree or the display is a lie.
+  if (profile?.approvalState !== 'approved') {
+    return {
+      ok: false,
+      code: 'identity-unverified',
+      message: 'Trainer identity is not verified — payout blocked until an ID document is approved',
+    };
+  }
   const account = profile?.payoutAccounts[0];
   if (!account?.verifiedAt) {
     return { ok: false, code: 'no-account', message: 'Trainer has no verified payout account' };

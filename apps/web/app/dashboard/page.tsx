@@ -251,11 +251,11 @@ export default function Dashboard() {
       )}
 
 {role === 'trainer' && (
-        <p className="u-mt-4">
-          Want learners to know you were checked?{' '}
-          <Link className="btn link" href="/trainer/verification">Get verified →</Link>
-        </p>
-      )}
+          <p className="u-mt-4">
+            Want to get paid?{' '}
+            <Link className="btn link" href="/trainer/approval">Verify your identity →</Link>
+          </p>
+        )}
 
       {role === 'participant' && (
         <p className="u-mt-4">

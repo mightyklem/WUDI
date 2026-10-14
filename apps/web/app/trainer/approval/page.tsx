@@ -58,10 +58,11 @@ export default function Approval() {
   return (
     <div className="wrap">
       <SiteNav />
-      <h1>Teaching verification.</h1>
+      <h1>Verify your identity.</h1>
       <p className="sub">
-        Free and paid classes are both open to you — this review does not gate what you can
-        teach. It verifies who you are, so payout accounts can be trusted.
+        Free, and reviewed by a person. You can teach free and paid classes right now —
+        this is only about getting paid, because a verified bank account proves the
+        account exists and not that it is yours.
       </p>
       {state && (
         <div className="card" style={{ marginTop: 12 }}>
