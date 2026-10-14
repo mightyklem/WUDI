@@ -6,7 +6,12 @@
  */
 
 export const PRESENT_THRESHOLD = 0.75; // FR-7.1: present = stayed >= 75% of session
-export const DEFAULT_MIN_PCT = 80; // FR-3.6 default
+// 60% is the floor as well as the default, so a new class asks for the least the
+// platform permits and a trainer who cares can raise it per class. Was 80%, which sat
+// 20 points above the floor and made the "attended most of it" promise easy to miss.
+// Note this only affects classes created from here on: minPct is stored per training,
+// so existing ones keep whatever they were created with.
+export const DEFAULT_MIN_PCT = 60;
 export const MIN_PCT_FLOOR = 60;
 export const MIN_PCT_CEIL = 100;
 

@@ -301,7 +301,7 @@ model Training {
   pricePerDayNgn Int? // whole naira, charged per billable day
   certMode   String   @default("none") // none|paid
   certPriceNgn Int?
-  minPct     Int      @default(80)
+  minPct     Int      @default(60)
   cap        Int
   seatsTaken Int      @default(0)
   plan       String   @default("free") // free|pro|business

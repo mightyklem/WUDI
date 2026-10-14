@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   isPresent, programPct, clampMinPct, isEligible,
   commission, trainerNet, tryClaimSeat, refundDecision, isCertNumber,
-  planCapCeiling, capOverPlanError,
+  planCapCeiling, capOverPlanError, DEFAULT_MIN_PCT,
 } from '../src/rules.js';
 
 describe('attendance (FR-7)', () => {
@@ -20,11 +20,16 @@ describe('attendance (FR-7)', () => {
     assert.equal(programPct(9, 3), 100);
     assert.equal(programPct(0, 0), 0);
   });
-  it('min pct clamps 60–100, default 80', () => {
+  it('min pct clamps 60–100, default 60', () => {
     assert.equal(clampMinPct(80), 80);
     assert.equal(clampMinPct(10), 60);
     assert.equal(clampMinPct(120), 100);
-    assert.equal(clampMinPct('x'), 80);
+    // Junk falls back to the default, so this tracks DEFAULT_MIN_PCT rather than
+    // asserting a literal that would silently disagree with it later.
+    assert.equal(clampMinPct('x'), DEFAULT_MIN_PCT);
+    assert.equal(DEFAULT_MIN_PCT, 60);
+    // A brand new class with no explicit minimum is exactly at the floor.
+    assert.equal(clampMinPct(undefined), 60);
   });
 });
 

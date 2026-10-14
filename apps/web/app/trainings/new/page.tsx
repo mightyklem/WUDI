@@ -31,7 +31,7 @@ export default function NewTraining() {
   const [tier, setTier] = useState<TierKey>('basic');
   const [pricePerDay, setPricePerDay] = useState('1500');
   const [wantsCertificate, setWantsCertificate] = useState(true);
-  const [minPct, setMinPct] = useState('80');
+  const [minPct, setMinPct] = useState('60');
   const [cap, setCap] = useState('50');
   const [slots, setSlots] = useState<Slot[]>(defaultSlots);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -156,7 +156,7 @@ export default function NewTraining() {
 
         <div className="btnrow">
           <span><label className="fl">Format</label><select value={format} onChange={(e) => setFormat(e.target.value)}><option value="video">Video + audio</option><option value="audio">Audio-only</option></select></span>
-          <span><label className="fl">Min %</label><select value={minPct} onChange={(e) => setMinPct(e.target.value)}><option value="60">60%</option><option value="80">80% (default)</option><option value="100">100%</option></select></span>
+          <span><label className="fl">Min %</label><select value={minPct} onChange={(e) => setMinPct(e.target.value)}><option value="60">60% (default)</option><option value="80">80%</option><option value="100">100%</option></select></span>
           <span><label className="fl">Cap</label><input type="text" inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value)} style={{ maxWidth: 100 }} /></span>
         </div>
 
