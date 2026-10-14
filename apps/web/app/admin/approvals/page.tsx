@@ -6,6 +6,7 @@ import AdminNav from '../../components/AdminNav';
 
 type Item = {
   id: string; trainerId: string; idDocUrls: string[]; expertiseEvidence: string | null;
+  identityType?: string | null; identityNumber?: string | null; bankStatementKey?: string | null;
   status: string; createdAt: string;
 };
 
@@ -52,6 +53,19 @@ export default function AdminApprovals() {
     if (j.url) window.open(j.url, '_blank', 'noopener');
   }
 
+  async function openBankStatement(approvalId: string) {
+    const access = getAccess();
+    if (!access) return;
+    // Same rule as the ID document: the audited route is the only way to reach the
+    // bytes, so the access record cannot be bypassed by calling storage directly.
+    const r = await fetch(`/api/admin/approvals/${approvalId}/bank-statement`, {
+      headers: { authorization: `Bearer ${access}` },
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return setMsg(j.error || 'Could not open that statement.');
+    if (j.url) window.open(j.url, '_blank', 'noopener');
+  }
+
   return (
     <div className="wrap">
       <AdminNav />
@@ -65,18 +79,37 @@ export default function AdminApprovals() {
       <div className="card" style={{ marginTop: 12 }}>
         {items.length === 0 && <p className="muted">Queue empty.</p>}
         {items.map((q) => (
-          <div key={q.id} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>
-            <b>{q.trainerId}</b> · docs: {q.idDocUrls.length} file(s) · evidence: {q.expertiseEvidence || '—'}
+          <div key={q.id} style={{ padding: '12px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>
+            <b>{q.trainerId}</b>
+            <div style={{ marginTop: 3 }}>
+              {/* The claim first, then the document to check it against. Showing the
+                  number without the document beside it tells a reviewer nothing; the two
+                  are only meaningful read together. */}
+              {q.identityType ? (
+                <span>
+                  Claims: <b>{q.identityType === 'nin' ? 'NIN' : 'Passport'}</b>{' '}
+                  <code style={{ fontSize: 13 }}>{q.identityNumber || '—'}</code>
+                </span>
+              ) : (
+                <span className="muted">
+                  No document type recorded — older application. Check the image by eye.
+                </span>
+              )}
+            </div>
+            <div className="muted" style={{ marginTop: 2, fontSize: 13 }}>
+              evidence: {q.expertiseEvidence || '—'}
+            </div>
             <div className="btnrow">
               {q.idDocUrls.map((_, i) => (
-                <button
-                  key={i}
-                  className="btn"
-                  onClick={() => openDocument(q.id, i)}
-                >
+                <button key={i} className="btn" onClick={() => openDocument(q.id, i)}>
                   Open ID {i + 1}
                 </button>
               ))}
+              {q.bankStatementKey && (
+                <button className="btn" onClick={() => openBankStatement(q.id)}>
+                  Open bank statement
+                </button>
+              )}
               <button className="btn primary" onClick={() => decide(q.id, 'approve')}>Approve</button>
               <button className="btn" onClick={() => decide(q.id, 'reject')}>Reject with reason</button>
             </div>

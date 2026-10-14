@@ -19,5 +19,9 @@ export async function GET(req: Request) {
     orderBy: { createdAt: 'asc' },
     take: 100,
   });
+  // identityNumber is returned to the reviewer because they have to compare it against
+  // the document to judge the application at all -- that comparison is the review. It
+  // goes nowhere else: no public route reads it, and staff reading the document itself
+  // through the audited route leaves the same access trail this field does not.
   return NextResponse.json({ queue });
 }

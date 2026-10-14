@@ -6,8 +6,38 @@ import { describeAccess, idAccessQueryFor } from '@/lib/id-access';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/trainer/approval { idDocKeys: string[], evidence?: string, consent?: boolean }
-// Any trainer can request teaching verification (FR-2.3).
+/**
+ * Nigerian identity numbers, checked properly rather than "a string that exists".
+ *
+ * A National Identification Number is exactly 11 digits. Validating only the character
+ * set would let "12345" through as an NIN, which tells a reviewer nothing and, worse,
+ * makes a wrong claim look like a real one. Rejecting it here is kinder than having
+ * staff spend the review discovering the document is not what was claimed.
+ *
+ * Passport numbers vary more across issuing series, so those are checked for
+ * plausibility rather than a fixed pattern -- enough to catch a typo, or an email address
+ * typed into the wrong box.
+ */
+const IDENTITY_TYPES = {
+  nin: { label: 'National Identification Number (NIN)', test: (v: string) => /^\d{11}$/.test(v) },
+  passport: { label: 'National passport', test: (v: string) => /^[A-Z0-9]{6,12}$/.test(v) },
+} as const;
+type IdentityType = keyof typeof IDENTITY_TYPES;
+
+function normaliseIdentityNumber(raw: unknown, type: IdentityType): string | null {
+  const v = String(raw ?? '').trim().toUpperCase().replace(/[\s-]/g, '');
+  return IDENTITY_TYPES[type].test(v) ? v : null;
+}
+
+/**
+ * POST /api/trainer/approval
+ *   { idDocKeys: string[], identityType: 'nin'|'passport', identityNumber: string,
+ *     bankStatementKey?: string, evidence?: string, consent: boolean }
+ *
+ * Identity verification. It gates payouts, not teaching -- free and paid classes are
+ * open either way. The document type and its number are both required, because a picture
+ * with no claim attached to it cannot be checked against anything.
+ */
 export async function POST(req: Request) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
@@ -15,9 +45,12 @@ export async function POST(req: Request) {
   const profile = await prisma.trainerProfile.findUnique({ where: { userId } });
   if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
 
-  const { idDocKeys, evidence, consent } = (await req.json().catch(() => ({}))) as {
-    idDocKeys?: string[]; evidence?: string; consent?: boolean;
-  };
+  const { idDocKeys, evidence, consent, identityType, identityNumber, bankStatementKey } =
+    (await req.json().catch(() => ({}))) as {
+      idDocKeys?: string[]; evidence?: string; consent?: boolean;
+      identityType?: string; identityNumber?: string; bankStatementKey?: string;
+    };
+
   // Enforced here, not just in the form. The form previously had no checkbox at all, so
   // an identity document was being stored with no recorded basis for processing it. The
   // checkbox is the visible half; this is the half that actually holds.
@@ -28,15 +61,49 @@ export async function POST(req: Request) {
     );
   }
   if (!Array.isArray(idDocKeys) || idDocKeys.length < 1 || idDocKeys.length > 5) {
-    return NextResponse.json({ error: 'Upload 1â€“5 ID documents first (kind=id)' }, { status: 400 });
+    return NextResponse.json({ error: 'Upload 1-5 ID documents first (kind=id)' }, { status: 400 });
   }
   if (idDocKeys.some((k) => typeof k !== 'string' || !k.startsWith(`id/${userId}/`))) {
     return NextResponse.json({ error: 'ID keys must be your own uploads' }, { status: 400 });
   }
+
+  const type = String(identityType || '').trim().toLowerCase();
+  if (!(type in IDENTITY_TYPES)) {
+    return NextResponse.json(
+      { error: 'Choose which document you are supplying: NIN or national passport' },
+      { status: 400 },
+    );
+  }
+  const number = normaliseIdentityNumber(identityNumber, type as IdentityType);
+  if (!number) {
+    return NextResponse.json(
+      {
+        error:
+          type === 'nin'
+            ? 'A NIN is 11 digits. Check the number on your document.'
+            : 'A passport number is 6-12 letters and digits. Check the number on your document.',
+      },
+      { status: 400 },
+    );
+  }
+
+  // Same ownership rule as the ID keys. Without it a reviewer could be handed a document
+  // that belongs to somebody else.
+  let bank: string | null = null;
+  if (bankStatementKey) {
+    if (typeof bankStatementKey !== 'string' || !bankStatementKey.startsWith(`bankstatement/${userId}/`)) {
+      return NextResponse.json({ error: 'Bank statement must be your own upload' }, { status: 400 });
+    }
+    bank = bankStatementKey;
+  }
+
   const approval = await prisma.trainerApproval.create({
     data: {
       trainerId: userId,
       idDocUrls: idDocKeys,
+      identityType: type,
+      identityNumber: number,
+      bankStatementKey: bank,
       expertiseEvidence: (evidence || '').slice(0, 2000) || null,
       consentAt: new Date(),
       consentVersion: ID_CONSENT_VERSION,

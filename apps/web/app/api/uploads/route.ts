@@ -8,6 +8,12 @@ export const dynamic = 'force-dynamic';
 
 const LIMITS: Record<string, { max: number; types: string[]; toPrivate: boolean }> = {
   id: { max: 5 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'application/pdf'], toPrivate: true },
+  // A bank statement is asked for at identity verification because the payout account
+  // proves the account exists and not that it belongs to the trainer. Private, because it
+  // carries a full account number, sort code, balance and every other transaction on the
+  // page -- far more revealing than an ID card, and much more likely to be reused as a
+  // statement long after this review.
+  bankstatement: { max: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'application/pdf'], toPrivate: true },
   evidence: { max: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'application/pdf', 'video/mp4'], toPrivate: true },
   asset: { max: 5 * 1024 * 1024, types: ['image/jpeg', 'image/png'], toPrivate: false },
 };
@@ -24,7 +30,7 @@ export async function POST(req: Request) {
   const kind = String(form?.get('kind') || '');
   const rule = LIMITS[kind];
   if (!(file instanceof Blob) || !rule) {
-    return NextResponse.json({ error: 'file + kind (id|evidence|asset) required' }, { status: 400 });
+    return NextResponse.json({ error: 'file + kind (id|bankstatement|evidence|asset) required' }, { status: 400 });
   }
   if (file.size > rule.max) return NextResponse.json({ error: `File too large (max ${rule.max / 1048576}MB)` }, { status: 413 });
   if (!rule.types.includes(file.type)) {

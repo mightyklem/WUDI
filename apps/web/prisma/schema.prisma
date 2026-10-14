@@ -259,14 +259,34 @@ model TrainerApproval {
   id                String   @id @default(cuid())
   trainerId         String
   trainer           TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
-  idDocUrls         String[] // private bucket only, never public
-  expertiseEvidence String?
-  // When the trainer agreed to us storing their identity document, and which wording
-  // they agreed to. Without this there is no artifact proving consent was ever
-  // obtained -- the form collected no checkbox and nothing was recorded. Versioned so
-  // a change to the wording later can be shown to have been consented to separately.
-  consentAt         DateTime?
-  consentVersion    String?
+idDocUrls         String[] // private bucket only, never public
+    expertiseEvidence String?
+
+    // Which document was supplied, and its number.
+    //
+    // Uploading "an ID photo" without saying what it is means a reviewer has to guess,
+    // and the guess is unverifiable. Recording the type and the number makes the claim
+    // checkable: one National Identification Number is one person.
+    //
+    // identityNumber is sensitive personal data under the NDPA. It is never returned by
+    // a public API, never included in any verify page, and is audit-logged whenever
+    // staff read it, exactly like the document image itself.
+    identityType     String? // nin | passport
+    identityNumber   String?
+
+    // A bank statement, asked for because the payout account otherwise proves nothing
+    // about ownership. The account number is resolved against the bank and stored, but
+    // the resolved name was never compared to the trainer, so anyone could nominate
+    // an account belonging to somebody else and be paid into it. A statement in the same
+    // name closes that.
+    bankStatementKey String?
+
+    // When the trainer agreed to us storing their identity document, and which wording
+    // they agreed to. Without this there is no artifact proving consent was ever
+    // obtained -- the form collected no checkbox and nothing was recorded. Versioned so
+    // a change to the wording later can be shown to have been consented to separately.
+    consentAt         DateTime?
+    consentVersion    String?
   status            String   @default("pending") // pending|approved|rejected|revoked
   reviewerId        String?
   decidedAt         DateTime?
