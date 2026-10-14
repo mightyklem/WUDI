@@ -3,8 +3,45 @@ import assert from 'node:assert/strict';
 import {
   isPresent, programPct, clampMinPct, isEligible,
   commission, trainerNet, tryClaimSeat, refundDecision, isCertNumber,
-  planCapCeiling, capOverPlanError, DEFAULT_MIN_PCT,
+  planCapCeiling, capOverPlanError, DEFAULT_MIN_PCT, mergeAttendanceWindow,
 } from '../src/rules.js';
+
+describe('attendance accumulates across a dropout', () => {
+  const MIN = 60 * 60_000; // a one-hour session
+
+  it('a dropout must not erase the time already attended', () => {
+    // 40 minutes, drop, rejoin for the last 15. Attended 55 of 60.
+    const first = mergeAttendanceWindow(0, 40 * 60_000, MIN);
+    assert.equal(first.stayedMs, 40 * 60_000);
+
+    const second = mergeAttendanceWindow(first.stayedMs, 15 * 60_000, MIN);
+    assert.equal(second.stayedMs, 55 * 60_000);
+    // 55/60 = 91.7%, over the 75% bar. The old behaviour replaced the total with 15
+    // minutes -- 25%, read as absent -- and denied a certificate to someone who sat
+    // through almost the whole class.
+    assert.equal(second.present, true);
+  });
+
+  it('still marks genuinely short attendance absent', () => {
+    const first = mergeAttendanceWindow(0, 10 * 60_000, MIN);
+    const second = mergeAttendanceWindow(first.stayedMs, 5 * 60_000, MIN);
+    assert.equal(second.present, false);
+  });
+
+  it('never reports more time than the session contains', () => {
+    // A duplicated leave event, or a wrong session end, must not produce 130%.
+    const once = mergeAttendanceWindow(0, 50 * 60_000, MIN);
+    const twice = mergeAttendanceWindow(once.stayedMs, 50 * 60_000, MIN);
+    assert.equal(twice.stayedMs, MIN);
+    assert.equal(twice.present, true);
+  });
+
+  it('tolerates junk input rather than producing NaN', () => {
+    const r = mergeAttendanceWindow(undefined, -500, MIN);
+    assert.equal(r.stayedMs, 0);
+    assert.equal(r.present, false);
+  });
+});
 
 describe('attendance (FR-7)', () => {
   it('present at exactly 75%', () => assert.equal(isPresent(3600_000, 2_700_000), true));

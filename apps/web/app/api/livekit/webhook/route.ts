@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyWebhook } from '@/lib/livekit';
-import { isPresent } from '@learnovize/shared';
+import { mergeAttendanceWindow } from '@learnovize/shared';
 import { awardAttendance, revokeAttendance } from '@/lib/points';
 import { isAdmin } from '@/lib/admin';
 import { computeEligibility, autoIssueForSession } from '@/lib/certs';
@@ -38,14 +38,17 @@ export async function POST(req: Request) {
   }
 
   if (evt.event === 'participant_joined') {
-    // A rejoin starts a new attendance window, so the previous exit has to be
-    // cleared. Setting only joinedAt left the row self-contradictory — leftAt
-    // from the earlier exit could end up earlier than the new joinedAt, and
-    // stayedMs and present would still describe the previous stay.
+    // A rejoin opens a new window, so leftAt has to be cleared or it describes the
+    // previous exit while the person is demonstrably still in the room.
+    //
+    // stayedMs is NOT reset. It is the running total across every window this learner has
+    // spent in this session, and the previous version zeroed it on each join -- which is
+    // why the attendance merge below exists. present is left alone here and recomputed on
+    // leave, from the merged total.
     await prisma.attendanceLog.upsert({
       where: { sessionId_userId: { sessionId: session.id, userId: evt.identity } },
       create: { sessionId: session.id, userId: evt.identity, joinedAt: new Date(), stayedMs: 0, present: false },
-      update: { joinedAt: new Date(), leftAt: null, stayedMs: 0, present: false },
+      update: { joinedAt: new Date(), leftAt: null },
     });
   } else if (evt.event === 'participant_left') {
     const log = await prisma.attendanceLog.findUnique({
@@ -53,14 +56,22 @@ export async function POST(req: Request) {
     });
     const joined = log?.joinedAt?.getTime();
     if (joined) {
-      const stayed = Date.now() - joined;
+      // Add this window to what was already accumulated. The previous code replaced the
+      // total, so a learner who attended 40 minutes, dropped on a bad connection and
+      // rejoined for the last 20 was recorded as having stayed 20 -- below the presence
+      // threshold, marked absent, and denied a certificate they had earned.
       const duration = session.endsAtUtc.getTime() - session.startsAtUtc.getTime();
-      const present = isPresent(duration, stayed);
+      const { stayedMs: stayed, present } = mergeAttendanceWindow(
+        log?.stayedMs ?? 0,
+        Date.now() - joined,
+        duration,
+      );
       await prisma.attendanceLog.update({
         where: { sessionId_userId: { sessionId: session.id, userId: evt.identity } },
         data: { leftAt: new Date(), stayedMs: stayed, present },
       });
-      // FR-7.6: confirm the recording, and warn while still fixable.
+      // Confirms attendance was recorded while it is still fixable. Not a recording of
+      // the session -- no audio or video exists.
       await prisma.notification.create({
         data: {
           userId: evt.identity, type: 'attendance-recorded',

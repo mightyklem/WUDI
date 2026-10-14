@@ -6,6 +6,8 @@ import SiteNav from '../../components/SiteNav';
 
 type Cert = {
   id: string; number: string; pdfUrl: string; createdAt: string;
+  status: string; revokedReason: string | null;
+  scopeLabel?: string; pctAttended?: number;
   training: { title: string; trainer: { displayName: string } };
 };
 
@@ -36,17 +38,51 @@ export default function MyCertificates() {
         {certs === null && <p className="muted">Log in to see your certificates.</p>}
         {certs !== null && certs.length === 0 && <p className="muted">None yet — finish a training past its minimum attendance.</p>}
         {certs?.map((c) => {
+          const revoked = c.status === 'revoked';
           const verifyUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${c.number}`;
           const text = encodeURIComponent(`I completed ${c.training.title} on Learnovize! Verify: ${c.number}`);
           const url = encodeURIComponent(verifyUrl);
           return (
-            <div className="rowitem" key={c.id} style={{ borderRadius: 16, marginBottom: 12 }}>
-              <div style={{ fontSize: 26 }}>🏅</div>
+            <div
+              className="rowitem"
+              key={c.id}
+              style={{ borderRadius: 16, marginBottom: 12, opacity: revoked ? 0.72 : 1 }}
+            >
+              <div style={{ fontSize: 26 }}>{revoked ? '🚫' : '🏅'}</div>
               <div>
                 <p className="rtitle" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{c.training.title}</p>
-                <p className="muted" style={{ margin: '2px 0 0' }}>{c.number} · {c.training.trainer.displayName}</p>
+                <p className="muted" style={{ margin: '2px 0 0' }}>
+                  {c.number} · {c.training.trainer.displayName}
+                  {c.pctAttended !== undefined && ` · ${c.pctAttended}% attendance`}
+                </p>
+
+                {/* Status, stated rather than implied. A revoked certificate used to be
+                    filtered out of this list entirely, so the holder's page simply got
+                    shorter with no explanation. Disappearing is not the same as being
+                    told, and the holder is the one who can contest it. */}
+                <p style={{ margin: '6px 0 0' }}>
+                  <span className={revoked ? 'badge rev' : 'badge ok'}>
+                    {revoked ? 'REVOKED' : 'VALID'}
+                  </span>
+                </p>
+                {revoked && (
+                  <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                    {c.revokedReason
+                      ? `Reason given: ${c.revokedReason}`
+                      : 'No reason was recorded. Contact support if you think this is wrong.'}
+                  </p>
+                )}
+
                 <p style={{ margin: '8px 0 0', fontSize: 14 }}>
-                  <a className="btn link" style={{ minHeight: 0, padding: '0 8px 0 0' }} href={c.pdfUrl}>Download</a>
+                  {/* No download on a revoked one: the file is withheld, so offering a
+                      link that cannot work is worse than not offering it. The verify link
+                      stays, because a revoked certificate is still resolvable and should
+                      say so honestly. */}
+                  {!revoked && (
+                    <a className="btn link" style={{ minHeight: 0, padding: '0 8px 0 0' }} href={c.pdfUrl}>
+                      Download
+                    </a>
+                  )}
                   <a className="btn link" style={{ minHeight: 0, padding: '0 8px' }} href={`https://www.linkedin.com/sharing/share-offsite/?url=${url}`}>LinkedIn</a>
                   <a className="btn link" style={{ minHeight: 0, padding: '0 8px' }} href={`https://twitter.com/intent/tweet?text=${text}&url=${url}`}>X</a>
                   <a className="btn link" style={{ minHeight: 0, padding: '0 8px' }} href={`https://wa.me/?text=${text}%20${url}`}>WhatsApp</a>
