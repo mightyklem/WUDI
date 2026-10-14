@@ -5,6 +5,7 @@ import {
   keyIdFor,
   SNAPSHOT_VERSION,
 } from '@learnovize/shared/cert-signing';
+import { createPrivateKey, createPublicKey } from 'crypto';
 
 /**
  * Certificate signing keys.
@@ -38,6 +39,29 @@ function env(name: string): string {
 }
 
 /**
+ * Turn a stored PEM back into a real one.
+ *
+ * Environment variables hold one value, so a multi-line PEM is stored with literal
+ * "\n" where the line breaks should be -- which is how it has to be, or the variable
+ * editor mangles it. Node, however, needs actual newlines, and hands you a bare
+ *
+ *   error:1E08010C:DECODER routines::unsupported
+ *
+ * with no mention of line endings. That is an OpenSSL complaint about an unreadable
+ * key, so it looks like a corrupt key rather than an encoding detail, and it costs a
+ * diagnosis every time.
+ *
+ * Values that already contain real newlines are left alone, so this is safe whichever
+ * way the variable was pasted.
+ */
+function pemFromEnv(raw: string): string {
+  if (!raw) return '';
+  const unescaped = raw.includes('\\n') ? raw.replace(/\\n/g, '\n') : raw;
+  // Strip surrounding quotes if someone pasted the whole line including them.
+  return unescaped.replace(/^["']|["']$/g, '').trim() + '\n';
+}
+
+/**
  * The public key, which is safe to hand to anyone.
  *
  * Returns null rather than throwing: something must be able to ask for the public key
@@ -45,7 +69,8 @@ function env(name: string): string {
  * not be able to take issuance down.
  */
 export function certPublicKeyPem(): string | null {
-  return env('CERT_SIGNING_PUBLIC_KEY') || null;
+  const v = env('CERT_SIGNING_PUBLIC_KEY');
+  return v ? pemFromEnv(v) : null;
 }
 
 export function certKeyId(): string | null {
@@ -77,9 +102,9 @@ export function signCertificate(claims: CertClaims): {
   keyId: string;
   templateVersion: string;
 } {
-  const privateKeyPem = env('CERT_SIGNING_PRIVATE_KEY');
-  const publicKeyPem = env('CERT_SIGNING_PUBLIC_KEY');
-  if (!privateKeyPem || !publicKeyPem) {
+  const rawPriv = env('CERT_SIGNING_PRIVATE_KEY');
+  const rawPub = env('CERT_SIGNING_PUBLIC_KEY');
+  if (!rawPriv || !rawPub) {
     throw Object.assign(
       new Error(
         'Certificate signing is not configured. Set CERT_SIGNING_PRIVATE_KEY and ' +
@@ -88,8 +113,35 @@ export function signCertificate(claims: CertClaims): {
       { code: 'NO_SIGNING_KEY' },
     );
   }
-  // Node's crypto accepts a PEM directly. The private half is never logged, never
-  // returned, and never leaves this function.
+  const privateKeyPem = pemFromEnv(rawPriv);
+  const publicKeyPem = pemFromEnv(rawPub);
+
+  // Parse both up front. Node's error for a malformed key is an OpenSSL complaint with
+  // no mention of which key or why -- and this runs on every issuance, so failing here
+  // names the actual problem instead of surfacing it later as "unsupported".
+  try {
+    createPrivateKey(privateKeyPem);
+  } catch (e) {
+    throw Object.assign(
+      new Error(
+        `CERT_SIGNING_PRIVATE_KEY could not be read: ${e instanceof Error ? e.message : 'unknown'}. ` +
+          'It must be the PEM from generate-cert-key.mjs, with \\n where the line breaks are.',
+      ),
+      { code: 'BAD_SIGNING_KEY' },
+    );
+  }
+  try {
+    createPublicKey(publicKeyPem);
+  } catch (e) {
+    throw Object.assign(
+      new Error(
+        `CERT_SIGNING_PUBLIC_KEY could not be read: ${e instanceof Error ? e.message : 'unknown'}`,
+      ),
+      { code: 'BAD_SIGNING_KEY' },
+    );
+  }
+
+  // The private half is never logged, never returned, and never leaves this function.
   const snapshot = buildSnapshot({ ...claims, learnerName: claims.learnerName });
   const signed = signSnapshot(snapshot, { privateKeyPem, publicKeyPem });
   return {
