@@ -29,6 +29,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     where: { trainingId: id, status: 'valid' }, select: { userId: true, number: true, id: true },
   });
   const certified = new Map(certs.map((c) => [c.userId, { number: c.number, id: c.id }]));
+
+  // Per-session attendance, so the panel can be a corrections surface rather than a
+  // summary of one. The attendance webhook mis-measures real cases -- a learner who
+  // drops and rejoins used to have the earlier window discarded -- and the trainer is
+  // the only person who knows whether that happened. They cannot fix what they cannot
+  // see, so each learner's sessions come back individually rather than as a percentage.
+  const sessions = await prisma.session.findMany({
+    where: { trainingId: id },
+    select: { id: true, dayId: true, startsAtUtc: true, endsAtUtc: true },
+    orderBy: { startsAtUtc: 'asc' },
+  });
+  const logs = await prisma.attendanceLog.findMany({
+    where: { sessionId: { in: sessions.map((s) => s.id) } },
+    select: { sessionId: true, userId: true, present: true, stayedMs: true, correctedBy: true, correctionReason: true },
+  });
+  const logFor = new Map(logs.map((l) => [`${l.sessionId}:${l.userId}`, l]));
+
   const rows = [];
   for (const r of regs) {
     const e = await computeEligibility(id, r.userId);
@@ -42,12 +59,31 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       // Free days they attended but which are not on the certificate, so a trainer can
       // explain the gap instead of the learner discovering it on the PDF.
       excludedFreeDays: e.excludedFreeDays,
+      attendance: sessions.map((s, i) => {
+        const l = logFor.get(`${s.id}:${r.userId}`);
+        return {
+          sessionId: s.id,
+          index: i + 1,
+          startsAtUtc: s.startsAtUtc.toISOString(),
+          present: l?.present ?? false,
+          stayedMs: l?.stayedMs ?? 0,
+          // Flagged so a corrected value is visibly different from a measured one --
+          // otherwise a manual override is indistinguishable from the webhook's opinion.
+          corrected: !!l?.correctedBy,
+          correctionReason: l?.correctionReason ?? null,
+        };
+      }),
       certificateNumber: certified.get(r.userId)?.number || null,
       certificateId: certified.get(r.userId)?.id || null,
     });
   }
   return NextResponse.json({
-    training: { id, title: t.title, minPct: t.minPct, certMode: t.certMode },
+    training: {
+      id, title: t.title, minPct: t.minPct, certMode: t.certMode,
+      sessions: sessions.map((s, i) => ({
+        id: s.id, index: i + 1, startsAtUtc: s.startsAtUtc.toISOString(),
+      })),
+    },
     rows: rows.sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.pct - a.pct),
   });
 }

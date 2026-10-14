@@ -4,7 +4,6 @@ import { prisma } from '@/lib/db';
 import RegisterButton from '../RegisterButton';
 import ModeratorInvite from '../ModeratorInvite';
 import CopyInviteLink from '../CopyInviteLink';
-import AttendanceSection from '../AttendanceSection';
 import IssueCertificates from '../IssueCertificates';
 import PostComposer from '../PostComposer';
 import DayPricingEditor from '../DayPricingEditor';
@@ -51,26 +50,26 @@ if (!t) return notFound();
         <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
         <CopyInviteLink url={inviteUrl} />
       </div>
-      <p className="eyebrow">{t.topic || 'Training'} · {t.format === 'audio' ? 'Audio-only' : 'Video + audio'} · {t.trainer.displayName}{t.accessType === 'paid' ? ` · ${tierLabel(t.tier)} class` : ' · Free class'}</p>
+      <p className="eyebrow">{t.topic || 'Training'} Â· {t.format === 'audio' ? 'Audio-only' : 'Video + audio'} Â· {t.trainer.displayName}{t.accessType === 'paid' ? ` Â· ${tierLabel(t.tier)} class` : ' Â· Free class'}</p>
       <h1 style={{ color: 'var(--ink)' }}>{t.title}</h1>
       <p className="sub">{t.description}</p>
       <p className="sub">
         {t.accessType === 'paid' ? (
           <>
-            <b>{formatNgn(price.pricePerDayNgn ?? 0)}</b> per day × {price.days} day{price.days === 1 ? '' : 's'} ={' '}
+            <b>{formatNgn(price.pricePerDayNgn ?? 0)}</b> per day Ã— {price.days} day{price.days === 1 ? '' : 's'} ={' '}
             <b>{formatNgn(price.totalNgn)}</b> total.
             {t.certMode === 'paid'
-              ? ` Certificate included — attend at least ${t.minPct}% of sessions to earn it.`
+              ? ` Certificate included â€” attend at least ${t.minPct}% of sessions to earn it.`
               : ` Attend at least ${t.minPct}% of sessions.`}
           </>
         ) : (
-          <>Free class — anyone can attend. No certificate is issued, but attendees earn points.</>
+          <>Free class â€” anyone can attend. No certificate is issued, but attendees earn points.</>
         )}
       </p>
       <div className="card" style={{ marginTop: 18 }}>
-        <p className="eyebrow">{t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} · {left} / {t.cap} seats left {full && '(FULL)'}</p>
+        <p className="eyebrow">{t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} Â· {left} / {t.cap} seats left {full && '(FULL)'}</p>
         {t.sessions.map((s) => (
-          <p key={s.id} className="meta">🗓 {lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)} <Link className="btn link" href={`/classroom/${s.id}`}>Join classroom →</Link></p>
+          <p key={s.id} className="meta">ðŸ—“ {lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)} <Link className="btn link" href={`/classroom/${s.id}`}>Join classroom â†’</Link></p>
         ))}
         <div className="btnrow"><RegisterButton trainingId={t.id} full={full || t.status !== 'live'} /></div>
       </div>
@@ -97,7 +96,6 @@ if (!t) return notFound();
 
       <h2 className="sec">Moderators</h2>
       <div className="card"><ModeratorInvite trainingId={t.id} /></div>
-      <AttendanceSection trainingId={t.id} sessionIds={t.sessions.map((s) => s.id)} />
       <IssueCertificates trainingId={t.id} />
       <h2 className="sec">Explore post</h2>
       <div className="card"><PostComposer trainingId={t.id} /></div>

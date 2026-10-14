@@ -182,7 +182,30 @@ export async function renderCertificatePdf(input: CertRenderInput): Promise<Uint
 }
 
 /** Issue (or return existing) certificate for an eligible participant. */
-export async function issueCertificate(trainingId: string, userId: string) {
+export async function issueCertificate(
+  trainingId: string,
+  userId: string,
+  /**
+   * Attestation overrides the eligibility gate, and only the eligibility gate.
+   *
+   * Certificates are issued automatically now, so the trainer no longer decides who gets
+   * one -- but the attendance behind that decision is measured by a webhook, and the
+   * webhook has been demonstrably wrong. A learner who drops and rejoins had the earlier
+   * window discarded and was marked absent. The trainer watched them stay for the whole
+   * class, and there was no way for them to say so.
+   *
+   * So a trainer who personally taught the person may attest they were there. That is a
+   * better witness than a metric, and it is bounded deliberately:
+   *
+   *   - it never grants a second certificate (the existing-row check runs first)
+   *   - it never touches a revoked one (that requires an explicit restore)
+   *   - it requires a reason, and writes its own audit action
+   *
+   * The name records who attests and why, so an attested certificate is visibly a
+   * judgement rather than a measurement. An employer can tell the difference.
+   */
+  opts: { attest?: boolean; reason?: string; actorId?: string } = {},
+) {
   // Matched on the pair, not on status='valid', because a REVOKED certificate must not
   // be quietly replaced by a fresh one. With auto-issue now running on its own, the old
   // query would re-issue for every revoked learner the moment their session ended --
@@ -198,8 +221,13 @@ export async function issueCertificate(trainingId: string, userId: string) {
   }
 
   const e = await computeEligibility(trainingId, userId);
-  if (!e.eligible) {
+  if (!e.eligible && !opts.attest) {
     throw Object.assign(new Error('Not eligible: attendance or payment missing'), { code: 'INELIGIBLE' });
+  }
+  // An attestation that is not an override still has to clear the gate, and an override
+  // that cannot say why is not a judgement at all.
+  if (!e.eligible && opts.attest && !(opts.reason || '').trim()) {
+    throw Object.assign(new Error('Attesting an ineligible learner needs a reason'), { code: 'NO_REASON' });
   }
   const training = await prisma.training.findUnique({
     where: { id: trainingId },
@@ -238,6 +266,18 @@ export async function issueCertificate(trainingId: string, userId: string) {
   });
   // A certificate is worth points, awarded once per learner per training.
   await awardCertificate({ userId, trainingId });
+  if (opts.attest && opts.actorId) {
+    await prisma.auditLog.create({
+      data: {
+        actorId: opts.actorId,
+        action: 'certificate.attest',
+        target: `certificate:${cert.number}`,
+        reason:
+          `trainer attested over ${e.eligible ? 'the eligibility gate' : `ineligible (${e.pct}% attendance, met=${e.minMet}, paidOk=${e.paidOk})`}` +
+          `: ${String(opts.reason || '').trim()}`,
+      },
+    });
+  }
   return cert;
 }
 

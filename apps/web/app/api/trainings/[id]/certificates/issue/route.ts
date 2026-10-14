@@ -17,15 +17,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!t || t.trainerId !== actorId) {
     return NextResponse.json({ error: 'Not found or not owner' }, { status: 404 });
   }
-  const { userIds } = (await req.json().catch(() => ({}))) as { userIds?: string[] };
+  const { userIds, attest, reason } = (await req.json().catch(() => ({}))) as {
+    userIds?: string[]; attest?: boolean; reason?: string;
+  };
   if (!Array.isArray(userIds) || userIds.length < 1 || userIds.length > 500) {
     return NextResponse.json({ error: 'userIds[1..500] required' }, { status: 400 });
+  }
+  // Attestation is refused up front rather than per learner, because it is a claim about
+  // the whole batch and a reason that applies to one person rarely applies to forty.
+  if (attest && !(reason || '').trim()) {
+    return NextResponse.json({ error: 'Attesting needs a reason', }, { status: 400 });
   }
   const issued: { userId: string; number: string }[] = [];
   const rejected: { userId: string; reason: string }[] = [];
   for (const userId of [...new Set(userIds)]) {
     try {
-      const cert = await issueCertificate(id, userId);
+      const cert = await issueCertificate(id, userId, { attest: attest === true, reason, actorId });
       issued.push({ userId, number: cert.number });
       // Granting a credential is the act that needs defending in a dispute, and it was
       // the only certificate action with no audit row -- revoking had one, handing one
