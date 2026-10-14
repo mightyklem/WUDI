@@ -5,7 +5,6 @@ import SiteNav from './SiteNav';
 
 const ITEMS = [
   { href: '/admin/sessions', label: 'Live rooms' },
-  { href: '/admin/verification', label: 'Verification' },
   { href: '/admin/approvals', label: 'Approvals' },
   { href: '/admin/payouts', label: 'Payouts' },
 ];

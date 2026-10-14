@@ -26,3 +26,8 @@ apps/android/local.properties
 apps/android/.gradle/
 apps/android/build/
 apps/android/app/build/
+
+# Certificate signing keypair (Ed25519), written here so it can be copied into Netlify.
+# The private half must never be committed or pasted anywhere -- losing it means nothing
+# new can ever be signed. Back it up offline.
+apps/web/cert-signing-secrets.txt
