@@ -154,7 +154,7 @@ export async function issueCertificate(
   if (existing) {
     if (existing.status === 'valid') return existing;
     throw Object.assign(
-      new Error('This learner holds a revoked certificate â€” restore it rather than issuing another'),
+      new Error('This learner holds a revoked certificate Ã¢â‚¬â€ restore it rather than issuing another'),
       { code: 'REVOKED' },
     );
   }
@@ -261,6 +261,14 @@ export type AutoIssueResult = {
   revoked: number;
   failed: number;
   truncated: boolean;
+  /**
+   * What actually went wrong, for the failures that were not a clean "not eligible".
+   *
+   * This was a bare `failed: 1` with no reason, which cost several rounds of guessing at
+   * the cause -- signing, eligibility, storage -- none of which the number distinguished.
+   * A counter that cannot say why it incremented is a counter nobody can act on.
+   */
+  errors: string[];
 };
 
 /**
@@ -300,13 +308,13 @@ export async function autoIssueForSession(sessionId: string): Promise<AutoIssueR
     select: { trainingId: true, endsAtUtc: true, status: true },
   });
   if (!session) {
-    return { issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated: false };
+    return { issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated: false, errors: [] };
   }
   // A cancelled session taught nobody anything, so nobody is entitled to a certificate
   // for it. Ending early is different: people attended the part that happened, and
   // eligibility is measured against sessions they actually turned up to.
   if (session.status === 'cancelled') {
-    return { issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated: false };
+    return { issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated: false, errors: [] };
   }
 
   const registrations = await prisma.registration.findMany({
@@ -329,7 +337,7 @@ export async function autoIssueForSession(sessionId: string): Promise<AutoIssueR
   const revoked = new Set(held.filter((c) => c.status === 'revoked').map((c) => c.userId));
 
   const result: AutoIssueResult = {
-    issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated,
+    issued: [], alreadyHeld: 0, notEligible: 0, revoked: 0, failed: 0, truncated, errors: [],
   };
 
   for (const r of batch) {
@@ -382,7 +390,15 @@ export async function autoIssueForSession(sessionId: string): Promise<AutoIssueR
       const code = (e as { code?: string })?.code;
       if (code === 'INELIGIBLE') result.notEligible += 1;
       else if (code === 'REVOKED') result.revoked += 1;
-      else result.failed += 1;
+      else {
+        result.failed += 1;
+        // Say what failed and for whom. A bare counter made this undiagnosable from
+        // the outside -- it looked identical whether the cause was signing, eligibility
+        // or the storage upload.
+const why = e instanceof Error ? e.message : String(e);
+        result.errors.push(`user ${r.userId}: ${why}`);
+        console.error(`[auto-issue] ${r.userId} on ${session.trainingId} failed:`, e);
+      }
     }
   }
   return result;

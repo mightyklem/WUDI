@@ -55,7 +55,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       reason:
         `manual run for "${session.training.title}": issued ${result.issued.length}, ` +
         `already held ${result.alreadyHeld}, not eligible ${result.notEligible}, ` +
-        `revoked ${result.revoked}, failed ${result.failed}`,
+        `revoked ${result.revoked}, failed ${result.failed}` +
+        // The reasons go into the audit row too, not just the log. "failed 1" sent us
+        // guessing at signing, eligibility and storage in turn when the answer was in
+        // the response all along and nobody was looking.
+        (result.errors.length ? ` -- ${result.errors.join(' | ').slice(0, 900)}` : ''),
     },
   });
 
