@@ -1,10 +1,11 @@
 import { randomBytes, createHash } from 'crypto';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { prisma } from '@/lib/db';
 import { programPct, isEligible } from '@learnovize/shared';
 import { putPublic } from '@/lib/storage';
 import { awardCertificate } from '@/lib/points';
+import { signCertificate } from '@/lib/cert-signing';
 import { certificateReadyEmail, emailEnabled, sendEmail } from '@/lib/email';
+import { renderCertificatePdf, type CertRenderInput } from '@/lib/cert-pdf';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
 
@@ -118,68 +119,6 @@ export async function computeEligibility(trainingId: string, userId: string): Pr
   };
 }
 
-export type CertRenderInput = {
-  participantName: string;
-  trainingTitle: string;
-  trainerName: string;
-  dateText: string;
-  number: string;
-  logoUrl?: string | null;
-};
-
-/** Co-branded PDF: trainer identity + Learnovize seal + number + non-accredited disclaimer. */
-export async function renderCertificatePdf(input: CertRenderInput): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-  const page = doc.addPage([842, 595]); // A4 landscape
-  const { width, height } = page.getSize();
-  const serif = await doc.embedFont(StandardFonts.TimesRomanBold);
-  const sans = await doc.embedFont(StandardFonts.Helvetica);
-  const sansBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const ink = rgb(0.11, 0.17, 0.2);
-  const mut = rgb(0.42, 0.45, 0.47);
-  const teal = rgb(0.11, 0.49, 0.55);
-  const green = rgb(0.05, 0.48, 0.24);
-
-  // Border + seal
-  page.drawRectangle({ x: 24, y: 24, width: width - 48, height: height - 48, borderColor: ink, borderWidth: 2 });
-  page.drawCircle({ x: width - 130, y: 130, size: 52, color: green });
-  page.drawText('L', { x: width - 143, y: 112, size: 44, font: serif, color: rgb(1, 1, 1) });
-
-  let y = height - 110;
-  const center = (text: string, size: number, font = sans, color = ink) => {
-    const w = font.widthOfTextAtSize(text, size);
-    page.drawText(text, { x: (width - w) / 2, y, size, font, color });
-    y -= size + 14;
-  };
-
-  center('Certificate of Completion', 34, serif);
-  center('This certifies that', 13, sans, mut);
-  center(input.participantName, 30, sansBold);
-  center(`has completed ${input.trainingTitle}`, 15, sans);
-  center(`Trainer: ${input.trainerName}  ·  ${input.dateText}`, 13, sans, mut);
-  y -= 8;
-  center(input.number, 16, sansBold, teal);
-  y -= 4;
-  center('Verify at /verify · Confirms attendance and completion only.', 11, sans, mut);
-  center('Not a government-accredited qualification.', 11, sans, mut);
-
-  // Trainer logo best-effort (absolute http[s] only); text fallback otherwise.
-  if (input.logoUrl && /^https?:\/\//.test(input.logoUrl)) {
-    try {
-      const res = await fetch(input.logoUrl);
-      const buf = new Uint8Array(await res.arrayBuffer());
-      const ct = res.headers.get('content-type') || '';
-      const img = ct.includes('png') ? await doc.embedPng(buf) : await doc.embedJpg(buf);
-      const scale = Math.min(120 / img.width, 60 / img.height, 1);
-      page.drawImage(img, { x: 70, y: 90, width: img.width * scale, height: img.height * scale });
-    } catch { /* logo optional — seal + name carry the branding */ }
-  }
-  page.drawText(input.trainerName, { x: 70, y: 70, size: 11, font: sans, color: mut });
-
-  const hash = createHash('sha256').update(await doc.save()).digest('hex');
-  void hash;
-  return doc.save();
-}
 
 /** Issue (or return existing) certificate for an eligible participant. */
 export async function issueCertificate(
@@ -215,7 +154,7 @@ export async function issueCertificate(
   if (existing) {
     if (existing.status === 'valid') return existing;
     throw Object.assign(
-      new Error('This learner holds a revoked certificate — restore it rather than issuing another'),
+      new Error('This learner holds a revoked certificate â€” restore it rather than issuing another'),
       { code: 'REVOKED' },
     );
   }
@@ -243,19 +182,50 @@ export async function issueCertificate(
     if (!clash) break;
     number = genCertNumber();
   }
+  const issuedAt = new Date().toISOString();
+  const dateText = new Date().toUTCString().slice(0, 16);
+
+  // Sign the CLAIMS, not the PDF bytes. That ordering matters and is deliberate.
+  //
+  // Signing the file would be circular: the signature would have to be printed on the
+  // document, so the bytes would change after signing and nothing would ever verify. And
+  // it would prove less. What a holder needs to know is that Learnovize issued these
+  // claims -- this person, this course, this trainer, this attendance -- and the claims
+  // are known before the document is drawn. The PDF is a rendering of them; the signature
+  // is over the rendering's subject.
+  //
+  // Signing before the render also means the snapshot embedded in the PDF is the exact
+  // string that was signed, so an offline verifier can rebuild it from the visible
+  // fields and compare rather than trusting a blob we handed them.
+  const signed = signCertificate({
+    number,
+    learnerName: user.email,
+    trainingTitle: training.title,
+    trainerName: training.trainer.displayName,
+    scope: e.scopeLabel,
+    days: e.dayIds,
+    pct: e.pct,
+    issuedAt,
+  });
+
   const pdf = await renderCertificatePdf({
     participantName: user.email,
     trainingTitle: training.title,
     trainerName: training.trainer.displayName,
-    dateText: new Date().toUTCString().slice(0, 16),
+    dateText,
     number,
     logoUrl: training.trainer.logoUrl,
+    signature: signed,
   });
   const sha256 = createHash('sha256').update(pdf).digest('hex');
   const pdfUrl = await putPublic(`certs/${number}.pdf`, pdf, 'application/pdf');
   const cert = await prisma.certificate.create({
     data: {
       number, trainingId, userId, pdfUrl, sha256,
+      snapshot: signed.snapshot,
+      signature: signed.signature,
+      keyId: signed.keyId,
+      templateVersion: signed.templateVersion,
       // A partial-attendance certificate must state its scope, or a one-day
       // certificate is indistinguishable from the full program.
       scopeLabel: e.scopeLabel,

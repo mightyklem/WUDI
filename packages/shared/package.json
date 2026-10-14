@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/rules.js",
     "./giveaway": "./src/giveaway.js",
-    "./room-access": "./src/room-access.js"
+    "./room-access": "./src/room-access.js",
+    "./cert-signing": "./src/cert-signing.js"
   },
   "scripts": {
     "test": "node --test \"test/*.test.js\""

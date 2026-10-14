@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { verifyCertificateSignature, signingConfigured } from '@/lib/cert-signing';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ number:
   });
   await prisma.verifyVisit.create({ data: { number: cert.number, status: 'valid' } }).catch(() => {});
   const showName = reg?.certConsentPublic === true;
+  // Checked on the way out, not only at issuance. A signature verified once when it was
+  // made and never looked at again is the same decorative field sha256 was -- written,
+  // never read, so able to detect nothing. Doing it here means a mismatch is visible to
+  // the exact person the verification page exists for.
+  const signatureValid =
+    Boolean(cert.snapshot) && Boolean(cert.signature)
+      ? verifyCertificateSignature(cert.snapshot as string, cert.signature as string)
+      : false;
   return NextResponse.json({
     status: 'valid',
     number: cert.number,
@@ -35,5 +44,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ number:
     training: cert.training.title,
     trainer: cert.training.trainer.displayName,
     pdfUrl: cert.pdfUrl,
+    // Enough to answer "what does this actually prove", which the old payload did not:
+    // a bare title and a trainer name read as a qualification.
+    scope: cert.scopeLabel,
+    pctAttended: cert.pctAttended,
+    issuedAt: cert.createdAt.toISOString(),
+    signing: {
+      configured: signingConfigured(),
+      valid: signatureValid,
+      keyId: cert.keyId,
+      templateVersion: cert.templateVersion,
+      // Published so anyone can re-check this themselves rather than taking our word for
+      // the boolean. The snapshot is exactly the claims printed on the document.
+      snapshot: cert.snapshot,
+      signature: cert.signature,
+      publicKeyUrl: '/api/certificates/signing-key',
+    },
   });
 }

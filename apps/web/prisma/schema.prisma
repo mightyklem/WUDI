@@ -525,6 +525,17 @@ model Certificate {
   pdfUrl      String
   imageUrl    String?
   sha256      String
+  // Ed25519 signature over `snapshot`. The pair is what makes the document verifiable
+  // without asking us: the snapshot is the claims a reader can see on the PDF,
+  // canonicalised and signed with a key whose public half is published. sha256 alone
+  // only proved the bytes in our bucket matched a row nobody outside could check.
+  //
+  // `snapshot` is also embedded in the PDF itself, which is what makes an offline
+  // verification possible -- a holder is not holding a session with our API.
+  snapshot    String?
+  signature   String?
+  keyId       String?
+  templateVersion String?
   status      String   @default("valid") // valid|revoked
   revokedReason String?
   createdAt   DateTime @default(now())
