@@ -43,7 +43,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ number:
     participant: showName ? cert.user.email : null,
     training: cert.training.title,
     trainer: cert.training.trainer.displayName,
-    pdfUrl: cert.pdfUrl,
+    pdfUrl: showName ? `/api/certificates/${cert.number}/download` : null,
     // Enough to answer "what does this actually prove", which the old payload did not:
     // a bare title and a trainer name read as a qualification.
     scope: cert.scopeLabel,
