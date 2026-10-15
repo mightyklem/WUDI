@@ -101,6 +101,95 @@ export async function putPrivate(key: string, body: Uint8Array, contentType: str
   return key;
 }
 
+/**
+ * Read a private object's bytes back.
+ *
+ * Exists for tamper detection. Certificate PDFs record a SHA-256 at issuance, and a hash
+ * that is only ever written and never read cannot detect anything -- an edited or
+ * re-uploaded PDF would have looked identical. Callers fetch, hash and compare before
+ * handing the bytes to anyone.
+ *
+ * Returns null when the object is absent rather than throwing, so a caller can tell
+ * "deleted" from "access denied" and answer accordingly.
+ */
+export async function getPrivate(key: string): Promise<Uint8Array | null> {
+  if (isLocalStorage()) {
+    const target = localPathFor(path.posix.join('private', key));
+    if (!target) return null;
+    const { readFile } = await import('fs/promises');
+    try {
+      return new Uint8Array(await readFile(target));
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const res = await storage().send(
+      new GetObjectCommand({ Bucket: privateBucket(), Key: key }),
+    );
+    if (!res.Body) return null;
+    return new Uint8Array(await res.Body.transformToByteArray());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read an object out of the PUBLIC bucket.
+ *
+ * Only for the one-off migration of already-issued certificates from public to private.
+ * It exists so that can be done without hand-writing SDK calls against production
+ * credentials, and it should have no long-lived caller: the point of this change is
+ * that nothing needs to read from the public bucket afterwards.
+ */
+export async function getPublicForMigration(key: string): Promise<Uint8Array | null> {
+  if (isLocalStorage()) {
+    const target = localPathFor(path.posix.join('public', key));
+    if (!target) return null;
+    const { readFile } = await import('fs/promises');
+    try {
+      return new Uint8Array(await readFile(target));
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const res = await storage().send(
+      new GetObjectCommand({ Bucket: publicBucket(), Key: key }),
+    );
+    if (!res.Body) return null;
+    return new Uint8Array(await res.Body.transformToByteArray());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remove an object from the public bucket.
+ *
+ * Paired with getPublicForMigration. A copy that stays behind is worse than one that
+ * never moved: the whole point is that the derivable URL stops working.
+ */
+export async function removePublic(key: string): Promise<boolean> {
+  if (isLocalStorage()) {
+    const target = localPathFor(path.posix.join('public', key));
+    if (!target) return false;
+    const { unlink } = await import('fs/promises');
+    try {
+      await unlink(target);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  try {
+    await storage().send(new DeleteObjectCommand({ Bucket: publicBucket(), Key: key }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** 5-minute signed read URL for private objects (access is logged by callers). */
 export async function signPrivate(key: string, seconds = 300): Promise<string> {
   if (isLocalStorage()) return `/api/files/private/${key}`;
