@@ -159,7 +159,12 @@ export async function getPublicForMigration(key: string): Promise<Uint8Array | n
     );
     if (!res.Body) return null;
     return new Uint8Array(await res.Body.transformToByteArray());
-  } catch {
+  } catch (e) {
+    // Logged, not swallowed. A bare `catch { return null }` here reported "no object to
+    // move" for a certificate whose public URL was demonstrably fetchable, because the
+    // real failure was a connection refused against a local MinIO endpoint. Absence and
+    // "I could not ask" look identical otherwise, and the caller cannot tell which it got.
+    console.error(`[storage] getPublicForMigration(${key}) failed:`, e);
     return null;
   }
 }
