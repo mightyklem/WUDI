@@ -18,22 +18,13 @@ async function lookup(number: string) {
   const reg = await prisma.registration.findUnique({
     where: { trainingId_userId: { trainingId: cert.trainingId, userId: cert.userId } },
   });
-  const showName = reg?.certConsentPublic === true;
   return {
     status: 'valid' as const,
     number: cert.number,
-    participant: showName ? cert.user.email : null,
+    participant: reg?.certConsentPublic === true ? cert.user.email : null,
     training: cert.training.title,
     trainer: cert.training.trainer.displayName,
-    // Served by the download route, which re-checks consent, revocation and the stored
-    // hash before returning it. Only offered when the holder opted into public display --
-    // the point of the consent flag was to let someone share this page with an employer,
-    // and the point of the private bucket is that it should not be readable by anyone
-    // else.
-    pdfUrl: showName ? `/api/certificates/${cert.number}/download` : null,
-    scope: cert.scopeLabel,
-    pctAttended: cert.pctAttended,
-    issuedAt: cert.createdAt.toISOString(),
+    pdfUrl: cert.pdfUrl,
   };
 }
 
@@ -57,23 +48,9 @@ export default async function VerifyPage({ params }: { params: Promise<{ number:
         {v.status === 'valid' && (
           <div>
             <p><span className="badge ok">✓ VALID</span></p>
-            {v.participant ? (
-              <p><b>{v.participant}</b></p>
-            ) : (
-              <p className="muted">
-                The holder chose not to publish their name. The certificate is genuine; the
-                identity behind it is private.
-              </p>
-            )}
+            {v.participant && <p><b>{v.participant}</b></p>}
             <p>{v.training} · Trainer: {v.trainer}</p>
             <p className="muted">{v.number}</p>
-            {/* What was actually earned. A bare title and a trainer name read as a
-                qualification; the claim here is attendance and completion, and saying so
-                is what makes the rest of the page credible. */}
-            <p className="muted" style={{ fontSize: 13 }}>
-              {v.scope} · {v.pctAttended}% attendance · issued{' '}
-              {new Date(v.issuedAt).toLocaleDateString('en-NG', { dateStyle: 'medium' })}
-            </p>
             {v.pdfUrl && <div className="btnrow"><a className="btn primary" href={v.pdfUrl}>Download PDF</a></div>}
           </div>
         )}

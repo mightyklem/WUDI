@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from 'crypto';
 import { prisma } from '@/lib/db';
 import { programPct, isEligible } from '@learnovize/shared';
-import { putPrivate } from '@/lib/storage';
+import { putPublic } from '@/lib/storage';
 import { awardCertificate } from '@/lib/points';
 import { signCertificate } from '@/lib/cert-signing';
 import { certificateReadyEmail, emailEnabled, sendEmail } from '@/lib/email';
@@ -218,20 +218,10 @@ export async function issueCertificate(
     signature: signed,
   });
   const sha256 = createHash('sha256').update(pdf).digest('hex');
-  // Private bucket, not public. The PDF embeds the learner's email, and the key is
-  // derived from the certificate number -- so a public copy hands anyone who guesses or
-  // is given a number both the learner's address, bypassing their consent choice, AND a
-  // downloadable certificate that outlives revocation. Every read goes through
-  // /api/certificates/[number]/download, which checks consent, revocation and this hash
-  // together before returning a byte.
-  await putPrivate(certKeyFor(number), pdf, 'application/pdf');
+  const pdfUrl = await putPublic(`certs/${number}.pdf`, pdf, 'application/pdf');
   const cert = await prisma.certificate.create({
     data: {
-      number, trainingId, userId, sha256,
-      // Not a URL any more. Kept as a path so the column keeps its meaning, but nothing
-      // serves it directly -- the download route is the only way to the bytes, and it
-      // re-checks everything.
-      pdfUrl: `/api/certificates/${number}/download`,
+      number, trainingId, userId, pdfUrl, sha256,
       snapshot: signed.snapshot,
       signature: signed.signature,
       keyId: signed.keyId,
@@ -412,11 +402,6 @@ const why = e instanceof Error ? e.message : String(e);
     }
   }
   return result;
-}
-
-/** Storage key for a certificate PDF. Private bucket only. */
-export function certKeyFor(number: string): string {
-  return `certs/${number}.pdf`;
 }
 
 /**
