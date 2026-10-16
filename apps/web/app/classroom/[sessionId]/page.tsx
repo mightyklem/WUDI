@@ -62,9 +62,22 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
             This session has not started yet. It opens at the time above.
           </p>
         )}
-        {now > ended && (
+        {now > ended && !session.admittedAtUtc && (
           <p className="muted" style={{ margin: '12px 0 0', fontSize: 14 }}>
-            This session has finished. Joining now will not earn attendance.
+            This session's scheduled time has passed. If the trainer is still live you can
+            still join below; joining after it ends will not earn attendance.
+          </p>
+        )}
+        {now > ended && !!session.admittedAtUtc && session.status !== 'ended' && (
+          <p className="muted" style={{ margin: '12px 0 0', fontSize: 14 }}>
+            This class is running over its scheduled time. The trainer has not ended it, so
+            joining now still counts.
+          </p>
+        )}
+        {session.endedAtUtc && (
+          <p className="muted" style={{ margin: '12px 0 0', fontSize: 14 }}>
+            This session has ended. Attendance was recorded up to the moment the trainer
+            closed the room.
           </p>
         )}
       </div>
@@ -81,6 +94,9 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
             // out before the advertised start rather than during it.
             opensAtUtc: (session.opensAtUtc ?? new Date(started - 3600_000)).toISOString(),
             admittedAtUtc: session.admittedAtUtc?.toISOString() ?? null,
+            // Passed separately from the latch above so the room can be shown as closed
+            // without erasing the fact that it once opened.
+            endedAtUtc: session.endedAtUtc?.toISOString() ?? null,
             agenda: session.agenda,
             showcaseName: session.showcaseName,
             showcaseUrl: session.showcaseUrl,

@@ -49,13 +49,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // trainer -- that they were "waiting for the host" when the trainer was the host.
   if (action === 'admit') {
     if (!isTrainer) return NextResponse.json({ error: 'Only the trainer can open the room' }, { status: 403 });
+    // A room is never silently resurrected. The trainer pressing End is a decision, and a
+    // stale connection re-announcing itself should not undo it behind their back.
+    if (session.status === 'ended') {
+      return NextResponse.json(
+        { error: 'This session has already ended', endedAtUtc: session.endedAtUtc },
+        { status: 409 },
+      );
+    }
+    // The opening time is recorded once. A trainer rejoining on a weak connection must not
+    // restamp it: that would move the moment the class opened, which is what the "running
+    // over" notice is measured against, and it would quietly rewrite the audit trail so the
+    // gap between opening and first attendance stops being visible.
+    const stamp = session.admittedAtUtc ?? new Date();
     const updated = await prisma.session.update({
       where: { id },
-      data: { admittedAtUtc: new Date(), status: 'live' },
+      data: { admittedAtUtc: stamp, status: 'live' },
     });
-    await prisma.auditLog.create({
-      data: { actorId: userId, action: 'session.admit', target: `session:${id}` },
-    });
+    // Audited when the room genuinely opens, not on every reconnect.
+    if (!session.admittedAtUtc) {
+      await prisma.auditLog.create({
+        data: { actorId: userId, action: 'session.admit', target: `session:${id}` },
+      });
+    }
     return NextResponse.json({ ok: true, admittedAtUtc: updated.admittedAtUtc });
   }
 

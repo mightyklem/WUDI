@@ -9,6 +9,12 @@ export type Intro = {
   endsAtUtc: string;
   opensAtUtc: string | null;
   admittedAtUtc: string | null;
+  /**
+   * When the trainer pressed End. Separate from admittedAtUtc because that is a latch: it
+   * stays set forever, because a class that opened at 3pm did open at 3pm. Treating it as
+   * "still open" after End means a closed room still invites people in.
+   */
+  endedAtUtc?: string | null;
   agenda: string | null;
   description: string | null;
   showcaseName: string | null;
@@ -61,19 +67,32 @@ export default function ClassSheet({
 
   const isHost = !!viewerId && viewerId === intro.ownerId;
 
-  const state = useMemo(() => {
-    if (isHost) {
-      // The host is never waiting for themselves. Until they open the room it says
-      // so plainly and offers the button that does it.
-      return intro.admittedAtUtc
-        ? { label: 'Room is open', tone: 'live' as const, canJoin: true }
-        : { label: 'You are hosting', tone: 'waiting' as const, canJoin: true };
-    }
-    if (intro.admittedAtUtc) return { label: 'Room is open', tone: 'live' as const, canJoin: true };
-    if (now >= open && now < end) return { label: 'Waiting for the host', tone: 'waiting' as const, canJoin: true };
-    if (now < start) return { label: `Starts ${ago(start - now)}`, tone: 'soon' as const, canJoin: false };
-    return { label: 'Finished', tone: 'over' as const, canJoin: false };
-  }, [isHost, intro.admittedAtUtc, now, open, start, end]);
+const state = useMemo(() => {
+      // End is a decision, not a timestamp. It outranks everything below, including the
+      // fact that the room opened -- otherwise closing a class would be indistinguishable
+      // from never having opened one.
+      if (intro.endedAtUtc) return { label: 'Finished', tone: 'over' as const, canJoin: false };
+
+      if (isHost) {
+        // The host is never waiting for themselves. Until they open the room it says
+        // so plainly and offers the button that does it.
+        return intro.admittedAtUtc
+          ? { label: 'Room is open', tone: 'live' as const, canJoin: true }
+          : { label: 'You are hosting', tone: 'waiting' as const, canJoin: true };
+      }
+      if (intro.admittedAtUtc) {
+        // Past the scheduled end with the trainer still in the room, this is not over.
+        // Real classes overrun, and telling someone the class finished while they can
+        // plainly hear it happening is the sort of thing people stop trusting a platform
+        // for. Said plainly so nobody thinks they have joined late.
+        return now >= end
+          ? { label: 'Running over', tone: 'live' as const, canJoin: true }
+          : { label: 'Room is open', tone: 'live' as const, canJoin: true };
+      }
+      if (now >= open && now < end) return { label: 'Waiting for the host', tone: 'waiting' as const, canJoin: true };
+      if (now < start) return { label: `Starts ${ago(start - now)}`, tone: 'soon' as const, canJoin: false };
+      return { label: 'Finished', tone: 'over' as const, canJoin: false };
+    }, [isHost, intro.admittedAtUtc, intro.endedAtUtc, now, open, start, end]);
 
   const seatsLeft = Math.max(0, intro.cap - intro.registered);
   const free = intro.accessType !== 'paid';

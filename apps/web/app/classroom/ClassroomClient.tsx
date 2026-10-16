@@ -135,7 +135,9 @@ const [admitted, setAdmitted] = useState(false);
   }, [sessionId]);
 
   const intro = useMemo(
-    () => (liveIntro ? { ...intro0, admittedAtUtc: liveIntro.admittedAtUtc } : intro0),
+    () => (liveIntro
+      ? { ...intro0, admittedAtUtc: liveIntro.admittedAtUtc, endedAtUtc: liveIntro.endedAtUtc }
+      : intro0),
     [liveIntro, intro0],
   );
 
@@ -173,9 +175,77 @@ const [admitted, setAdmitted] = useState(false);
     })();
   }, [room, state, pass, intent]);
 
-  useEffect(() => {
+useEffect(() => {
     if (state === 'connected' && phase === 'joining') setPhase('in');
   }, [state, phase]);
+
+  // The server has to learn that the trainer is here.
+  //
+  // It used to depend on the trainer pressing "Open the room" before teaching. Miss that
+  // and nothing else recorded it, so once the scheduled end passed the page stopped saying
+  // "waiting" and started saying "Finished" -- to the trainer and to every learner, while
+  // the trainer was still standing there teaching. A button you must remember to press,
+  // exactly when you are about to teach, is the wrong place for that knowledge.
+  //
+  // A live connection is the authoritative signal and cannot be forgotten. It goes through
+  // the same trainer-only, audited endpoint the button used, so the permission model and
+  // the audit trail are unchanged -- this only removes the step where the truth was optional.
+  useEffect(() => {
+    if (state !== 'connected' || !pass) return;
+    if (pass.role !== 'trainer') return;
+    let cancelled = false;
+    fetch(`/api/sessions/${sessionId}/moderate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${getAccess() ?? ''}` },
+      body: JSON.stringify({ action: 'admit' }),
+    })
+      .then(async (r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((j) => {
+        // 409 means the session was already ended. Surfaced rather than swallowed, because
+        // a trainer who is teaching into an ended session is silently losing attendance.
+        if (cancelled || !j) return;
+        if (j.error) setErr(`This session has ended: ${j.error}`);
+        else if (j.admittedAtUtc) setLiveIntro({ ...intro0, admittedAtUtc: j.admittedAtUtc });
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [state, pass, sessionId, intro0]);
+
+  // A learner already sitting on the page is the case the server-rendered intro cannot
+  // cover: it was rendered when they arrived, so it is frozen at whatever the room was
+  // then. Without this they watch "Waiting for the host" until the trainer opens, and then
+  // keep watching, because nothing re-asks the server. Twenty seconds is often longer
+  // than a learner will wait before concluding they were forgotten.
+  //
+  // Only while on the landing page -- no reason to keep asking once they are in the room,
+  // and every unnecessary poll on a metered connection is one fewer reason to stay.
+  useEffect(() => {
+    if (phase !== 'landing') return;
+    let stop = false;
+    const check = async () => {
+      try {
+        const r = await fetch(`/api/sessions/${sessionId}/live`, { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (stop) return;
+        if (j.roomOpen && !liveIntro?.admittedAtUtc) {
+          setLiveIntro({ ...intro0, admittedAtUtc: j.admittedAtUtc });
+        }
+        // End outranks the open latch, so a closed room stops inviting people in even
+        // though it legitimately opened an hour ago.
+        if (j.status === 'ended' && !liveIntro?.endedAtUtc) {
+          setLiveIntro({ ...intro0, admittedAtUtc: j.admittedAtUtc ?? liveIntro?.admittedAtUtc ?? null, endedAtUtc: j.endedAtUtc });
+          setErr('This session has ended. The trainer has closed the room.');
+        }
+      } catch { /* offline or mid-navigation; the next tick will say otherwise */ }
+    };
+    const id = setInterval(check, 20000);
+    void check();
+    return () => { stop = true; clearInterval(id); };
+  }, [phase, sessionId, intro0, liveIntro?.admittedAtUtc, liveIntro?.endedAtUtc]);
 
   const join = useCallback(async () => {
     setErr(null);
