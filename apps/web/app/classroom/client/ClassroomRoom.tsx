@@ -1,7 +1,7 @@
 'use client';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
-import type { Room, TrackPublishOptions } from 'livekit-client';
+import { Track, type Room, type TrackPublishOptions } from 'livekit-client';
 import { useClassroomData, useModeration, type ConnectState } from './useClassroom';
 import { displayName, type Role } from './model';
 import Stage from './Stage';
@@ -101,6 +101,46 @@ const lp = room.localParticipant;
       d.setNotice(explain('camera', e));
     }
   }, [d, explain, lp]);
+
+  /* ---------------- front / rear camera ---------------- */
+
+  const [cams, setCams] = useState<MediaDeviceInfo[]>([]);
+
+  const loadCams = useCallback(async () => {
+    try {
+      const list = (await navigator.mediaDevices.enumerateDevices())
+        .filter((x) => x.kind === 'videoinput');
+      setCams(list);
+    } catch { /* no camera permission yet, or none at all; the control simply stays hidden */ }
+  }, []);
+
+  // Device labels and ids are only populated once permission has been granted, so asking
+  // before the camera is on returns an unusable list -- which is why there used to be no
+  // way to reach the rear camera: nothing ever asked for it again afterwards.
+  useEffect(() => { if (lp.isCameraEnabled) void loadCams(); }, [lp.isCameraEnabled, loadCams]);
+
+  // The device actually publishing, which is not necessarily the one we asked for: the
+  // browser can substitute another when the chosen one is unavailable.
+  const currentCamId = useMemo(() => {
+    const track = lp.getTrackPublication(Track.Source.Camera)?.track;
+    return track?.mediaStreamTrack?.getSettings()?.deviceId ?? null;
+  }, [lp, lp.isCameraEnabled, cams]);
+
+  const canFlip = lp.isCameraEnabled && cams.length > 1;
+
+  const flipCamera = useCallback(async () => {
+    if (!canFlip) return;
+    const at = cams.findIndex((c) => c.deviceId === currentCamId);
+    // -1 means we could not tell which one is live, so start from the top rather than
+    // picking an arbitrary neighbour of an unknown index.
+    const next = cams[(at + 1) % cams.length];
+    if (!next) return;
+    try {
+      await lp.setCameraEnabled(true, { deviceId: next.deviceId });
+    } catch (e) {
+      d.setNotice(explain('camera', e));
+    }
+  }, [canFlip, cams, currentCamId, d, explain, lp]);
 
   const toggleShare = useCallback(async () => {
     if (!canScreenShare) {
@@ -207,6 +247,8 @@ const lp = room.localParticipant;
               shareOn={!!d.local?.share}
               mayPublish={d.mayPublish}
         canScreenShare={canScreenShare}
+        canFlip={canFlip}
+        onFlip={flipCamera}
               handUp={handUp}
               panel={panel}
               onPanel={(p) => setPanel((cur) => (cur === p ? null : (p as Tab)))}

@@ -17,7 +17,7 @@ export type IconName =
   | 'clock' | 'calendar' | 'star' | 'heart' | 'lightbulb' | 'laughing'
   | 'shield' | 'wallet' | 'badge' | 'search' | 'close' | 'chevron-right'
   | 'chevron-left' | 'arrow-right' | 'play' | 'sparkles' | 'alert'
-  | 'info' | 'link' | 'download' | 'book' | 'grid' | 'expand' | 'home' | 'logout';
+  | 'info' | 'link' | 'download' | 'book' | 'grid' | 'expand' | 'home' | 'logout' | 'flip';
 
 const P: Record<IconName, string> = {
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
@@ -25,6 +25,9 @@ const P: Record<IconName, string> = {
   camera: 'M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
   'camera-off': 'M3 3l18 18M9 9v.5M15 13.5a3.5 3.5 0 0 1-5.3 3M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H8',
   share: 'M4 5h11a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM20 15v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4M8 10l8-4M8 10l8 4',
+    // Two arcs with arrowheads: the conventional flip-camera mark, and legible at 19px
+    // where a camera glyph with a rotation arrow would turn to mush.
+    flip: 'M4 9a8 8 0 0 1 13.7-5.6M20 15a8 8 0 0 1-13.7 5.6M18 3v4h-4M6 21v-4h4',
   hand: 'M8 12V5.5a1.5 1.5 0 0 1 3 0V11m0-1V4.5a1.5 1.5 0 0 1 3 0V11m0-.5V6.5a1.5 1.5 0 0 1 3 0V15a5 5 0 0 1-5 5h-1a5 5 0 0 1-4.3-2.5L4 14.5a1.5 1.5 0 0 1 2.6-1.5L8 14',
   chat: 'M20 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z',
   people: 'M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8',

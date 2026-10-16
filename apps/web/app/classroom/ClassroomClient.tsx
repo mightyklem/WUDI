@@ -39,7 +39,7 @@ export default function ClassroomClient({
   const [err, setErr] = useState<string | null>(null);
   const [fatal, setFatal] = useState<{ title: string; detail: string } | null>(null);
   const [myId, setMyId] = useState('me');
-  const [intent, setIntent] = useState<{ mic: boolean; cam: boolean }>({ mic: false, cam: false });
+  const [intent, setIntent] = useState<{ mic: boolean; cam: boolean; deviceId: string }>({ mic: false, cam: false, deviceId: '' });
   const appliedFor = useRef<string | null>(null);
   const [mediaIssue, setMediaIssue] = useState<string | null>(null);
   // Whether the viewer owns this training decides if the attach-a-product grid is
@@ -170,7 +170,17 @@ const [admitted, setAdmitted] = useState(false);
         if (wantMic) await room.localParticipant.setMicrophoneEnabled(true);
       } catch (e) { fail('microphone', e); }
       try {
-        if (wantCam) await room.localParticipant.setCameraEnabled(true);
+        // The device the person chose in the lobby has to actually be handed over here.
+        // Calling setCameraEnabled(true) with no capture options asks LiveKit for the
+        // default camera, which on a phone is the front one -- so somebody who deliberately
+        // picked the rear camera in the lobby got the front one anyway, with nothing on
+        // screen to say so. A selector that silently does not select is worse than none.
+        if (wantCam) {
+          await room.localParticipant.setCameraEnabled(
+            true,
+            intent.deviceId ? { deviceId: intent.deviceId } : undefined,
+          );
+        }
       } catch (e) { fail('camera', e); }
     })();
   }, [room, state, pass, intent]);
@@ -345,8 +355,8 @@ if (phase === 'lobby') {
         role={role ?? 'participant'}
         joining={false}
         error={err}
-        onJoin={({ mic, cam }) => {
-          setIntent({ mic, cam });
+        onJoin={({ mic, cam, deviceId }) => {
+          setIntent({ mic, cam, deviceId });
           void join();
         }}
       />

@@ -17,13 +17,15 @@ export default function ControlBar({
   shareOn,
 mayPublish,
     canScreenShare,
+    canFlip,
     handUp,
   panel,
   onPanel,
   onMic,
   onCam,
-  onShare,
-  onHand,
+onShare,
+    onFlip,
+    onHand,
   onReaction,
   onLeave,
   onEnd,
@@ -36,12 +38,15 @@ mayPublish,
 mayPublish: boolean;
     /** False where the browser has no getDisplayMedia, so the control is disabled with a reason. */
     canScreenShare: boolean;
+    /** False unless the camera is on and the device reports more than one camera. */
+    canFlip: boolean;
     handUp: boolean;
   panel: string | null;
   onPanel: (p: string | null) => void;
   onMic: () => void;
   onCam: () => void;
   onShare: () => void;
+    onFlip: () => void;
   onHand: () => void;
   onReaction: (emoji: string) => void;
   onLeave: () => void;
@@ -87,8 +92,14 @@ mayPublish: boolean;
         icon={camOn ? 'camera' : 'camera-off'}
         label="Camera"
         disabled={!mayPublish}
-        onClick={onCam}
-      />
+onClick={onCam}
+        />
+        {/* Only offered when it would actually do something. A flip that appears on every
+            desktop and then quietly fails is noise; the real need is a trainer holding a
+            phone up to a whiteboard mid-class. */}
+        {canFlip && (
+          <Btn on={false} icon="flip" label="Flip" onClick={onFlip} />
+        )}
       <Btn
         on={shareOn}
         icon="share"
