@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
-import { Track, type Room, type TrackPublishOptions } from 'livekit-client';
+import { Track, type Room, type TrackPublishOptions, type VideoCaptureOptions } from 'livekit-client';
 import { useClassroomData, useModeration, type ConnectState } from './useClassroom';
 import { displayName, type Role } from './model';
 import Stage from './Stage';
@@ -133,6 +133,17 @@ const lp = room.localParticipant;
 
   const canFlip = lp.isCameraEnabled && cams.length > 1;
 
+  /** Stop the current camera, wait for the device to be released, open one by constraint. */
+  const reopenCamera = useCallback(async (constraints: VideoCaptureOptions) => {
+    await lp.setCameraEnabled(false);
+    for (let i = 0; i < 25 && lp.getTrackPublication(Track.Source.Camera)?.track; i += 1) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    await lp.setCameraEnabled(true, constraints);
+    await new Promise((r) => setTimeout(r, 700));
+    return liveCameraId();
+  }, [lp]);
+
   const flipCamera = useCallback(async () => {
     if (!canFlip) return;
     const live = liveCameraId();
@@ -145,34 +156,28 @@ const lp = room.localParticipant;
       ? cams[(at + 1) % cams.length]
       : cams.find((c) => c.deviceId !== live) ?? cams[0];
     if (!next) return;
-    try {
-      // The old track has to go first. setCameraEnabled(true, options) on a camera that is
-      // already on only mutes or unmutes the track that exists -- it does not re-capture --
-      // so asking for a different device while the old one publishes changes nothing at all.
-      // There is no switchCamera in this client version to do it properly for us.
-      await lp.setCameraEnabled(false);
 
-      // ...and then it has to be released, not merely asked to stop. Opening the second
-      // camera while the first is still held is refused by Android, and is refused quietly.
-      for (let i = 0; i < 25 && lp.getTrackPublication(Track.Source.Camera)?.track; i += 1) {
-        await new Promise((r) => setTimeout(r, 100));
+    try {
+      let after = await reopenCamera({ deviceId: next.deviceId });
+
+      // A deviceId that was accepted when the camera was first opened is not reliably
+      // accepted when a camera is re-opened: an Android WebView will quietly hand back the
+      // default instead, which is the failure this reports. Asking by facing direction
+      // maps onto the hardware through the browser's own device layer, which survives
+      // re-acquisition where a copied identifier does not.
+      if (!after || after === live) {
+        // cams[0] is the user-facing camera on every phone worth supporting, and the one
+        // the device defaults to, so the opposite of where we are is the one we want.
+        const want = (at === 0 || at === -1) ? 'environment' : 'user';
+        after = await reopenCamera({ facingMode: want });
       }
 
-      await lp.setCameraEnabled(true, { deviceId: next.deviceId });
-      // Let the new capture settle before judging it, or a slow phone reports the old
-      // device and the switch looks like a failure when it is only a moment early.
-      await new Promise((r) => setTimeout(r, 700));
-
-      const after = liveCameraId();
       console.info('[cam] flip', {
         live, after, wanted: next.deviceId,
         devices: cams.map((c) => ({ id: c.deviceId, label: c.label })),
       });
-      setCamId(next.deviceId);
+      setCamId(after ?? next.deviceId);
 
-      // Says what actually happened rather than what was asked for. If the phone claims
-      // several cameras but hands back the same one, that is a device fact worth reporting
-      // and not something to keep guessing at.
       d.setNotice(
         after && after !== live
           ? 'Camera switched.'
@@ -181,7 +186,7 @@ const lp = room.localParticipant;
     } catch (e) {
       d.setNotice(explain('camera', e));
     }
-  }, [canFlip, camId, cams, d, explain, lp]);
+  }, [canFlip, camId, cams, d, explain, reopenCamera]);
 
   const toggleShare = useCallback(async () => {
     if (!canScreenShare) {
