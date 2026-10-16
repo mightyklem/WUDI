@@ -1,9 +1,5 @@
 'use client';
 import { useMemo, useState } from 'react';
-// Imported rather than typed as a literal: the webhook decides presence with this same
-// constant. Hard-coding 75 here would be a second source of truth that drifts from the
-// one that actually marks somebody absent.
-import { PRESENT_THRESHOLD } from '@learnovize/shared';
 import ProductTypeGrid, { type ProductType } from './ProductTypeGrid';
 
 export type Intro = {
@@ -29,21 +25,8 @@ export type Intro = {
   cap: number;
   accessType: string;
   pricePerDayNgn: number | null;
-  /**
-   * The two attendance rules, stated rather than implied.
-   *
-   * These are different numbers about different things, and conflating them is how people
-   * decide they have earned something they have not. Per session, attendance is time-based:
-   * stay PRESENT_THRESHOLD of the SCHEDULED duration and you are present for that session.
-   * The certificate is a separate bar over the whole programme: attend minPct% of its
-   * sessions. A learner who sat through every minute of one session has still not met the
-   * second one.
-   */
+  /** The programme's certificate threshold. Shown live in the room, not on this screen. */
   minPct: number;
-  /** Whether this training requires payment for the certificate, not whether one exists. */
-  certMode: string;
-  /** Sessions in the programme, so "3 of 5" can be shown rather than only a percentage. */
-  sessionCount: number;
   /** The trainer who owns this training. Not secret: their name is already shown. */
   ownerId: string;
 };
@@ -122,12 +105,6 @@ const state = useMemo(() => {
   const blurb = intro.description?.trim() || `${intro.title}, live with ${intro.hostName}.`;
   // Two lines is roughly what fits on a phone; the rest waits behind See more.
   const long = blurb.length > 150;
-
-  // Stated in minutes because "75%" alone makes people do arithmetic on a clock they are
-  // trying to watch. Measured against the scheduled length, which is what the webhook
-  // uses, so a class that runs over cannot cost somebody their attendance.
-  const duration = Math.max(0, Math.round((end - start) / 60000));
-  const minutes = Math.round(duration * PRESENT_THRESHOLD);
 
   /**
    * Open the room for everyone. Until the trainer does this, a learner is told the
@@ -208,39 +185,6 @@ const state = useMemo(() => {
           <p className="cs-block-body">{intro.agenda}</p>
         </section>
       )}
-
-      {/* Before the join, not after it. A rule discovered afterwards is one somebody has
-          already decided they failed. */}
-      <section className="cs-block cs-attend">
-        <h2 className="cs-h">Attendance</h2>
-
-        <p className="cs-block-body">
-          Stay <strong>{Math.round(PRESENT_THRESHOLD * 100)}% of this session</strong>
-          {minutes > 0 && <> — about {minutes} of the {duration} minutes</>}
-          {' '}and you are marked present for it.
-        </p>
-
-        {intro.certMode === 'paid' ? (
-          <p className="cs-block-body">
-            To earn your certificate you also need to attend at least{' '}
-            <strong>{intro.minPct}% of the {intro.sessionCount} sessions</strong> in this
-            programme, and pay the certificate fee. Attending this one well does not do it on
-            its own.
-          </p>
-        ) : (
-          <p className="cs-block-body">
-            To earn your certificate you also need to attend at least{' '}
-            <strong>{intro.minPct}% of the {intro.sessionCount} sessions</strong> in this
-            programme. Attending this one well does not do it on its own.
-          </p>
-        )}
-
-        <p className="cs-block-body cs-attend-note">
-          Counting is against the scheduled length, so a class that runs late does not cost
-          you anything. If your connection drops, ask the trainer — they can correct your
-          attendance after the class.
-        </p>
-      </section>
 
       {canAttach && (
         <section className="cs-block">

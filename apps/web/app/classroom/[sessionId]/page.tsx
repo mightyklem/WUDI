@@ -26,8 +26,6 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
           // The attendance rules, so the join screen can state them rather than leave a
           // learner to find out what they were being measured against afterwards.
           minPct: true,
-          certMode: true,
-          sessions: { select: { id: true } },
           days: { orderBy: { dayIndex: 'asc' } },
         },
       },
@@ -115,12 +113,9 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
             // Resolved on the client against /api/me: the access token lives in localStorage,
             // so a server component cannot see who is asking.
             ownerId: session.training.trainerId,
-            // The attendance rules, shown before anyone joins. Both numbers, because they
-            // are separate bars and showing only one is how a learner ends up believing
-            // they have qualified for a certificate they have not.
+            // Surfaced live in the room as a countdown to the attendance threshold, rather
+            // than as a paragraph of rules to read before joining.
             minPct: session.training.minPct,
-            certMode: session.training.certMode,
-            sessionCount: session.training.sessions.length,
           }}
         />
       </div>

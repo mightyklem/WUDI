@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 import { Track, type Room, type TrackPublishOptions, type VideoCaptureOptions } from 'livekit-client';
+// The same constant the webhook decides presence with. A literal typed in here would be a
+// second source of truth that quietly drifts from the one that marks somebody absent.
+import { PRESENT_THRESHOLD } from '@learnovize/shared';
 import { useClassroomData, useModeration, type ConnectState } from './useClassroom';
 import { displayName, type Role } from './model';
 import Stage from './Stage';
@@ -10,6 +13,64 @@ import SidePanel from './SidePanel';
 
 type Tab = 'chat' | 'people' | 'polls' | 'giveaway';
 
+function AttendanceChip({
+  room,
+  minPct,
+  startsAt,
+  endsAt,
+}: {
+  room: Room;
+  minPct: number;
+  startsAt: number;
+  endsAt: number;
+}) {
+  // Ticks once a second so the countdown moves, but the chip only changes when the minute
+  // does -- text rewriting every second is unreadable and makes the phone work.
+  const [minute, setMinute] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setMinute(Math.floor(Date.now() / 60000)), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const now = Date.now();
+  const span = endsAt - startsAt;
+  if (!Number.isFinite(span) || span <= 0) return null;
+
+  // The threshold is measured against the SCHEDULED length -- that is what the webhook
+  // uses -- so a class that runs over cannot cost anybody their attendance. Taken from our
+  // own records rather than the media server's clock, which is not the thing deciding.
+  //
+  // Measured from when THIS person connected, not from the scheduled start. Someone who
+  // joins twenty minutes late still has to be present for the required share of the class,
+  // and telling them otherwise would be the one message in the room that is actually wrong.
+  //
+  // Using joinedAt is also correct across a drop: the webhook accumulates windows rather
+  // than overwriting, so each reconnect genuinely starts a fresh stretch that counts.
+  const since = room.localParticipant.joinedAt?.getTime() ?? now;
+  const needed = span * PRESENT_THRESHOLD;
+  const left = Math.max(0, needed - (now - since));
+
+  const mmss = `${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`;
+  const done = left <= 0;
+  const pct = Math.round(PRESENT_THRESHOLD * 100);
+
+  return (
+    <span
+      className="croom-chip croom-attend"
+      data-done={done || undefined}
+      data-min={minute}
+      title={
+        done
+          ? `Your attendance for this session is secured: you need ${pct}% of the class and you have it. Your certificate needs ${minPct}% of the sessions.`
+          : `Stay ${mmss} more to reach ${pct}% of this class and count as present. Your certificate needs ${minPct}% of the sessions.`
+      }
+    >
+      {done ? '✓ Attendance' : `⏱ ${mmss} to count`}
+      <span className="croom-attend-pct">{pct}%</span>
+    </span>
+  );
+}
+
 export default function ClassroomRoom({
   room,
   sessionId,
@@ -17,6 +78,9 @@ export default function ClassroomRoom({
   role,
   myId,
   subtitle,
+  minPct,
+  introStartsAt,
+  introEndsAt,
   state,
   quality,
   retryIn,
@@ -31,6 +95,9 @@ onLeave,
   role: Role;
   myId: string;
   subtitle: string;
+  minPct: number;
+  introStartsAt: string;
+  introEndsAt: string;
   state: ConnectState;
   quality: number;
   retryIn: number;
@@ -232,7 +299,13 @@ const lp = room.localParticipant;
             {sessionTitle}
             <span>{subtitle}</span>
           </div>
-          <div className="croom-head-spacer" />
+            <div className="croom-head-spacer" />
+            <AttendanceChip
+              room={room}
+              minPct={minPct}
+              startsAt={Date.parse(introStartsAt)}
+              endsAt={Date.parse(introEndsAt)}
+            />
           <span className="croom-chip" title={`Connection: ${qualityLabel}`}>
             <span className="croom-signal" data-q={quality} aria-hidden>
               <i /><i /><i />

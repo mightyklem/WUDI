@@ -1109,3 +1109,43 @@ overflow: hidden;
   color: var(--croom-fg-dim);
   font-size: 13px;
 }
+
+/* Attendance countdown, in the room header.
+   The one thing a learner wants to know while a class runs is how much longer they must
+   stay. That is a clock, not a paragraph -- which is why the rule is not spelled out on
+   the join screen, where it would be something to read past before entering. The full
+   wording lives in the title attribute for anyone who wants it. */
+.croom-attend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.croom-attend-pct {
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--croom-chip-bg, rgba(255, 255, 255, 0.12));
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Once the threshold is passed this stops being a warning and becomes a reassurance.
+   Green rather than red: the person has succeeded, and colouring it as a problem would
+   be a small lie about the state they are in. */
+.croom-attend[data-done] {
+  background: rgba(34, 160, 107, 0.18);
+  border-color: rgba(34, 160, 107, 0.45);
+  color: #7fe0b4;
+}
+
+.croom-attend[data-done] .croom-attend-pct {
+  background: rgba(34, 160, 107, 0.3);
+}
+
+/* Longest possible label is "30:00 to count". Keep it from crowding the quality and
+   count chips on a narrow phone. */
+@media (max-width: 560px) {
+  .croom-attend { font-size: 12px; }
+  .croom-attend-pct { display: none; }
+}
