@@ -119,28 +119,47 @@ const lp = room.localParticipant;
   // way to reach the rear camera: nothing ever asked for it again afterwards.
   useEffect(() => { if (lp.isCameraEnabled) void loadCams(); }, [lp.isCameraEnabled, loadCams]);
 
-  // The device actually publishing, which is not necessarily the one we asked for: the
-  // browser can substitute another when the chosen one is unavailable.
-  const currentCamId = useMemo(() => {
+  // Which camera is actually publishing, read at the moment it is needed. This must not be
+  // memoised on camera state: the camera never turns off when it switches, so nothing that
+  // could key a memo would ever change, and the second flip would target the same device.
+  const liveCameraId = () => {
     const track = lp.getTrackPublication(Track.Source.Camera)?.track;
     return track?.mediaStreamTrack?.getSettings()?.deviceId ?? null;
-  }, [lp, lp.isCameraEnabled, cams]);
+  };
+
+  // Held in state rather than derived, so each tap advances instead of recomputing a
+  // position it cannot confirm.
+  const [camId, setCamId] = useState<string | null>(null);
 
   const canFlip = lp.isCameraEnabled && cams.length > 1;
 
   const flipCamera = useCallback(async () => {
     if (!canFlip) return;
-    const at = cams.findIndex((c) => c.deviceId === currentCamId);
-    // -1 means we could not tell which one is live, so start from the top rather than
-    // picking an arbitrary neighbour of an unknown index.
-    const next = cams[(at + 1) % cams.length];
-    if (!next) return;
+    const live = liveCameraId();
+    const from = camId ?? live;
+    const at = cams.findIndex((c) => c.deviceId === from);
+    // When the live device cannot be identified, at is -1 and (at + 1) % length is 0 --
+    // which on a phone is the front camera, i.e. the one already in use, so the control
+    // would appear to do nothing. Pick whatever is demonstrably not the live one instead.
+    const next = at >= 0
+      ? cams[(at + 1) % cams.length]
+      : cams.find((c) => c.deviceId !== live) ?? cams[0];
+    if (!next || next.deviceId === live) {
+      d.setNotice('Could not work out which camera you are on. Turn the camera off and on, then try again.');
+      return;
+    }
     try {
+      // The old track has to go first. setCameraEnabled(true, options) on a camera that is
+      // already on only mutes or unmutes the track that exists -- it does not re-capture --
+      // so asking for a different device while the old one publishes changes nothing at all.
+      // There is no switchCamera in this client version to do it properly for us.
+      await lp.setCameraEnabled(false);
       await lp.setCameraEnabled(true, { deviceId: next.deviceId });
+      setCamId(next.deviceId);
     } catch (e) {
       d.setNotice(explain('camera', e));
     }
-  }, [canFlip, cams, currentCamId, d, explain, lp]);
+  }, [canFlip, camId, cams, d, explain, lp]);
 
   const toggleShare = useCallback(async () => {
     if (!canScreenShare) {
