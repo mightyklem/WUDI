@@ -223,6 +223,17 @@ export function useClassroomData(room: Room | null, myId: string, role: Role) {
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [poll, setPoll] = useState<Poll | null>(null);
   const [hands, setHands] = useState<Set<string>>(new Set());
+  // Mirrors `hands` for read-only use inside long-lived listeners. The data handler is
+  // registered once per room, so it closes over the Set from that first render -- asking
+  // it "do I have my hand up?" would answer about a room that no longer exists.
+  const handsRef = useRef<Set<string>>(hands);
+  const applyHands = useCallback((fn: (prev: Set<string>) => Set<string>) => {
+    setHands((prev) => {
+      const next = fn(prev);
+      handsRef.current = next;
+      return next;
+    });
+  }, []);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -261,7 +272,19 @@ export function useClassroomData(room: Room | null, myId: string, role: Role) {
       syncRemotes(room);
     };
     const onJoin = () => syncRemotes(room);
-    const onLeave = () => syncRemotes(room);
+    const onLeave = (p: RemoteParticipant) => {
+      // A raised hand is a claim about someone who is in the room. Once they leave the
+      // claim is stale, and a queue entry with a live Allow button beside it invites the
+      // trainer to grant speaking rights to an empty seat -- which then silently does
+      // nothing when the identity reconnects.
+      applyHands((h) => {
+        if (!h.has(p.identity)) return h;
+        const n = new Set(h);
+        n.delete(p.identity);
+        return n;
+      });
+      syncRemotes(room);
+    };
     const onLeaveLocal = () => setRemotes([...room.remoteParticipants.values()]);
 
     room.on(RoomEvent.ParticipantConnected, onJoin);
@@ -273,7 +296,36 @@ export function useClassroomData(room: Room | null, myId: string, role: Role) {
     room.on(RoomEvent.ParticipantPermissionsChanged, onPerm);
     room.on(RoomEvent.Disconnected, onLeaveLocal);
 
+    // LiveKit's participant map is the truth about who is connected. The events that tell
+    // us it changed can be missed -- a phone that drops to a weak 4G cell and recovers is
+    // exactly the moment a roster goes wrong -- and the symptom is a trainer who cannot
+    // see who is in their class until something unrelated happens to correct it.
+    //
+    // So re-read the authoritative map on a timer and act only on real change. The
+    // signature is a sorted identity string, so this allocates one small string every few
+    // seconds and calls setState only when the room genuinely differs.
+    const rosterSignature = () => [...room.remoteParticipants.keys()].sort().join('|');
+    let lastSignature = rosterSignature();
+    const reconcile = setInterval(() => {
+      const next = rosterSignature();
+      if (next === lastSignature) return;
+      lastSignature = next;
+      // Anything whose hand we were tracking but who is no longer here goes too, so a
+      // disconnect observed here is cleaned up even if the event itself was missed.
+      const here = new Set(room.remoteParticipants.keys());
+      applyHands((h) => {
+        let changed = false;
+        const n = new Set(h);
+        for (const id of h) {
+          if (!here.has(id)) { n.delete(id); changed = true; }
+        }
+        return changed ? n : h;
+      });
+      syncRemotes(room);
+    }, 5000);
+
     return () => {
+      clearInterval(reconcile);
       room.off(RoomEvent.ParticipantConnected, onJoin);
       room.off(RoomEvent.ParticipantDisconnected, onLeave);
       room.off(RoomEvent.TrackMuted, bump);
@@ -332,9 +384,32 @@ export function useClassroomData(room: Room | null, myId: string, role: Role) {
           }
         }
         if (topic === 'hand') {
-          setHands((h) => {
+          applyHands((h) => {
             const n = new Set(h);
             if (m.up) n.add(from); else n.delete(from);
+            return n;
+          });
+        }
+        // Someone has just arrived and cannot see what they missed. LiveKit does not
+        // replay data messages to a new participant, so without this a hand raised before
+        // they joined stays invisible to them until the owner happens to lower and raise
+        // it again -- which is the only reason it ever appeared to fix itself.
+        if (topic === 'hand:query') {
+          // Answer only about ourselves, and only if our hand is actually up. Silence is
+          // both the cheap and the truthful answer for everyone else, and a classroom
+          // holds few raised hands at once.
+          if (handsRef.current.has(myId)) {
+            void send('hand:state', { id: myId, up: true });
+          }
+        }
+        if (topic === 'hand:state') {
+          // Identity comes from the payload, not the sender: a participant object is not
+          // attached to every data message shape, and falling back to the sender is how a
+          // hand ends up filed against "unknown".
+          const id = typeof m.id === 'string' ? m.id : from;
+          applyHands((h) => {
+            const n = new Set(h);
+            n.add(id);
             return n;
           });
         }
@@ -351,6 +426,23 @@ export function useClassroomData(room: Room | null, myId: string, role: Role) {
     } catch (e) {
       setNotice('Could not send that — the connection dropped. Try again.');
     }
+  }, [room]);
+
+  // Ask who has a hand up, once we are actually connected.
+  //
+  // Publishing before the room is connected is a race that loses silently, so this hangs
+  // off the Connected event rather than firing on mount. Sent on every connect, including
+  // reconnects, because the reconnection is precisely the case where the answer has gone
+  // stale: that is how a host rejoining mid-class used to lose sight of everyone.
+  useEffect(() => {
+    if (!room) return;
+    const announce = () => {
+      room.localParticipant
+        .publishData(enc.encode(JSON.stringify({ ask: 1 })), { reliable: true, topic: 'hand:query' })
+        .catch(() => undefined);
+    };
+    room.on(RoomEvent.Connected, announce);
+    return () => { room.off(RoomEvent.Connected, announce); };
   }, [room]);
 
   /**
@@ -385,13 +477,13 @@ export function useClassroomData(room: Room | null, myId: string, role: Role) {
   }, [myId, send]);
 
   const raiseHand = useCallback(async (up: boolean) => {
-    setHands((h) => {
+    applyHands((h) => {
       const n = new Set(h);
       if (up) n.add(myId); else n.delete(myId);
       return n;
     });
     await send('hand', { up });
-  }, [myId, send]);
+  }, [applyHands, myId, send]);
 
   const vote = useCallback(async (opt: number) => {
     if (!poll || poll.seen.has(myId)) return;
