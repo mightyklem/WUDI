@@ -34,7 +34,12 @@ export async function GET(req: Request) {
       // Kept as a real path rather than the stored column: the PDF is served by the
       // download route, which re-checks consent, revocation and the stored hash before
       // returning a byte.
-      pdfUrl: `/api/certificates/${c.number}/download`,
+      // Keyed on the row id, not the certificate number. The download route takes [id]
+      // to match the revoke and restore routes beside it -- and two different parameter
+      // names for the same URL shape makes every route in the app fail at runtime. This
+      // one was missed when that moved, so the holder's own Download button 404'd while
+      // the public verify page worked.
+      pdfUrl: `/api/certificates/${c.id}/download`,
       status: c.status,
       revokedReason: c.revokedReason,
       scopeLabel: c.scopeLabel,
