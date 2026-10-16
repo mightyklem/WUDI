@@ -45,22 +45,68 @@ onLeave: () => void;
   const [view, setView] = useState<'auto' | 'grid' | 'speaker'>('auto');
   const [spotlight, setSpotlight] = useState<string | null>(null);
 
-  const lp = room.localParticipant;
+const lp = room.localParticipant;
   const handUp = d.hands.has(myId);
+
+  // Whether this browser can share a screen at all, decided before anyone taps a button.
+  // iOS Safari has no getDisplayMedia, so on an iPhone the Share control is a promise the
+  // device cannot keep. Offering it and failing quietly is worse than not offering it: a
+  // trainer pressing Share three times in front of a class concludes the platform is
+  // broken rather than that their phone cannot do it.
+  const canScreenShare = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const md = navigator.mediaDevices as (MediaDevices & { getDisplayMedia?: unknown }) | undefined;
+    // getDisplayMedia is gated on a secure context, so a page loaded over plain http can
+    // pass a feature test and still fail at the moment of use.
+    return typeof md?.getDisplayMedia === 'function' && window.isSecureContext !== false;
+  }, []);
+
+  /**
+   * The browser says why and we keep it. Both toggles used to catch and discard, so a
+   * blocked permission, a busy device and a phone with no camera were all indistinguishable
+   * from a button that did nothing -- which is exactly what was reported.
+   *
+   * Each of these has a different fix the person can actually apply, so the message has to
+   * name one rather than admit defeat.
+   */
+  const explain = useCallback((what: string, e: unknown) => {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/notallowed|permission|denied|security/i.test(msg)) {
+      return `Your ${what} is blocked. Allow it in this site's settings, then reload.`;
+    }
+    if (/notfound|nonexistent|devicesnotfound/i.test(msg)) {
+      return `No ${what} was found on this device.`;
+    }
+    if (/notreadable|trackstart|inuse|busy/i.test(msg)) {
+      return `Your ${what} is already in use by another app. Close that and try again.`;
+    }
+    if (/notsupported|unsupported|typeerror/i.test(msg)) {
+      return `This browser cannot share your screen. On a phone, screen sharing is usually unavailable -- ask the trainer to share instead.`;
+    }
+    return `Could not start your ${what}: ${msg}`;
+  }, []);
 
   const toggleMic = useCallback(async () => {
     try {
       await lp.setMicrophoneEnabled(!lp.isMicrophoneEnabled);
-    } catch { /* denied or no device; the control reflects real state on the next tick */ }
-  }, [lp]);
+    } catch (e) {
+      d.setNotice(explain('microphone', e));
+    }
+  }, [d, explain, lp]);
 
   const toggleCam = useCallback(async () => {
     try {
       await lp.setCameraEnabled(!lp.isCameraEnabled);
-    } catch { /* ignore */ }
-  }, [lp]);
+    } catch (e) {
+      d.setNotice(explain('camera', e));
+    }
+  }, [d, explain, lp]);
 
   const toggleShare = useCallback(async () => {
+    if (!canScreenShare) {
+      d.setNotice(explain('screen share', new Error('not supported')));
+      return;
+    }
     try {
       if (lp.isScreenShareEnabled) {
         await lp.setScreenShareEnabled(false);
@@ -81,8 +127,10 @@ onLeave: () => void;
         simulcast: false,
       } as TrackPublishOptions,
     );
-    } catch { /* a denied picker or a busy device must not break the room */ }
-  }, [lp]);
+    } catch (e) {
+      d.setNotice(explain('screen share', e));
+    }
+  }, [canScreenShare, d, explain, lp]);
 
   const end = useCallback(async () => {
     await mod.act('end');
@@ -158,6 +206,7 @@ onLeave: () => void;
               camOn={!!d.local?.cam}
               shareOn={!!d.local?.share}
               mayPublish={d.mayPublish}
+        canScreenShare={canScreenShare}
               handUp={handUp}
               panel={panel}
               onPanel={(p) => setPanel((cur) => (cur === p ? null : (p as Tab)))}

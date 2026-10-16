@@ -15,8 +15,9 @@ export default function ControlBar({
   micOn,
   camOn,
   shareOn,
-  mayPublish,
-  handUp,
+mayPublish,
+    canScreenShare,
+    handUp,
   panel,
   onPanel,
   onMic,
@@ -32,8 +33,10 @@ export default function ControlBar({
   micOn: boolean;
   camOn: boolean;
   shareOn: boolean;
-  mayPublish: boolean;
-  handUp: boolean;
+mayPublish: boolean;
+    /** False where the browser has no getDisplayMedia, so the control is disabled with a reason. */
+    canScreenShare: boolean;
+    handUp: boolean;
   panel: string | null;
   onPanel: (p: string | null) => void;
   onMic: () => void;
@@ -86,7 +89,18 @@ export default function ControlBar({
         disabled={!mayPublish}
         onClick={onCam}
       />
-      <Btn on={shareOn} icon="share" label="Share" disabled={!mayPublish} onClick={onShare} />
+      <Btn
+        on={shareOn}
+        icon="share"
+        label="Share"
+        disabled={!mayPublish || !canScreenShare}
+        reason={
+          !mayPublish
+            ? 'The trainer has not given you speaking rights yet'
+            : 'This browser cannot share your screen'
+        }
+        onClick={onShare}
+      />
 
       {!compact && (
         <Btn
@@ -201,24 +215,27 @@ export default function ControlBar({
 }
 
 function Btn({
-  on, off, icon, label, disabled, onClick,
+  on, off, icon, label, disabled, reason, onClick,
 }: {
-  on: boolean;
-  off?: boolean;
-  icon: string;
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className="croom-btn"
-      aria-pressed={on}
-      data-off={off || undefined}
-      disabled={disabled}
-      onClick={onClick}
-    >
+on?: boolean;
+    off?: boolean;
+    icon: string;
+    label: string;
+    disabled?: boolean;
+    /** Why it is disabled, spoken on hover and read by assistive tech. */
+    reason?: string;
+    onClick: () => void;
+  }) {
+    return (
+      <button
+        type="button"
+        className="croom-btn"
+        aria-pressed={on}
+        data-off={off || undefined}
+        disabled={disabled}
+        title={reason}
+        onClick={onClick}
+      >
       <b><Icon name={icon as IconName} size={19} /></b>
       <span>{label}</span>
     </button>
