@@ -144,18 +144,40 @@ const lp = room.localParticipant;
     const next = at >= 0
       ? cams[(at + 1) % cams.length]
       : cams.find((c) => c.deviceId !== live) ?? cams[0];
-    if (!next || next.deviceId === live) {
-      d.setNotice('Could not work out which camera you are on. Turn the camera off and on, then try again.');
-      return;
-    }
+    if (!next) return;
     try {
       // The old track has to go first. setCameraEnabled(true, options) on a camera that is
       // already on only mutes or unmutes the track that exists -- it does not re-capture --
       // so asking for a different device while the old one publishes changes nothing at all.
       // There is no switchCamera in this client version to do it properly for us.
       await lp.setCameraEnabled(false);
+
+      // ...and then it has to be released, not merely asked to stop. Opening the second
+      // camera while the first is still held is refused by Android, and is refused quietly.
+      for (let i = 0; i < 25 && lp.getTrackPublication(Track.Source.Camera)?.track; i += 1) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
       await lp.setCameraEnabled(true, { deviceId: next.deviceId });
+      // Let the new capture settle before judging it, or a slow phone reports the old
+      // device and the switch looks like a failure when it is only a moment early.
+      await new Promise((r) => setTimeout(r, 700));
+
+      const after = liveCameraId();
+      console.info('[cam] flip', {
+        live, after, wanted: next.deviceId,
+        devices: cams.map((c) => ({ id: c.deviceId, label: c.label })),
+      });
       setCamId(next.deviceId);
+
+      // Says what actually happened rather than what was asked for. If the phone claims
+      // several cameras but hands back the same one, that is a device fact worth reporting
+      // and not something to keep guessing at.
+      d.setNotice(
+        after && after !== live
+          ? 'Camera switched.'
+          : `Camera did not switch. This device reported ${cams.length} camera${cams.length === 1 ? '' : 's'}.`,
+      );
     } catch (e) {
       d.setNotice(explain('camera', e));
     }
