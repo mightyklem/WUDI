@@ -102,91 +102,66 @@ const lp = room.localParticipant;
     }
   }, [d, explain, lp]);
 
-  /* ---------------- front / rear camera ---------------- */
+  /* ---------------- choosing a camera ---------------- */
 
   const [cams, setCams] = useState<MediaDeviceInfo[]>([]);
+  const [camId, setCamId] = useState<string | null>(null);
+  const [camBusy, setCamBusy] = useState(false);
 
   const loadCams = useCallback(async () => {
     try {
       const list = (await navigator.mediaDevices.enumerateDevices())
         .filter((x) => x.kind === 'videoinput');
       setCams(list);
-    } catch { /* no camera permission yet, or none at all; the control simply stays hidden */ }
-  }, []);
-
-  // Device labels and ids are only populated once permission has been granted, so asking
-  // before the camera is on returns an unusable list -- which is why there used to be no
-  // way to reach the rear camera: nothing ever asked for it again afterwards.
-  useEffect(() => { if (lp.isCameraEnabled) void loadCams(); }, [lp.isCameraEnabled, loadCams]);
-
-  // Which camera is actually publishing, read at the moment it is needed. This must not be
-  // memoised on camera state: the camera never turns off when it switches, so nothing that
-  // could key a memo would ever change, and the second flip would target the same device.
-  const liveCameraId = () => {
-    const track = lp.getTrackPublication(Track.Source.Camera)?.track;
-    return track?.mediaStreamTrack?.getSettings()?.deviceId ?? null;
-  };
-
-  // Held in state rather than derived, so each tap advances instead of recomputing a
-  // position it cannot confirm.
-  const [camId, setCamId] = useState<string | null>(null);
-
-  const canFlip = lp.isCameraEnabled && cams.length > 1;
-
-  /** Stop the current camera, wait for the device to be released, open one by constraint. */
-  const reopenCamera = useCallback(async (constraints: VideoCaptureOptions) => {
-    await lp.setCameraEnabled(false);
-    for (let i = 0; i < 25 && lp.getTrackPublication(Track.Source.Camera)?.track; i += 1) {
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    await lp.setCameraEnabled(true, constraints);
-    await new Promise((r) => setTimeout(r, 700));
-    return liveCameraId();
+      // Seed from what is actually publishing, so the control opens on the live camera
+      // rather than the first one the device happens to list.
+      const live = lp.getTrackPublication(Track.Source.Camera)?.track
+        ?.mediaStreamTrack?.getSettings()?.deviceId;
+      setCamId((cur) => cur ?? live ?? list[0]?.deviceId ?? null);
+    } catch { /* no permission yet, or no camera; the control simply stays hidden */ }
   }, [lp]);
 
-  const flipCamera = useCallback(async () => {
-    if (!canFlip) return;
-    const live = liveCameraId();
-    const from = camId ?? live;
-    const at = cams.findIndex((c) => c.deviceId === from);
-    // When the live device cannot be identified, at is -1 and (at + 1) % length is 0 --
-    // which on a phone is the front camera, i.e. the one already in use, so the control
-    // would appear to do nothing. Pick whatever is demonstrably not the live one instead.
-    const next = at >= 0
-      ? cams[(at + 1) % cams.length]
-      : cams.find((c) => c.deviceId !== live) ?? cams[0];
-    if (!next) return;
+  // Device ids and labels are only populated once permission has been granted, so asking
+  // before the camera is on returns an unusable list.
+  useEffect(() => { if (lp.isCameraEnabled) void loadCams(); }, [lp.isCameraEnabled, loadCams]);
 
+  /**
+   * Publish a different camera.
+   *
+   * setCameraEnabled cannot do this, and no amount of constraint tweaking will make it.
+   * Read from the client's own implementation rather than assumed:
+   *
+   *     if (enabled) { if (track) { await track.unmute() } else { createTracks(options) } }
+   *     else         { await track.mute() }
+   *
+   * Disabling MUTES -- the publication and its MediaStreamTrack survive. Enabling then
+   * finds a track and unmutes it, so the options are never read at all: the requested
+   * deviceId is discarded and the same camera comes back. There is no switchCamera in this
+   * client version to do it properly either. The track has to be unpublished outright
+   * before any constraint means anything, and only then does createTracks run with them.
+   *
+   * This is the same path the lobby uses, which is why choosing a camera there worked while
+   * switching in the room did not.
+   */
+  const selectCamera = useCallback(async (deviceId: string) => {
+    if (!deviceId || deviceId === camId) return;
+    setCamBusy(true);
+    const chosen = cams.find((c) => c.deviceId === deviceId);
     try {
-      let after = await reopenCamera({ deviceId: next.deviceId });
-
-      // A deviceId that was accepted when the camera was first opened is not reliably
-      // accepted when a camera is re-opened: an Android WebView will quietly hand back the
-      // default instead, which is the failure this reports. Asking by facing direction
-      // maps onto the hardware through the browser's own device layer, which survives
-      // re-acquisition where a copied identifier does not.
-      if (!after || after === live) {
-        // cams[0] is the user-facing camera on every phone worth supporting, and the one
-        // the device defaults to, so the opposite of where we are is the one we want.
-        const want = (at === 0 || at === -1) ? 'environment' : 'user';
-        after = await reopenCamera({ facingMode: want });
+      const pub = lp.getTrackPublication(Track.Source.Camera);
+      if (pub?.track) {
+        // stopOnUnpublish, so the device is released before the next one is asked to open.
+        await lp.unpublishTrack(pub.track, true);
       }
-
-      console.info('[cam] flip', {
-        live, after, wanted: next.deviceId,
-        devices: cams.map((c) => ({ id: c.deviceId, label: c.label })),
-      });
-      setCamId(after ?? next.deviceId);
-
-      d.setNotice(
-        after && after !== live
-          ? 'Camera switched.'
-          : `Camera did not switch. This device reported ${cams.length} camera${cams.length === 1 ? '' : 's'}.`,
-      );
+      await lp.setCameraEnabled(true, { deviceId });
+      setCamId(deviceId);
     } catch (e) {
       d.setNotice(explain('camera', e));
+    } finally {
+      setCamBusy(false);
+      void loadCams();
     }
-  }, [canFlip, camId, cams, d, explain, reopenCamera]);
+}, [camId, cams, d, explain, loadCams, lp]);
 
   const toggleShare = useCallback(async () => {
     if (!canScreenShare) {
@@ -293,8 +268,10 @@ const lp = room.localParticipant;
               shareOn={!!d.local?.share}
               mayPublish={d.mayPublish}
         canScreenShare={canScreenShare}
-        canFlip={canFlip}
-        onFlip={flipCamera}
+        cams={cams}
+        camId={camId}
+        camBusy={camBusy}
+        onSelectCamera={selectCamera}
               handUp={handUp}
               panel={panel}
               onPanel={(p) => setPanel((cur) => (cur === p ? null : (p as Tab)))}

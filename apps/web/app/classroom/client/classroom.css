@@ -1036,3 +1036,49 @@ overflow: hidden;
   color: #ffd9c9;
   font-size: 13.5px;
 }
+
+/* Camera picker, shown in the toolbar once the camera is on.
+   Sized to match the toolbar buttons beside it so the row does not change height when
+   it appears -- a control that reflows the bar when you turn your camera on is the kind
+   of thing you mis-tap once and then distrust. */
+.croom-camsel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  min-height: 56px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--croom-line);
+  background: var(--croom-panel-2);
+  padding: 0 6px;
+}
+
+.croom-camsel select {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: 132px;
+  border: 0;
+  background: transparent;
+  color: var(--croom-fg);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 2px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.croom-camsel select:focus-visible {
+  outline: 2px solid var(--croom-accent);
+  outline-offset: 2px;
+}
+
+.croom-camsel select option {
+  color: #111;
+  background: #fff;
+}
+
+/* Long device names ("OBS Virtual Camera", "HD Webcam C920") must not be able to push the
+   rest of the toolbar off a phone. */
+@media (max-width: 560px) {
+  .croom-camsel select { max-width: 96px; }
+}

@@ -17,14 +17,16 @@ export default function ControlBar({
   shareOn,
 mayPublish,
     canScreenShare,
-    canFlip,
+    cams,
+    camId,
+    camBusy,
+    onSelectCamera,
     handUp,
   panel,
   onPanel,
   onMic,
   onCam,
 onShare,
-    onFlip,
     onHand,
   onReaction,
   onLeave,
@@ -38,15 +40,17 @@ onShare,
 mayPublish: boolean;
     /** False where the browser has no getDisplayMedia, so the control is disabled with a reason. */
     canScreenShare: boolean;
-    /** False unless the camera is on and the device reports more than one camera. */
-    canFlip: boolean;
+    /** Video inputs the device reports. Populated only once camera permission is granted. */
+    cams: MediaDeviceInfo[];
+    camId: string | null;
+    camBusy: boolean;
+    onSelectCamera: (deviceId: string) => void;
     handUp: boolean;
   panel: string | null;
   onPanel: (p: string | null) => void;
   onMic: () => void;
   onCam: () => void;
   onShare: () => void;
-    onFlip: () => void;
   onHand: () => void;
   onReaction: (emoji: string) => void;
   onLeave: () => void;
@@ -94,11 +98,27 @@ mayPublish: boolean;
         disabled={!mayPublish}
 onClick={onCam}
         />
-        {/* Only offered when it would actually do something. A flip that appears on every
-            desktop and then quietly fails is noise; the real need is a trainer holding a
-            phone up to a whiteboard mid-class. */}
-        {canFlip && (
-          <Btn on={false} icon="flip" label="Flip" onClick={onFlip} />
+        {/* Every video input, not just a front/rear flip.
+            A phone has two cameras and the answer is "the other one". A computer has however
+            many are plugged in, plus OBS and vMix virtual cameras, and the answer there is
+            usually a named list. A two-way flip cannot express the second case, and a
+            trainer who has just started a virtual camera mid-class cannot un-start it. */}
+        {camOn && cams.length > 0 && (
+          <label className="croom-camsel">
+            <span className="sr-only">Camera</span>
+            <select
+              value={camId ?? ''}
+              disabled={camBusy}
+              aria-label="Choose a camera"
+              onChange={(e) => onSelectCamera(e.target.value)}
+            >
+              {cams.map((c, i) => (
+                <option key={c.deviceId} value={c.deviceId}>
+                  {c.label || `Camera ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
       <Btn
         on={shareOn}
