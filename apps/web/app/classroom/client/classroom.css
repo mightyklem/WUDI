@@ -1082,3 +1082,30 @@ overflow: hidden;
 @media (max-width: 560px) {
   .croom-camsel select { max-width: 96px; }
 }
+
+/* Attendance rules, on the join screen before anyone commits to joining.
+   Given a quiet background so it reads as reference material rather than a promotion --
+   the join button below it is the thing being asked for. */
+.cs-attend {
+  border-left: 3px solid var(--croom-accent);
+}
+
+.cs-attend .cs-h {
+  margin-bottom: 6px;
+}
+
+.cs-attend .cs-block-body {
+  margin: 0 0 8px;
+}
+
+.cs-attend .cs-block-body strong {
+  color: var(--croom-fg);
+  font-weight: 700;
+}
+
+/* The correction note is secondary, but it is the line that decides whether somebody
+   bothers asking when their connection dropped, so it is not made to look like fine print. */
+.cs-attend-note {
+  color: var(--croom-fg-dim);
+  font-size: 13px;
+}
