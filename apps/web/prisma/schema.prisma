@@ -87,23 +87,6 @@ model PointsEvent {
   day       TrainingDay? @relation(fields: [dayId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  // ---------------------------------------------------------------------
-  // On-chain anchoring (Base)
-  //
-  // Nullable and defaulting to pending, because anchoring must never be able to stop a
-  // points award. Someone who turned up gets the credit even if every Base node is
-  // unreachable; the anchor catches up later or is retried by hand. The opposite ordering
-  // -- award only once the chain confirms -- would make an RPC outage a reason to withhold
-  // an earned point, which is not a tradeoff anyone would accept if told it was being made.
-  //
-  // chainStatus separates "not tried" from "tried and failed", because those want
-  // different responses: the first needs a worker, the second needs an alert.
-  chainId     Int?    // 8453 Base, 84532 Base Sepolia while testing
-  chainTxHash String? // the anchoring transaction
-  chainStatus String  @default("pending") // pending|anchored|failed|skipped
-  chainError  String?
-  anchoredAt  DateTime?
-
   @@unique([userId, ref])
   @@index([userId, createdAt])
 }
@@ -573,22 +556,8 @@ model Certificate {
   signature   String?
   keyId       String?
   templateVersion String?
-    status      String   @default("valid") // valid|revoked
-    revokedReason String?
-
-    // ------------------------------------------------------------------
-    // On-chain anchoring (Base)
-    //
-    // The same rule as PointsEvent: never a precondition for issuance. The certificate is
-    // signed and issued first, and anchoring is a separate, retryable step that records
-    // what it did and what went wrong. chainStatus separates "not yet tried" from "tried
-    // and failed" so a backlog is never mistaken for an outage.
-    chainId     Int?      // 8453 Base, 84532 Base Sepolia while testing
-    chainTxHash String?
-    chainStatus String    @default("pending") // pending|anchored|failed|skipped
-    chainError  String?
-    anchoredAt  DateTime?
-
+  status      String   @default("valid") // valid|revoked
+  revokedReason String?
   createdAt   DateTime @default(now())
 
   // One certificate per learner per training, ever. issueCertificate checked with
