@@ -529,23 +529,23 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
    is the brand's -- so the whole thing is scaled up here rather than shrinking the word
    into illegibility. */
 .topbar .logo .logo-word {
-  /* 100%: the wordmark is as tall as the mark. 626x95 gives 6.59:1, so 34px tall is
-     224px wide and the lockup holds its shape at whatever size it is rendered.
+  /* 70%: the wordmark is 70% of the mark's height. At 34px that is 24px tall and 157px
+     wide, the width being fixed by the 626x95 artwork rather than chosen.
 
      The selector is deliberately more specific than the narrow-screen `.topbar .logo img`
-     rule below. That rule sets every image in the logo to 22x22, and an image selector
+     rule below. That rule sets every image in the logo to 22x22, and an element selector
      beats a two-class selector, so the wordmark was being squashed into a square on every
      phone. Scoping this as `.topbar .logo .logo-word` wins on class count. */
-  width: 224px;
-  height: 34px;
+  width: 157px;
+  height: 24px;
   display: block;
   object-fit: contain;
   border-radius: 0;
 }
 
 @media (max-width: 560px) {
-  /* Scaled down, ratio intact: 22 x 6.59 = 145. */
-  .topbar .logo .logo-word { width: 145px; height: 22px; }
+  /* Scaled down, ratio intact: 15.4 tall, which is 70% of the 22px mark. */
+  .topbar .logo .logo-word { width: 101px; height: 15px; }
 }
 
 /* =====================================================================
