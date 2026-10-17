@@ -49,8 +49,8 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
         {/* The real wordmark rather than the name set in the site's own font. The two
             are not the same drawing, and a brand that changes typeface between the nav
             bar and a certificate is a brand nobody can recognise across three surfaces. */}
-        <img src="/icon.svg" alt="" width={26} height={26} />
-        <img className="logo-word" src="/learnovize-wordmark.png" alt="Learnovize" width={104} height={16} />
+        <img src="/learnovize-mark.svg" alt="" width={34} height={34} />
+        <img className="logo-word" src="/learnovize-wordmark.png" alt="Learnovize" width={99} height={15} />
       </Link>
 
       {/* Only for someone who can actually use them. A visitor arriving for the

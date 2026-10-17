@@ -520,12 +520,17 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
 .logo img { display: block; flex: 0 0 auto; border-radius: 8px; }
 .logo-text { overflow: hidden; text-overflow: ellipsis; }
 /* The wordmark is an image, so it needs the vertical centring and shrink-to-fit that the
-   text node got for free. object-fit keeps the proportions if the intrinsic size is ever
-   overridden, and height:auto stops the width/height pair fighting each other. */
+   text node got for free.
+
+   Sized from the supplied artwork rather than by eye: the wordmark is 95px tall against a
+   216px mark and they share a centre line, so the height is 44% of the icon's. Set to the
+   text node's old 16px against a 26px icon it came out at 61%, which reads as two things
+   competing rather than one lockup. The overall size is ours to choose -- only the ratio
+   is the brand's -- so the whole thing is scaled up here rather than shrinking the word
+   into illegibility. */
 .logo .logo-word {
-  height: auto;
-  width: auto;
-  max-height: 17px;
+  width: 99px;
+  height: 15px;
   object-fit: contain;
   border-radius: 0;
 }
