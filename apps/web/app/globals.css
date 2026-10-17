@@ -529,8 +529,8 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
    is the brand's -- so the whole thing is scaled up here rather than shrinking the word
    into illegibility. */
 .logo .logo-word {
-  width: 99px;
-  height: 15px;
+  width: 104px;
+  height: 16px;
   object-fit: contain;
   border-radius: 0;
 }
