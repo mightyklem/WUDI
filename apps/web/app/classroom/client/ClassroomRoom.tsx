@@ -294,32 +294,43 @@ const lp = room.localParticipant;
             remote audio on its own; it has to be rendered somewhere. It was
             dropped in the rebuild and took every sound with it. */}
         <RoomAudioRenderer />
-        <header className="croom-head">
-          <div className="croom-head-title">
-            {sessionTitle}
-            <span>{subtitle}</span>
-          </div>
-            <div className="croom-head-spacer" />
-            <AttendanceChip
-              room={room}
-              minPct={minPct}
-              startsAt={Date.parse(introStartsAt)}
-              endsAt={Date.parse(introEndsAt)}
-            />
-          <span className="croom-chip" title={`Connection: ${qualityLabel}`}>
-            <span className="croom-signal" data-q={quality} aria-hidden>
-              <i /><i /><i />
-            </span>
-            {qualityLabel}
-          </span>
-          <span className="croom-chip">{count} in room</span>
-          {status.live && <span className="croom-live">{status.text}</span>}
-          {!status.live && state !== 'connected' && (
-            <span className="croom-chip" onClick={retryNow} role="button" tabIndex={0}>
-              {status.text} · retry
-            </span>
-          )}
-        </header>
+          <header className="croom-head">
+            {/* Two rows on a phone, one on a desktop.
+                This was a single non-wrapping flex row, so on a 480px screen the title and
+                the clock fought the chips for the same line: the time broke into a column of
+                single characters and "Live" was pushed off the edge entirely. Identity on
+                its own row, status on its own row, and neither has to give way. */}
+            <div className="croom-head-top">
+              <img className="croom-head-logo" src="/logo.svg" alt="" width={24} height={24} />
+              <div className="croom-head-title">
+                <b>{sessionTitle}</b>
+                <span>{subtitle}</span>
+              </div>
+              {status.live
+                ? <span className="croom-live">{status.text}</span>
+                : state !== 'connected' && (
+                  <button type="button" className="croom-live" data-off onClick={retryNow}>
+                    {status.text} · retry
+                  </button>
+                )}
+            </div>
+
+            <div className="croom-head-bar">
+              <AttendanceChip
+                room={room}
+                minPct={minPct}
+                startsAt={Date.parse(introStartsAt)}
+                endsAt={Date.parse(introEndsAt)}
+              />
+              <span className="croom-chip" title={`Connection: ${qualityLabel}`}>
+                <span className="croom-signal" data-q={quality} aria-hidden>
+                  <i /><i /><i />
+                </span>
+                {qualityLabel}
+              </span>
+              <span className="croom-chip">{count} in room</span>
+            </div>
+          </header>
 
         <div className="croom-body">
           <div className="croom-main">

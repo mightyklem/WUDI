@@ -34,64 +34,81 @@ overflow: hidden;
 .croom-head {
   flex: 0 0 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 6px 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--croom-line);
   background: var(--croom-panel);
-  min-height: 56px;
 }
 
+/* Row 1: who you are in. Logo, class, who is teaching, and whether it is live.
+   Given a full row on a phone so none of it has to compete with the chips. */
+.croom-head-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.croom-head-logo {
+  flex: 0 0 auto;
+  border-radius: 7px;
+}
+
+/* min-width:0 plus an ellipsis on BOTH lines. Without it the title column refuses to
+   shrink below its longest word, and "12:00 AM � 3:00 AM WAT" breaks between characters --
+   which is how a clock ends up rendered as a vertical stack of letters. */
 .croom-head-title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-weight: 650;
   font-size: 15px;
   line-height: 1.25;
-  min-width: 0;
 }
+
+.croom-head-title b,
 .croom-head-title span {
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.croom-head-title span {
   font-weight: 400;
   font-size: 12px;
   color: var(--croom-dim);
 }
 
-.croom-head-spacer { flex: 1 1 auto; }
-
-.croom-chip {
-  display: inline-flex;
+/* Row 2: how the class is going. Scrolls sideways rather than overflowing, because a chip
+   clipped by the right edge is a chip nobody can read -- that is how "Live" ended up
+   half off the screen. */
+.croom-head-bar {
+  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
-  border-radius: var(--r-full);
-  background: var(--croom-panel-2);
-  border: 1px solid var(--croom-line);
-  font-size: 12.5px;
-  white-space: nowrap;
-  color: var(--croom-fg);
+  flex: 1 1 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Stop the strip bouncing the whole page sideways when it does overflow. */
+  overscroll-behavior-x: contain;
 }
 
-.croom-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border-radius: var(--r-full);
-  background: rgba(180, 85, 47, 0.18);
-  border: 1px solid rgba(180, 85, 47, 0.5);
-  color: #ffd9c9;
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.croom-live::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #e4693c;
-  animation: croom-pulse 1.8s ease-in-out infinite;
-}
-@keyframes croom-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.croom-head-bar::-webkit-scrollbar { display: none; }
 
+/* Chips must never be squeezed. They are status, and a status rendered as "in" is worse
+   than one that has scrolled. */
+.croom-head-bar > * { flex: 0 0 auto; }
+
+/* One row when there is genuinely room for one. */
+@media (min-width: 760px) {
+  .croom-head { flex-wrap: nowrap; gap: 12px; padding: 10px 14px; }
+  .croom-head-top { flex: 1 1 auto; }
+  .croom-head-bar { flex: 0 0 auto; overflow-x: visible; }
+}
 /* Connection quality: three bars, filled by strength 0..3. */
 .croom-signal { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
 .croom-signal i {
@@ -1042,6 +1059,7 @@ overflow: hidden;
    it appears -- a control that reflows the bar when you turn your camera on is the kind
    of thing you mis-tap once and then distrust. */
 .croom-camsel {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1056,7 +1074,9 @@ overflow: hidden;
 .croom-camsel select {
   appearance: none;
   -webkit-appearance: none;
-  max-width: 132px;
+  /* Capped against the viewport, not against a fixed width. A wide phone in CSS pixels
+     slips past a media query while a 130px control still squeezes the other seven. */
+  max-width: min(132px, 28vw);
   border: 0;
   background: transparent;
   color: var(--croom-fg);
@@ -1080,7 +1100,7 @@ overflow: hidden;
 /* Long device names ("OBS Virtual Camera", "HD Webcam C920") must not be able to push the
    rest of the toolbar off a phone. */
 @media (max-width: 560px) {
-  .croom-camsel select { max-width: 96px; }
+  .croom-camsel select { max-width: min(96px, 24vw); }
 }
 
 /* Attendance rules, on the join screen before anyone commits to joining.
@@ -1149,3 +1169,39 @@ overflow: hidden;
   .croom-attend { font-size: 12px; }
   .croom-attend-pct { display: none; }
 }
+
+
+/* The Live badge doubles as a retry button when the connection is down, so it needs to
+   stop being an inline <span> and start behaving like one. */
+button.croom-live {
+  flex: 0 0 auto;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+
+/* Not live: the same shape, but quiet. The one control on this bar that must be obvious
+   is "try again", and it must not be the same orange as the live state it replaced. */
+.croom-live[data-off] {
+  background: rgba(180, 85, 47, 0.08);
+  border-color: var(--croom-line);
+  color: var(--croom-dim);
+  animation: none;
+}
+
+.croom-live[data-off]::before { background: var(--croom-dim); animation: none; }
+
+/* Toolbar safety net.
+   The row is not allowed to wrap -- a second row of controls costs height that the video
+   needs, and on a phone in landscape that height is the difference between seeing the
+   trainer and seeing the toolbar. So it scrolls sideways instead, which guarantees every
+   control stays reachable without squeezing the others into unreadable slivers. */
+.croom-bar {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.croom-bar::-webkit-scrollbar { display: none; }
+
+.croom-bar > * { flex: 0 0 auto; }
