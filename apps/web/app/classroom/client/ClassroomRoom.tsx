@@ -301,7 +301,7 @@ const lp = room.localParticipant;
                 single characters and "Live" was pushed off the edge entirely. Identity on
                 its own row, status on its own row, and neither has to give way. */}
             <div className="croom-head-top">
-              <img className="croom-head-logo" src="/learnovize-mark-stacked.svg" alt="Learnovize" width={26} height={26} />
+              <img className="croom-head-logo" src="/icon.svg" alt="Learnovize" width={26} height={26} />
               <div className="croom-head-title">
                 <b>{sessionTitle}</b>
                 <span>{subtitle}</span>

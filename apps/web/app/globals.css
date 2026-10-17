@@ -519,6 +519,16 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
 .logo:focus-visible { outline: 3px solid var(--teal-400); outline-offset: 4px; border-radius: var(--r-xs); }
 .logo img { display: block; flex: 0 0 auto; border-radius: 8px; }
 .logo-text { overflow: hidden; text-overflow: ellipsis; }
+/* The wordmark is an image, so it needs the vertical centring and shrink-to-fit that the
+   text node got for free. object-fit keeps the proportions if the intrinsic size is ever
+   overridden, and height:auto stops the width/height pair fighting each other. */
+.logo .logo-word {
+  height: auto;
+  width: auto;
+  max-height: 17px;
+  object-fit: contain;
+  border-radius: 0;
+}
 
 /* =====================================================================
    Header, narrow screens
