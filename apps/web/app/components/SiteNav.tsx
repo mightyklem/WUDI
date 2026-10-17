@@ -50,7 +50,7 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
             are not the same drawing, and a brand that changes typeface between the nav
             bar and a certificate is a brand nobody can recognise across three surfaces. */}
         <img src="/learnovize-mark.svg" alt="" width={34} height={34} />
-        <img className="logo-word" src="/learnovize-wordmark.png" alt="Learnovize" width={157} height={24} />
+        <img className="logo-word" src="/learnovize-wordmark.png" alt="Learnovize" width={145} height={22} />
       </Link>
 
       {/* Only for someone who can actually use them. A visitor arriving for the

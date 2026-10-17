@@ -529,23 +529,23 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
    is the brand's -- so the whole thing is scaled up here rather than shrinking the word
    into illegibility. */
 .topbar .logo .logo-word {
-  /* 70%: the wordmark is 70% of the mark's height. At 34px that is 24px tall and 157px
+  /* 65%: the wordmark is 65% of the mark's height. At 34px that is 22px tall and 145px
      wide, the width being fixed by the 626x95 artwork rather than chosen.
 
      The selector is deliberately more specific than the narrow-screen `.topbar .logo img`
      rule below. That rule sets every image in the logo to 22x22, and an element selector
      beats a two-class selector, so the wordmark was being squashed into a square on every
      phone. Scoping this as `.topbar .logo .logo-word` wins on class count. */
-  width: 157px;
-  height: 24px;
+  width: 145px;
+  height: 22px;
   display: block;
   object-fit: contain;
   border-radius: 0;
 }
 
 @media (max-width: 560px) {
-  /* Scaled down, ratio intact: 15.4 tall, which is 70% of the 22px mark. */
-  .topbar .logo .logo-word { width: 101px; height: 15px; }
+  /* Scaled down, ratio intact: 14 tall, which is 65% of the 22px mark. */
+  .topbar .logo .logo-word { width: 92px; height: 14px; }
 }
 
 /* =====================================================================
