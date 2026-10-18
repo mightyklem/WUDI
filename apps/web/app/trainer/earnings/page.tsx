@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
+import StandingPanel from '../../components/StandingPanel';
 
 type Row = {
   trainingId: string; title: string; plan: string; sales: number;
@@ -47,6 +48,13 @@ export default function Earnings() {
         {plan !== 'business' && <button className="btn" onClick={() => upgrade('business')}>Upgrade to Business</button>}
       </div>
       {msg && <div className="okmsg">{msg}</div>}
+
+      {/* Standing sits above the money because it is the other half of the same question.
+          A trainer's rank was already being computed and awarded -- from reviews, and now
+          from classes they actually taught -- and had never been rendered anywhere on the
+          trainer's side. */}
+      <StandingPanel title="Your standing" />
+
       <div className="card" style={{ marginTop: 18 }}>
         <p className="eyebrow">Totals — gross ₦{totals.gross} · fees ₦{totals.fees} · commission ₦{totals.commission} · net ₦{totals.net}</p>
         {rows.length === 0 && <p className="muted">No paid sales yet.</p>}
