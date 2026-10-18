@@ -5,12 +5,22 @@ import { displayName, initials, type Role } from './model';
 import type { useClassroomData, useModeration } from './useClassroom';
 import GiveawayPanel from './GiveawayPanel';
 
-type Tab = 'chat' | 'people' | 'polls' | 'giveaway';
+/** The panels the drawer can show. The list and the type come from one declaration, so
+ *  adding a tab cannot leave it reachable in the type and missing from the buttons. */
+const TABS = ['chat', 'people', 'polls', 'giveaway'] as const;
+type Tab = (typeof TABS)[number];
+
+const TAB_LABELS: Record<Tab, string> = {
+  chat: 'Chat',
+  people: 'People',
+  polls: 'Polls',
+  giveaway: 'Giveaway',
+};
 type Data = ReturnType<typeof useClassroomData>;
 type Mod = ReturnType<typeof useModeration>;
 
 /**
- * One drawer, three tabs -- Meet's pattern rather than a page that scrolls under
+ * One drawer, four tabs -- Meet's pattern rather than a page that scrolls under
  * the video. Everything that used to sit below the stage lives here now, which is
  * what keeps the stage clear.
  *
@@ -43,7 +53,12 @@ export default function SidePanel({
   return (
     <aside className="croom-side" aria-label="Classroom panel">
       <div className="croom-tabs" role="tablist">
-        {(['chat', 'people', 'polls'] as Tab[]).map((t) => (
+        {/* The giveaway was in the Tab union, had its label branch below, and its panel
+            mounted at the bottom of this file -- and was missing from this list. Every
+            part of it worked. Nobody could reach it, because there was no button to open
+            it. Driven off the union instead of a hand-written literal so a fourth tab
+            cannot be forgotten the same way. */}
+        {TABS.map((t) => (
           <button
             key={t}
             type="button"
@@ -52,7 +67,7 @@ export default function SidePanel({
             aria-selected={tab === t}
             onClick={() => onTab(t)}
           >
-            {t === 'chat' ? 'Chat' : t === 'people' ? 'People' : t === 'giveaway' ? 'Giveaway' : 'Polls'}
+            {TAB_LABELS[t]}
           </button>
         ))}
         <button type="button" className="croom-tab" aria-label="Close panel" onClick={onClose}>

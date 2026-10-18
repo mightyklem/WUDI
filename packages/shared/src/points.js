@@ -18,6 +18,22 @@ export const POINTS = Object.freeze({
   // One review is worth up to this, scaled by the stars it was given. See
   // pointsForReview for why one and two stars award nothing.
   reviewReceivedMax: 15,
+  /**
+   * What a trainer earns when someone actually turns up to their class.
+   *
+   * This is the missing half of loyalty. Until now a trainer's standing came only from
+   * reviews, which is the one thing they can influence least -- and it does nothing at
+   * all for a trainer who has just taught their hundredth session and has no reviews left
+   * to write. Delivering a class to a room is the work, and this is the reward for it.
+   *
+   * Flat, and deliberately not scaled by price, for the same reason the learner's awards
+   * are not: weighting by what a class costs would send a trainer after the most expensive
+   * room rather than the best one, and rank would become a receipt again.
+   *
+   * Above the learner's 20, so a trainer delivering a five-session programme lands about
+   * where a learner who completed one and earned the certificate does. Both earned it.
+   */
+  sessionTaught: 30,
 });
 
 /** Reasons recorded against a PointsEvent. */
@@ -26,6 +42,7 @@ export const POINT_REASONS = Object.freeze({
   programCompleted: 'program_completed',
   certificateEarned: 'certificate_earned',
   reviewReceived: 'review_received',
+  sessionTaught: 'session_taught',
   manualAdjustment: 'manual_adjustment',
 });
 

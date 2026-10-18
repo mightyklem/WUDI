@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyWebhook } from '@/lib/livekit';
 import { mergeAttendanceWindow } from '@learnovize/shared';
-import { awardAttendance, revokeAttendance } from '@/lib/points';
+import { awardAttendance, revokeAttendance, awardSessionTaught, revokeSessionTaught } from '@/lib/points';
 import { isAdmin } from '@/lib/admin';
 import { computeEligibility, autoIssueForSession } from '@/lib/certs';
 
@@ -20,7 +20,12 @@ export async function POST(req: Request) {
   }
   if (!evt.room || !evt.identity) return NextResponse.json({ ok: true });
 
-  const session = await prisma.session.findFirst({ where: { livekitRoom: evt.room } });
+  // The trainer is needed here, not later: their standing is awarded from the same
+    // moment of fact as the learner's, and a bare findFirst cannot reach it.
+    const session = await prisma.session.findFirst({
+      where: { livekitRoom: evt.room },
+      include: { training: { select: { trainerId: true } } },
+    });
   if (!session) return NextResponse.json({ ok: true });
 
   // Staff observe, they do not attend. An admin can now join any classroom, so their
@@ -81,8 +86,14 @@ export async function POST(req: Request) {
       // Verified attendance is what earns points (FR-13). Absent, nothing.
       if (present) {
         await awardAttendance({ userId: evt.identity, sessionId: session.id });
+        // And the trainer earned something too. This is the same moment of fact: someone
+        // was in their room, so the class was taught to an audience. Keyed on the session
+        // rather than the attendee, so a full room does not pay a trainer thirty times --
+        // the work was delivering the class once.
+        await awardSessionTaught({ trainerId: session.training.trainerId, sessionId: session.id });
       } else {
         await revokeAttendance({ userId: evt.identity, sessionId: session.id });
+        await revokeSessionTaught({ trainerId: session.training.trainerId, sessionId: session.id });
       }
 
       const training = await prisma.training.findUnique({

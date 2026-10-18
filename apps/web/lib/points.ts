@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import {
   POINT_REASONS,
+  POINTS,
   pointsForAttendanceDay,
   pointsForCertificate,
   pointsForProgramCompletion,
@@ -139,6 +140,42 @@ export async function revokeAttendance({ userId, sessionId }: { userId: string; 
     if (!stillComplete) await revoke(userId, `program:${session.trainingId}`);
   }
   return syncUserPoints(userId);
+}
+
+/**
+ * Award the trainer standing for having someone actually turn up to their class.
+ *
+ * Keyed on `taught:<sessionId>`, so one session pays a trainer once no matter how many
+ * learners attend it -- the work is delivering the class, not repeating it per head -- and
+ * a replayed webhook awards nothing further. Same guarantee the learner awards rely on.
+ *
+ * Called from the attendance webhook on the present branch only. A class nobody came to
+ * earns the trainer nothing, which is the point: standing should track whether people
+ * were in the room, not whether a room was opened.
+ */
+export async function awardSessionTaught({ trainerId, sessionId }: { trainerId: string; sessionId: string }) {
+  if (!trainerId) return { awarded: false, points: 0 };
+  const created = await grant(
+    trainerId,
+    `taught:${sessionId}`,
+    POINT_REASONS.sessionTaught,
+    POINTS.sessionTaught,
+    { sessionId },
+  );
+  if (created) await syncUserPoints(trainerId);
+  return { awarded: created, points: created ? POINTS.sessionTaught : 0 };
+}
+
+/**
+ * Called when attendance is corrected back to absent, and the room turns out to have been
+ * emptier than it looked. Takes the trainer's award back with the learner's, so a corrected
+ * record cannot leave the two sides of the same class disagreeing.
+ */
+export async function revokeSessionTaught({ trainerId, sessionId }: { trainerId: string; sessionId: string }) {
+  if (!trainerId) return null;
+  const removed = await revoke(trainerId, `taught:${sessionId}`);
+  if (!removed) return null;
+  return syncUserPoints(trainerId);
 }
 
 /** Called when a certificate is issued. */
