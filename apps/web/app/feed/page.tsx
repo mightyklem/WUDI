@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { QuoteStrip } from './QuoteStrip';
 import { formatNgn } from '@learnovize/shared';
 import { lagosWhenLabel } from '@/lib/lagos';
@@ -43,7 +43,10 @@ export default function Feed() {
     if (cert !== 'any') sp.set('cert', cert);
     if (q) sp.set('q', q);
     if (following) sp.set('following', '1');
-    fetch(`/api/feed?${sp.toString()}`, { headers: access ? { authorization: `Bearer ${access}` } : {} })
+    // authFetch rather than a hand-built header: the feed is public, but a signed-in person's
+    // own posts and follows only come back with a token, and this attaches one when there is
+    // a usable one without the caller having to know that.
+    authFetch(`/api/feed?${sp.toString()}`)
       .then((r) => r.json())
       .then((j) => {
         setPosts(j.posts || []);
@@ -57,9 +60,8 @@ export default function Feed() {
   const filtered = Boolean(q || topic || cert !== 'any' || following);
 
   async function authed(path: string, opts: RequestInit = {}) {
-    const access = getAccess();
-    if (!access) { setMsg('Log in first.'); return null; }
-    const r = await fetch(path, { ...opts, headers: { ...(opts.headers || {}), authorization: `Bearer ${access}` } });
+    if (!getAccess()) { setMsg('Log in first.'); return null; }
+    const r = await authFetch(path, opts);
     if (!r.ok) setMsg('Action failed.');
     return r.ok ? r.json().catch(() => ({})) : null;
   }

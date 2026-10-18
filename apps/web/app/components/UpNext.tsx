@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch } from '@/lib/client-auth';
 import { lagosWhenLabel, lagosCountdownLabel } from '@/lib/lagos';
 
 type Row = {
@@ -35,10 +35,7 @@ export default function UpNext() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/me/upcoming', {
-        headers: { authorization: `Bearer ${getAccess() ?? ''}` },
-        cache: 'no-store',
-      });
+      const r = await authFetch('/api/me/upcoming');
       if (!r.ok) return;
       setData(await r.json());
     } catch { /* the rest of the dashboard is more important than this card */ }

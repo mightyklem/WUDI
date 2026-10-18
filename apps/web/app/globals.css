@@ -184,6 +184,9 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
   100%{opacity:0;transform:translateY(-120px) scale(1)}
 }
 @keyframes fade{from{opacity:0}to{opacity:1}}
+/* Loading placeholders. A sweep rather than a pulse, because a pulsing block on a white
+   card draws the eye as if it were the content, while a sweep reads as "not arrived yet". */
+@keyframes skeleton-sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .rise{animation:rise var(--dur-3) var(--ease) both}
 .fade{animation:fade var(--dur-2) var(--ease) both}
 /* Staggered by index so a list arrives as a sequence, not a slab. */

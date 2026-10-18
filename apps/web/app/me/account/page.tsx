@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess, clearSession } from '@/lib/client-auth';
+import { authFetch, getAccess, clearSession } from '@/lib/client-auth';
 
 export default function DeleteAccount() {
   const [pw, setPw] = useState('');
@@ -18,7 +18,7 @@ export default function DeleteAccount() {
   useEffect(() => {
     const access = getAccess();
     if (!access) return;
-    fetch('/api/me', { headers: { authorization: `Bearer ${access}` }, cache: 'no-store' })
+    authFetch('/api/me')
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (j?.user?.fullName !== undefined) setName(j.user.fullName ?? '');

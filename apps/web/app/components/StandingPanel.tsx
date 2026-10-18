@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch } from '@/lib/client-auth';
 
 type Points = {
   points: number;
@@ -49,10 +49,7 @@ export default function StandingPanel({
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/me/points', {
-        headers: { authorization: `Bearer ${getAccess() ?? ''}` },
-        cache: 'no-store',
-      });
+      const r = await authFetch('/api/me/points');
       if (!r.ok) { setFailed(true); return; }
       setData(await r.json());
       setFailed(false);

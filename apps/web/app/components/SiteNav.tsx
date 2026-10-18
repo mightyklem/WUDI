@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { clearSession, getAccess } from '@/lib/client-auth';
+import { authFetch, clearSession, getAccess, needsRefresh, refreshAccess } from '@/lib/client-auth';
 import Icon, { type IconName } from '@/components/Icon';
+import { Skeleton, SkeletonNavAction } from './Skeleton';
 
 /**
  * The one navigation bar.
@@ -30,11 +31,13 @@ const ICONS: { href: string; icon: IconName; label: string }[] = [
 
 export default function SiteNav({ right }: { right?: React.ReactNode }) {
   const pathname = usePathname();
-  const [signedIn, setSignedIn] = useState(false);
+  // null means "not known yet", which is a third state and the whole point. It used to be
+  // false, so every navigation rendered the signed-out header for the fraction of a second
+  // it took to read localStorage -- a flash of "Sign in" on a page you were already logged
+  // into, which reads as being logged out.
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [unread, setUnread] = useState(0);
 
-  // Read after mount, never during render: localStorage does not exist on the server,
-  // so reading it there would make the server and client markup disagree.
   useEffect(() => {
     setSignedIn(!!getAccess());
     const onStore = () => setSignedIn(!!getAccess());
@@ -42,15 +45,20 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
     return () => window.removeEventListener('storage', onStore);
   }, []);
 
-  // Unread count, so the bell is worth looking at. Only fetched when signed in, and a
-  // failure is silent -- a header is the wrong place to show an error about an error.
+  // Renew before the token lapses rather than reacting to a 401 afterwards. This is why the
+  // console filled with 401s on every tab: the refresh endpoint existed, but nothing had
+  // ever asked for a new token, so the expiry was discovered by failing.
+  useEffect(() => {
+    if (!signedIn || !needsRefresh()) return;
+    void refreshAccess();
+  }, [signedIn, pathname]);
+
+  // Unread count, so the bell is worth looking at. Goes through authFetch, so an expired
+  // token renews itself instead of logging the person out.
   useEffect(() => {
     if (!signedIn) return;
     let live = true;
-    fetch('/api/me/notifications?unreadOnly=1', {
-      headers: { authorization: `Bearer ${getAccess() ?? ''}` },
-      cache: 'no-store',
-    })
+    authFetch('/api/me/notifications?unreadOnly=1')
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => { if (live && j) setUnread(j.unread ?? 0); })
       .catch(() => undefined);
@@ -73,29 +81,37 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
           first time got three icons leading to pages behind a sign-in, which
           reads as a broken promise; the landing page now offers the mark and the
           two things they can actually do. */}
-      {signedIn && (
-        <nav>
-          {ICONS.map((i) => {
-            const active = pathname === i.href || pathname.startsWith(i.href + '/');
-            return (
-              <Link
-                key={i.href}
-                className="navicon"
-                href={i.href}
-                title={i.label}
-                aria-label={i.label}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon name={i.icon} size={19} strokeWidth={active ? 2.3 : 1.9} />
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+{signedIn === null ? (
+          <nav aria-hidden style={{ display: 'flex', gap: 4 }}>
+            {ICONS.map((i) => <Skeleton key={i.href} width={34} height={34} radius={9} />)}
+          </nav>
+        ) : signedIn && (
+          <nav>
+            {ICONS.map((i) => {
+              const active = pathname === i.href || pathname.startsWith(i.href + '/');
+              return (
+                <Link
+                  key={i.href}
+                  className="navicon"
+                  href={i.href}
+                  title={i.label}
+                  aria-label={i.label}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <Icon name={i.icon} size={19} strokeWidth={active ? 2.3 : 1.9} />
+                </Link>
+              );
+            })}
+          </nav>
+        )}
 
       <div className="topbar-actions">
         {right}
-        {signedIn ? (
+        {/* Placeholder, not "Sign in". The slot is filled with the same shape it will hold,
+            so nothing shifts sideways when the real controls arrive. */}
+        {signedIn === null ? (
+          <SkeletonNavAction />
+        ) : signedIn ? (
           <>
             {/* Was a Dashboard button with a home icon, which was the same destination as
                 the logo one tap to its left. Two controls for one place is one too many,

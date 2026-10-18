@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 
 type Note = {
@@ -66,7 +66,7 @@ export default function Notifications() {
       router.replace('/login');
       return;
     }
-    fetch('/api/me/notifications', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/me/notifications')
       .then((r) => r.json())
       .then((j) => setNotes(j.notifications || []))
       .catch(() => setNotes([]));
@@ -95,9 +95,8 @@ export default function Notifications() {
               const access = getAccess();
               if (!access) return;
               setMsg('Marking read…');
-              const r = await fetch('/api/me/notifications', {
+              const r = await authFetch('/api/me/notifications', {
                 method: 'POST',
-                headers: { authorization: `Bearer ${access}` },
               }).catch(() => null);
               if (!r || !r.ok) { setMsg('Could not mark as read. Try again.'); return; }
               const now = new Date().toISOString();

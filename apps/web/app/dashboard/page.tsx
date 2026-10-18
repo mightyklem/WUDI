@@ -6,9 +6,10 @@ import PaymentDueBanner from './PaymentDueBanner';
 import SiteNav from '../components/SiteNav';
 import StandingPanel from '../components/StandingPanel';
 import UpNext from '../components/UpNext';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel } from '@/lib/lagos';
+import { Skeleton, SkeletonCard, SkeletonLines } from '../components/Skeleton';
 
 type Me = {
   user: { id: string; email: string; role: 'admin' | 'trainer' | 'participant'; verified: boolean };
@@ -34,12 +35,12 @@ export default function Dashboard() {
   const [certs, setCerts] = useState<number | null>(null);
   const [live, setLive] = useState<{ id: string; title: string } | null>(null);
 
-  const authed = (path: string) =>
-    fetch(path, { headers: { authorization: `Bearer ${getAccess() ?? ''}` } }).then((r) => (r.ok ? r.json() : null));
+  // Through authFetch, so an expired token renews itself instead of every one of these
+  // four calls failing with a 401 and dumping the person at the login page.
+  const authed = (path: string) => authFetch(path).then((r) => (r.ok ? r.json() : null));
 
   useEffect(() => {
-    const access = getAccess();
-    if (!access) {
+    if (!getAccess()) {
       router.replace('/login');
       return;
     }
@@ -54,7 +55,28 @@ export default function Dashboard() {
     authed('/api/certificates/mine').then((c) => c && setCerts((c.certificates || []).length));
   }, []);
 
-  if (!me) return <div className="wrap"><p className="muted" style={{ marginTop: 30 }}>Loading your dashboard…</p></div>;
+  // Skeletons shaped like the page they are standing in for. "Loading your dashboard..." was
+  // honest but made the page jump from one line to a full screen, and a blank second is
+  // indistinguishable from a broken one.
+  if (!me) {
+    return (
+      <div className="wrap">
+        <SiteNav />
+        <div style={{ marginTop: 18 }}>
+          <Skeleton width={240} height={30} radius={8} />
+          <Skeleton width={190} height={13} style={{ marginTop: 10 }} />
+        </div>
+        <div style={{ display: 'grid', gap: 14, marginTop: 20 }}>
+          <SkeletonCard height={84} />
+          <SkeletonCard height={150} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 14 }}>
+            {[0, 1, 2].map((i) => <SkeletonCard key={i} height={128} />)}
+          </div>
+          <SkeletonCard height={120} />
+        </div>
+      </div>
+    );
+  }
 
   const { role } = me.user;
   const head = headlineFor(role);

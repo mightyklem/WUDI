@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { lagosWhenLabel } from '@/lib/lagos';
 import SiteNav from '../../components/SiteNav';
 
@@ -27,13 +27,13 @@ export default function MyRegistrations() {
   function load() {
     const access = getAccess();
     if (!access) return;
-    fetch('/api/me/registrations', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/me/registrations')
       .then((r) => r.json())
       .then((j) => {
         const list: Reg[] = j.registrations || [];
         setRegs(list);
         for (const r of list) {
-          fetch(`/api/me/attendance?trainingId=${r.training.id}`, { headers: { authorization: `Bearer ${access}` } })
+          authFetch(`/api/me/attendance?trainingId=${r.training.id}`)
             .then((x) => x.json())
             .then((p) => setProgress((prev) => ({ ...prev, [r.training.id]: p })))
             .catch(() => {});
@@ -45,8 +45,8 @@ export default function MyRegistrations() {
   async function cancel(id: string) {
     const access = getAccess();
     if (!access) return;
-    const r = await fetch(`/api/registrations/${id}/cancel`, {
-      method: 'POST', headers: { authorization: `Bearer ${access}` },
+    const r = await authFetch(`/api/registrations/${id}/cancel`, {
+      method: 'POST',
     });
     const j = await r.json();
     if (!r.ok) return setMsg(j.error || 'Cancel failed');
@@ -62,9 +62,9 @@ export default function MyRegistrations() {
     const note = prompt('What happened? (e.g. network dropped at 10:24, rejoined 10:31)') || '';
     const access = getAccess();
     if (!access) return;
-    const r = await fetch('/api/attendance/correction-request', {
+    const r = await authFetch('/api/attendance/correction-request', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ sessionId: target.sessionId, note }),
     });
     setMsg(r.ok ? 'Correction request sent to your trainer.' : 'Request failed.');

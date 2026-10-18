@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../components/SiteNav';
 import VerifiedBadge from '../components/VerifiedBadge';
 
