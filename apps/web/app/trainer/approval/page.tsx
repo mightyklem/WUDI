@@ -168,7 +168,7 @@ export default function Approval() {
           maxLength={identityType === 'nin' ? 11 : 12}
           autoComplete="off"
         />
-        <p className="muted" style={{ fontSize: 12, margin: '-6px 0 12px' }}>
+        <p className="muted" style={{ fontSize: 12, margin: '8px 0 14px' }}>
           A reviewer checks this against the document you attach. It is stored privately,
           never shown on any public page, and every staff view of it is logged.
         </p>
@@ -182,7 +182,7 @@ export default function Approval() {
           accept=".jpg,.jpeg,.png,.pdf"
           onChange={(e) => setBankFile(e.target.files?.[0] || null)}
         />
-        <p className="muted" style={{ fontSize: 12, margin: '-6px 0 12px' }}>
+        <p className="muted" style={{ fontSize: 12, margin: '8px 0 14px' }}>
           In your own name, from the account you want to be paid into. A verified account
           proves the account exists — not that it is yours, which is the part we cannot
           check without this. 10MB max.

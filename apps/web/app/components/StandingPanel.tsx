@@ -31,8 +31,18 @@ const REASON_COPY: Record<string, string> = {
 export default function StandingPanel({
   /** Whose standing. Null renders nothing rather than a broken shell. */
   title = 'Your standing',
+  /**
+   * Things the points sit next to: certificates held, seats taken, rewards.
+   *
+   * Rendered as part of this card rather than beside it. Standing on its own was a number
+   * with nothing to do about it -- a person reading "620 points, 380 to Silver" had no
+   * obvious next move, and no idea that certificates and discounts came from the same
+   * attendance that scored the points. One panel, one answer to "what have I actually got".
+   */
+  related = [],
 }: {
   title?: string;
+  related?: { href: string; label: string; value: number | null; hint: string }[];
 }) {
   const [data, setData] = useState<Points | null>(null);
   const [failed, setFailed] = useState(false);
@@ -130,6 +140,37 @@ export default function StandingPanel({
               </li>
             ))}
           </ul>
+        </>
+      )}
+
+      {/* Stacked here rather than as separate tiles further down, because they are the same
+          story: the points are the score, and these are the things the score is for. */}
+      {related.length > 0 && (
+        <>
+          <p className="eyebrow" style={{ marginTop: 18, marginBottom: 6 }}>What that gets you</p>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {related.map((r) => (
+              <a
+                key={r.href}
+                href={r.href}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '11px 13px', borderRadius: 'var(--r-sm)',
+                  border: '1px solid var(--line)', textDecoration: 'none', color: 'inherit',
+                  background: 'var(--bg-soft, #fff)',
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="u-h-sm" style={{ display: 'block' }}>{r.label}</span>
+                  <span className="muted" style={{ fontSize: 12.5 }}>{r.hint}</span>
+                </span>
+                {r.value !== null && (
+                  <span style={{ fontWeight: 800, fontSize: 17 }}>{r.value}</span>
+                )}
+                <span className="muted" aria-hidden style={{ fontSize: 18 }}>›</span>
+              </a>
+            ))}
+          </div>
         </>
       )}
     </section>

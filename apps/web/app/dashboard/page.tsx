@@ -80,12 +80,23 @@ export default function Dashboard() {
           definition of what a rank means -- and it had already drifted: this one showed
           no progress percentage next to the bar and no record of what earned the points,
           so the learner could see they were Gold without being able to find out why.
-          One component, one meaning. */}
+          One component, one meaning.
+
+          The related links are stacked inside the same panel on purpose. Standing,
+          certificates and seats are one story about what turning up has been worth; split
+          across the page they read as three unrelated numbers, and the hierarchy that says
+          which is about now and which is about later is lost. */}
       <UpNext />
 
-      <StandingPanel />
+      <StandingPanel
+        related={[
+          { href: '/me/certificates', label: 'Certificates', value: certs, hint: 'Issued when you finish a programme' },
+          { href: '/me/registrations', label: 'Seats held', value: seats, hint: 'Classes you are booked into' },
+        ]}
+      />
 
-{role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
+<h2 className="sec">Teaching</h2>
+      {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
         <div className="card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
           <div className="u-flex">
             <span className="ibadge" style={{ background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 18 }} aria-hidden>⏳</span>
@@ -132,7 +143,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h2 className="sec">Tiles</h2>
+      <h2 className="sec">Go somewhere</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 14 }}>
         {tiles.map((t) => (
           <Link

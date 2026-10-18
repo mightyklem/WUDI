@@ -225,7 +225,7 @@ export default function Signup() {
               placeholder="As it should appear on your certificate"
               autoComplete="name"
         />
-        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '-6px 0 14px' }}>
+        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 16px' }}>
           Printed exactly as you type it. You can change it later.
         </p>
 

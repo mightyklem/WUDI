@@ -31,6 +31,7 @@ const ICONS: { href: string; icon: IconName; label: string }[] = [
 export default function SiteNav({ right }: { right?: React.ReactNode }) {
   const pathname = usePathname();
   const [signedIn, setSignedIn] = useState(false);
+  const [unread, setUnread] = useState(0);
 
   // Read after mount, never during render: localStorage does not exist on the server,
   // so reading it there would make the server and client markup disagree.
@@ -40,6 +41,21 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
     window.addEventListener('storage', onStore);
     return () => window.removeEventListener('storage', onStore);
   }, []);
+
+  // Unread count, so the bell is worth looking at. Only fetched when signed in, and a
+  // failure is silent -- a header is the wrong place to show an error about an error.
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    fetch('/api/me/notifications?unreadOnly=1', {
+      headers: { authorization: `Bearer ${getAccess() ?? ''}` },
+      cache: 'no-store',
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (live && j) setUnread(j.unread ?? 0); })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [signedIn, pathname]);
 
   const home = signedIn ? '/dashboard' : '/';
 
@@ -81,17 +97,34 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
         {right}
         {signedIn ? (
           <>
-            {/* Filled when you are already on it. Standing on a page and seeing
-                its own link sit there looking inactive is the clearest way to
-                tell somebody that navigation does not track location. */}
+            {/* Was a Dashboard button with a home icon, which was the same destination as
+                the logo one tap to its left. Two controls for one place is one too many,
+                and it left the top-right corner with nothing that changed without the
+                person going somewhere. Alerts is the thing that does change, so that is
+                what earns the slot -- and the count is only meaningful because marks can
+                now be acknowledged at all. */}
             <Link
-              className={pathname.startsWith('/dashboard') ? 'btn primary topbar-action' : 'btn topbar-action'}
-              href="/dashboard"
-              aria-label="Dashboard"
-              aria-current={pathname.startsWith('/dashboard') ? 'page' : undefined}
+              className="btn topbar-action"
+              href="/me/notifications"
+              aria-label={unread > 0 ? `Alerts, ${unread} unread` : 'Alerts'}
+              aria-current={pathname.startsWith('/me/notifications') ? 'page' : undefined}
+              style={{ position: 'relative' }}
             >
-              <span className="topbar-action-icon"><Icon name="home" size={17} /></span>
-              <span className="topbar-action-label">Dashboard</span>
+              <span className="topbar-action-icon"><Icon name="bell" size={17} /></span>
+              <span className="topbar-action-label">Alerts</span>
+              {unread > 0 && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18,
+                    padding: '0 5px', borderRadius: 999, background: 'var(--warn)',
+                    color: '#fff', fontSize: 11, fontWeight: 800, lineHeight: '18px',
+                    textAlign: 'center', border: '2px solid var(--bg)',
+                  }}
+                >
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
             </Link>
             <button
               className="btn link topbar-action"
