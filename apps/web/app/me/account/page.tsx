@@ -88,8 +88,9 @@ export default function DeleteAccount() {
         </p>
         <form onSubmit={saveName} style={{ maxWidth: 420 }}>
           <label className="fl">Full name</label>
-          <input
-            value={name}
+<input
+                type="text"
+                value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="As it should appear on your certificate"
             autoComplete="name"

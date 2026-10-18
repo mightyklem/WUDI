@@ -117,8 +117,9 @@ export default function GiveawayPanel({
       {isTrainer && !live && (
         <>
           <p className="eyebrow" style={{ color: 'var(--croom-dim)', marginTop: 4 }}>Give away something</p>
-          <input
-            className="croom-input"
+<input
+                type="text"
+                className="croom-input"
             value={prize}
             placeholder="Prize, e.g. Full course access"
             aria-label="Prize"

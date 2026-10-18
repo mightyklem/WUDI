@@ -16,9 +16,48 @@ export function emailEnabled(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 }
 
-/** From address, defaulting to Resend's onboarding sender when unset. */
-function fromAddress(): string {
-  return process.env.EMAIL_FROM || 'Learnovize <onboarding@resend.dev>';
+/**
+ * From address.
+ *
+ * Resend's onboarding@resend.dev sender is a TESTING sender: Resend rejects every send to
+ * anyone but the account owner's own address with a 403. Falling back to it in production
+ * therefore does not "send something that might not arrive" -- it guarantees that nothing
+ * arrives, silently, to every real user. That is exactly how new signups ended up told
+ * "we sent a 6-digit code" and never receiving one.
+ *
+ * So it is allowed in development, where sending to your own inbox is the point, and refused
+ * in production, where the only safe behaviour is to not pretend.
+ */
+function fromAddress(): string | null {
+  const configured = process.env.EMAIL_FROM?.trim();
+  if (configured) return configured;
+  if (process.env.NODE_ENV !== 'production') return 'Learnovize <onboarding@resend.dev>';
+  return null;
+}
+
+/**
+ * Whether real mail can leave this deployment, as booleans only.
+ *
+ * Nothing here returns a secret or a full key -- it is safe to show an admin, because the
+ * question "is email working" had no answer at all until now, and an outage nobody can see
+ * is how a broken signup goes unreported for days.
+ */
+export function emailHealth(): {
+  apiKeySet: boolean;
+  fromConfigured: boolean;
+  fromIsResendSandbox: boolean;
+  canDeliver: boolean;
+  problem: string | null;
+} {
+  const apiKeySet = Boolean(process.env.RESEND_API_KEY);
+  const from = fromAddress();
+  const sandbox = from?.includes('resend.dev') ?? false;
+  const canDeliver = apiKeySet && from !== null && !(sandbox && process.env.NODE_ENV === 'production');
+  let problem: string | null = null;
+  if (!apiKeySet) problem = 'RESEND_API_KEY is not set.';
+  else if (!from) problem = 'EMAIL_FROM is not set. Without it Resend only allows sending to the account owner, so nothing would reach a real user.';
+  else if (sandbox && process.env.NODE_ENV === 'production') problem = 'EMAIL_FROM is not set in production; the resend.dev test sender cannot deliver to real users.';
+  return { apiKeySet, fromConfigured: from !== null, fromIsResendSandbox: sandbox, canDeliver, problem };
 }
 
 /**
@@ -67,7 +106,14 @@ export function button(href: string, label: string): string {
  * email must not roll back the in-app notification or the payment that triggered it.
  */
 export async function sendEmail(msg: Email): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) return false;
+  const health = emailHealth();
+  if (!health.canDeliver) {
+    // Loud, greppable, and honest about the fact that this is a deployment problem rather
+    // than a bad address. Previously this returned false with no trace at the call site,
+    // so a total mail outage looked exactly like a quiet, successful signup.
+    console.error('[email] NOT SENT —', health.problem ?? 'mail is not configured', '| to:', msg.to, '| subject:', msg.subject);
+    return false;
+  }
   try {
     const r = await fetch(`${RESEND_API}/emails`, {
       method: 'POST',
@@ -76,7 +122,7 @@ export async function sendEmail(msg: Email): Promise<boolean> {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        from: fromAddress(),
+        from: fromAddress()!,
         to: msg.to,
         subject: msg.subject,
         text: msg.text,

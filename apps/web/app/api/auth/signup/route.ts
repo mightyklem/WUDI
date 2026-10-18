@@ -37,14 +37,17 @@ export async function POST(req: Request) {
   const user = await prisma.user.create({
     data: { email: lower, passwordHash: await hashPassword(password), fullName: name || null },
   });
-  // Best effort: if mail fails the account still exists and the resend endpoint covers it.
-  await issueOtp({ id: user.id, email: user.email, emailOtpExpiresAt: null });
+  // The account exists either way — refusing to create it because a mail provider is
+  // misconfigured would strand the person with no way back in. But the answer must say
+  // truthfully whether the code went anywhere, because the screen tells them to go and
+  // look for it.
+  const { sent } = await issueOtp({ id: user.id, email: user.email, emailOtpExpiresAt: null });
 
   return NextResponse.json(
     {
       user: { id: user.id, email: user.email, fullName: user.fullName },
       verificationRequired: true,
-      emailSent: true,
+      emailSent: sent,
     },
     { status: 201 },
   );

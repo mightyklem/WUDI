@@ -109,6 +109,7 @@ export default function PayoutSettings() {
 
         <label className="fl">Account number</label>
         <input
+          type="text"
           value={number}
           onChange={(e) => setNumber(e.target.value)}
           inputMode="numeric"

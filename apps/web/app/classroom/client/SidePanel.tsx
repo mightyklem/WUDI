@@ -145,8 +145,9 @@ function Chat({ d, myId }: { d: Data; myId: string }) {
         })}
       </div>
       <div className="croom-compose">
-        <input
-          className="croom-input"
+<input
+              type="text"
+              className="croom-input"
           value={draft}
           placeholder="Message everyone…"
           aria-label="Message"
@@ -330,6 +331,7 @@ function Polls({ room, role, d }: { room: Room; role: Role; d: Data }) {
         <>
           <p className="eyebrow" style={{ color: 'var(--croom-dim)', marginTop: 8 }}>New poll</p>
           <input
+            type="text"
             className="croom-input"
             value={q}
             aria-label="Poll question"
@@ -337,6 +339,7 @@ function Polls({ room, role, d }: { room: Room; role: Role; d: Data }) {
             onChange={(e) => setQ(e.target.value)}
           />
           <input
+            type="text"
             className="croom-input"
             value={opts}
             aria-label="Poll options"

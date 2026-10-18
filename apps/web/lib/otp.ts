@@ -47,16 +47,27 @@ export type OtpUser = {
 };
 
 /**
- * Mint a code, store only its hash, and email it. Returns the plaintext code so callers
- * can log it in local dev — never return it from an HTTP route.
+ * Mint a code, store only its hash, and email it.
+ *
+ * Returns whether the mail was actually accepted by the provider, because the caller has to
+ * be able to tell the truth. Signup used to answer "we sent a 6-digit code" from a hardcoded
+ * true while the send quietly failed, which is how people were told to check an inbox that
+ * was never going to receive anything.
+ *
+ * The plaintext code is returned for local dev logging only — never return it from a route.
  */
-export async function issueOtp(user: OtpUser, now = new Date()): Promise<string | null> {
+export async function issueOtp(
+  user: OtpUser,
+  now = new Date(),
+): Promise<{ sent: boolean; code: string | null }> {
   // One code per minute per account, so an attacker cannot flood someone's inbox or burn
   // through our Resend quota.
   const issuedAt = user.emailOtpExpiresAt
     ? user.emailOtpExpiresAt.getTime() - CODE_TTL_MINUTES * 60_000
     : 0;
-  if (user.emailOtpExpiresAt && now.getTime() - issuedAt < RESEND_COOLDOWN_MS) return null;
+  if (user.emailOtpExpiresAt && now.getTime() - issuedAt < RESEND_COOLDOWN_MS) {
+    return { sent: false, code: null };
+  }
 
   const code = newOtpCode();
   await prisma.user.update({
@@ -67,8 +78,18 @@ export async function issueOtp(user: OtpUser, now = new Date()): Promise<string 
       emailOtpAttempts: 0,
     },
   });
-  await sendEmail({ ...verificationCodeEmail(code), to: user.email });
-  return code;
+  const sent = await sendEmail({ ...verificationCodeEmail(code), to: user.email });
+  if (!sent) {
+    // Clear the hash so the account is not left holding a code that was never delivered.
+    // Otherwise "I never got a code" is unfixable without a rate-limit bypass: the stored
+    // code is real, the cooldown is armed, and resend returns early for a minute with
+    // nothing sent either.
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailOtpHash: null, emailOtpExpiresAt: null },
+    }).catch(() => undefined);
+  }
+  return { sent, code };
 }
 
 export function verificationCodeEmail(code: string): { subject: string; text: string; html: string } {

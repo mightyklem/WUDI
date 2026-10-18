@@ -44,6 +44,7 @@ export default function CopyInviteLink({ url, label = 'Invite link' }: { url: st
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <input
+          type="text"
           readOnly
           value={url}
           aria-label={`${label} to copy`}

@@ -38,6 +38,9 @@ export default function Signup() {
   // a blank one falls back to the email local part until they set it.
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
+  // Whether the code actually went out. Drives the heading, so the screen never claims a
+  // delivery that did not happen.
+  const [sentOk, setSentOk] = useState(true);
   const [code, setCode] = useState('');
   const [step, setStep] = useState(0);
   const [stage, setStage] = useState<'form' | 'verify'>('form');
@@ -56,7 +59,19 @@ export default function Signup() {
     setBusy(false);
     if (!r.ok) return setMsg({ ok: false, text: j.error || 'Signup failed' });
     setStage('verify');
-    setMsg({ ok: true, text: `We sent a 6-digit code to ${j.user.email}. It expires in 15 minutes.` });
+    // Say what actually happened. The old copy claimed a code was on its way from a
+    // hardcoded true, so a total mail outage looked like people failing to check spam.
+    // If it did not send, say that plainly and point at the thing that can fix it.
+    if (j.emailSent) {
+      setSentOk(true);
+      setMsg({ ok: true, text: `We sent a 6-digit code to ${j.user.email}. It expires in 15 minutes.` });
+    } else {
+      setSentOk(false);
+      setMsg({
+        ok: false,
+        text: `Your account was created, but we could not send the code to ${j.user.email}. Email may be temporarily unavailable — try again in a minute, or contact support if it keeps happening.`,
+      });
+    }
   }
 
   async function verify(e: React.FormEvent) {
@@ -95,14 +110,19 @@ export default function Signup() {
       <div className="wrap">
         <div className="surface surface-hero pat-dots fade u-mt-3">
           <span className="tile-icon tint-accent" aria-hidden>✉️</span>
-          <h1 className="u-mt-2">Check your inbox.</h1>
-          <p className="sub">We sent a 6-digit code to <b>{email}</b>. It expires in 15 minutes.</p>
+<h1 className="u-mt-2">{sentOk ? 'Check your inbox.' : 'Your account is waiting.'}</h1>
+        <p className="sub">
+          {sentOk
+            ? <>We sent a 6-digit code to <b>{email}</b>. It expires in 15 minutes.</>
+            : <>We could not reach <b>{email}</b> just now. Your account exists — once sending is working, the code below will arrive.</>}
+        </p>
         </div>
         <form onSubmit={verify} className="card u-mt-2">
           <label className="fl">6-digit code</label>
-          <input
-            inputMode="numeric"
-            autoComplete="one-time-code"
+<input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
             pattern="[0-9]{6}"
             maxLength={6}
             required
@@ -198,11 +218,12 @@ export default function Signup() {
             with their email address -- which is what was happening, and is precisely the
             document nobody shows an employer. */}
         <label className="fl">Full name</label>
-        <input
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          placeholder="As it should appear on your certificate"
-          autoComplete="name"
+<input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="As it should appear on your certificate"
+              autoComplete="name"
         />
         <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '-6px 0 14px' }}>
           Printed exactly as you type it. You can change it later.
