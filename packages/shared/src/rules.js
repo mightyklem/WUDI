@@ -186,6 +186,7 @@ export * from './pricing.js';
 
 // Points and level ranks (FR-13), same reasoning.
 export * from './points.js';
+export * from './rewards.js';
 
 // Trainer application questions and scoring. Pure so the same arithmetic runs in the
 // browser, the API and the tests -- inconsistent scoring is what makes an approval

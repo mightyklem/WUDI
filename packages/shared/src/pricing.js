@@ -78,12 +78,21 @@ export function billableDays(sessions) {
 
 /**
  * Per-day quote for a class.
- * Free classes always cost nothing. Paid classes cost pricePerDay x billable days.
+ * Free classes always cost nothing. Paid classes cost pricePerDay x billable days,
+ * less an optional loyalty discount.
+ *
+ * `discountPct` arrives from points a learner spent, never from the client. It is
+ * validated here rather than trusted: a NaN, a negative, or a hundred-and-ten all have
+ * to mean "no discount" instead of a negative invoice or a free course.
+ *
+ * The reduction is applied to the TOTAL and the total is rounded once, rather than
+ * rounding the discount and subtracting it. Rounding the discount rounds it up about half
+ * the time, and on a large order that is money handed out by an accident of arithmetic.
  */
-export function quote({ accessType, pricePerDayNgn, sessions }) {
+export function quote({ accessType, pricePerDayNgn, sessions, discountPct = 0 }) {
   const days = billableDays(sessions);
   if (accessType !== 'paid') {
-    return { accessType: 'free', days, pricePerDayNgn: null, totalNgn: 0 };
+    return { accessType: 'free', days, pricePerDayNgn: null, totalNgn: 0, discountPct: 0, discountNgn: 0 };
   }
   // Careful: Number(null), Number(undefined) and Number('') are all 0, which would make an
   // unpriced paid class look free. An unknown price must stay unknown, not collapse to zero.
@@ -93,12 +102,37 @@ export function quote({ accessType, pricePerDayNgn, sessions }) {
     (typeof pricePerDayNgn === 'string' && pricePerDayNgn.trim() === '');
   const raw = blank ? NaN : Number(pricePerDayNgn);
   const perDay = Number.isFinite(raw) ? Math.round(raw) : null;
+  const gross = perDay === null ? 0 : perDay * days;
+
+  const pct = normaliseDiscount(discountPct);
+  // totalNgn is gross MINUS the reduction. Naming the reduced figure "discountNgn" and
+  // returning it as the total -- which is exactly what this did first -- prices every paid
+  // class at zero whenever there is no discount, which is the most common case there is.
+  const reducedNgn = pct > 0 && perDay !== null ? Math.round((gross * (100 - pct)) / 100) : gross;
+
   return {
     accessType: 'paid',
     days,
     pricePerDayNgn: perDay,
-    totalNgn: perDay === null ? 0 : perDay * days,
+    grossNgn: gross,
+    totalNgn: reducedNgn,
+    discountPct: pct,
+    discountNgn: gross - reducedNgn,
   };
+}
+
+/**
+ * Coerce anything a caller might pass into a percentage that is safe to multiply money by.
+ * Anything unrecognised, or outside 0..100, is zero. Discounting by a negative number or
+ * by more than the whole price is not a rounding curiosity.
+ */
+export function normaliseDiscount(pct) {
+  const n = Number(pct);
+  if (!Number.isFinite(n)) return 0;
+  const i = Math.floor(n);
+  if (i <= 0) return 0;
+  if (i > 100) return 100;
+  return i;
 }
 
 /**
