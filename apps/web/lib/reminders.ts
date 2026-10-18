@@ -1,34 +1,45 @@
 import { prisma } from '@/lib/db';
-import { sendEmailMany, sessionStartingEmail, emailEnabled } from '@/lib/email';
+import { sendEmailMany, sessionsReminderEmail, emailEnabled } from '@/lib/email';
 
 /**
- * Remind a learner about what they are booked into, once.
+ * Two nudges, not one.
  *
- * sessionStartingEmail has existed since the email library was written and has never been
- * called by anything. A learner who reserved a seat and heard nothing afterwards had no
- * way of knowing when the room opened, and the failure is silent: they simply do not turn
- * up, and the class runs for everyone else.
+ * The first went out at 36 hours. That does nothing for somebody who booked a class six days
+ * ago and has simply forgotten about it, which is most people, most of the time. So there is
+ * a second one on the day itself -- terse, hour and link, because by then anything longer is
+ * skipped.
  *
- * WHY THIS FIRES ON LOGIN RATHER THAN FROM A TIMER: there is no cron here, and adding one
- * to Netlify means a paid feature and a new failure mode. Firing when the learner comes
- * back covers the case that matters -- somebody who has just booked something checks the
- * app -- and it costs nothing to run.
+ * WHY NOT A TIMER: still no cron here, and adding one to Netlify means a paid plan and a new
+ * failure mode. Both nudges fire when the learner opens the app, which is when somebody who
+ * has just booked something is actually present to be reminded.
  *
- * The acknowledgement is written BEFORE the send, not after. If the process dies between
- * sending and recording, the duplicate is caught; the other order loses the reminder and
- * nobody knows. A missed reminder is a nuisance, a repeated one is an annoyance you cannot
- * explain, and the second is the one that makes people mark you as spam.
+ * THE TWO WINDOWS DO NOT OVERLAP. "Today" claims anything starting within TODAY_HOURS;
+ * "soon" only claims what starts beyond that and inside SOON_HOURS. Without that split,
+ * somebody who booked a class two days out and then opened the app twice would get the
+ * planning email and the day-of email minutes apart, which reads as a broken system.
  */
+
+const SOON_HOURS = 36;
+const TODAY_HOURS = 6;
+
+type Due = {
+  sessionId: string;
+  trainingTitle: string;
+  startsAtUtc: string;
+  roomPath: string;
+  ref: string;
+  kind: 'soon' | 'today';
+};
+
 export async function remindUpcoming(userId: string) {
   if (!emailEnabled()) return { sent: 0, skipped: 'no-email' };
 
   const now = Date.now();
-  const horizon = now + 36 * 3600 * 1000; // just over a day, so "tomorrow" gets sent
+  const horizon = now + SOON_HOURS * 3600 * 1000;
 
   const regs = await prisma.registration.findMany({
     where: { userId, status: 'active' },
     select: {
-      id: true,
       training: {
         select: {
           title: true,
@@ -42,60 +53,77 @@ export async function remindUpcoming(userId: string) {
     },
   });
 
-  const due: {
-    email: ReturnType<typeof sessionStartingEmail>;
-    ref: string;
-    sessionId: string;
-    title: string;
-    startsAtUtc: string;
-  }[] = [];
-
+  const due: Due[] = [];
   for (const r of regs) {
-    const s = r.training.sessions[0]; // soonest is the one worth a nudge about
-    if (!s || s.status === 'cancelled') continue;
-    due.push({
-      email: sessionStartingEmail({
+    for (const s of r.training.sessions) {
+      if (s.status === 'cancelled') continue;
+      const hoursOut = (s.startsAtUtc.getTime() - now) / 3600_000;
+      // Keyed on the session AND the stage, so each is claimed once and never repeated.
+      // A single key here would mean the day-of nudge silently never fires, because the
+      // planning one had already used the slot.
+      const kind: 'soon' | 'today' = hoursOut <= TODAY_HOURS ? 'today' : 'soon';
+      due.push({
+        sessionId: s.id,
         trainingTitle: r.training.title,
         startsAtUtc: s.startsAtUtc.toISOString(),
         roomPath: `/classroom/${s.id}`,
-      }),
-      // Keyed on the session, not the day, so somebody booked into three sessions
-      // tomorrow gets three distinct reminders and three distinct acknowledgements.
-      ref: `session-reminder:${s.id}`,
-      sessionId: s.id,
-      title: r.training.title,
-      startsAtUtc: s.startsAtUtc.toISOString(),
-    });
+        ref: `session-reminder:${kind}:${s.id}`,
+        kind,
+      });
+    }
   }
   if (!due.length) return { sent: 0 };
 
-  // Claim first, then send. Anything already claimed is skipped, which is what makes a
-  // second call on the next login harmless.
-  //
-  // The payload carries sessionId and title, not just the dedupe ref, because this row is
-  // also what the Alerts page renders. Without them it would appear as an anonymous
-  // "Update" with nothing to click, which is a worse notification than sending nothing.
-  const claimed: typeof due = [];
+  // Claim first, then send. Anything already claimed is skipped, which is what makes calling
+  // this on every page load harmless. Losing a nudge to a crash is a nuisance; sending the
+  // same one twice is the failure that gets an address marked as spam.
+  const claimed: Due[] = [];
   for (const d of due) {
     try {
       await prisma.notification.create({
         data: {
           userId,
           type: 'session-reminder',
-          payload: { ref: d.ref, sessionId: d.sessionId, title: d.title, startsAtUtc: d.startsAtUtc },
+          payload: {
+            ref: d.ref,
+            kind: d.kind,
+            sessionId: d.sessionId,
+            title: d.trainingTitle,
+            startsAtUtc: d.startsAtUtc,
+          },
         },
       });
       claimed.push(d);
     } catch {
-      // A duplicate here just means a reminder already went out for this session.
+      // Already claimed for this stage.
     }
   }
   if (!claimed.length) return { sent: 0, skipped: 'already-reminded' };
 
-  // The email builder leaves `to` blank because it did not know the address; fill it now.
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
   if (!user?.email) return { sent: 0 };
 
-  const res = await sendEmailMany(claimed.map((c) => ({ ...c.email, to: user.email })));
+  // One email per stage, listing every class in it, rather than one per class. Somebody with
+  // three sessions tomorrow gets one email naming three, not an inbox of three.
+  const messages = (['today', 'soon'] as const)
+    .map((kind) => {
+      const items = claimed.filter((c) => c.kind === kind);
+      if (!items.length) return null;
+      return {
+        ...sessionsReminderEmail(
+          items.map((i) => ({
+            trainingTitle: i.trainingTitle,
+            startsAtUtc: i.startsAtUtc,
+            roomPath: i.roomPath,
+          })),
+          kind,
+        ),
+        to: user.email!,
+      };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+
+  if (!messages.length) return { sent: 0 };
+  const res = await sendEmailMany(messages);
   return { sent: res.sent };
 }

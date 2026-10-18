@@ -1,3 +1,5 @@
+import { lagosWhenLabel } from './lagos';
+
 /**
  * Transactional email via Resend (ADR-004). Plain HTTP against the Resend API — no SDK,
  * keeps the dependency surface small and the call sites synchronous.
@@ -13,7 +15,10 @@ export type Email = { to: string; subject: string; text: string; html?: string }
 const RESEND_API = 'https://api.resend.com';
 
 export function emailEnabled(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+  // Delegates to the health check rather than repeating a looser version of it. Two
+  // definitions of "can we send" is how sendEmail ended up guarded differently from the
+  // callers that ask this question first.
+  return emailHealth().canDeliver;
 }
 
 /**
@@ -216,18 +221,63 @@ export function seatConfirmedEmail(opts: { trainingTitle: string; seatPath: stri
   };
 }
 
-export function sessionStartingEmail(opts: { trainingTitle: string; startsAtUtc: string; roomPath: string }): Email {
-  const href = absoluteUrl(opts.roomPath);
-  const when = new Date(opts.startsAtUtc).toUTCString();
+/**
+ * The reminder about what somebody is booked into.
+ *
+ * Two kinds, because they are read at two different moments. "Soon" is planning -- they may
+ * be on a laptop and can note the time. "Today" is the nudge, and it is deliberately terse:
+ * by then the only useful thing is the hour and the link, and anything longer gets skipped.
+ *
+ * Takes a list rather than one class, because somebody booked into a course with three
+ * sessions tomorrow should get one email listing three, not three emails.
+ *
+ * Times are Lagos, not GMT. The old version printed toUTCString(), which told a learner in
+ * Lagos their 3pm class was at "14:00:00 GMT" -- and every other time in this product is
+ * already in their timezone.
+ */
+export function sessionsReminderEmail(
+  items: { trainingTitle: string; startsAtUtc: string; roomPath: string }[],
+  kind: 'soon' | 'today',
+): Email {
+  const today = kind === 'today';
+  const list = items
+    .map((i) => ({ ...i, when: lagosWhenLabel(i.startsAtUtc), href: absoluteUrl(i.roomPath) }));
+
+  const rows = list
+    .map(
+      (i) => `<tr>
+        <td style="padding:10px 0;border-top:1px solid var(--line,#e6ebee);font-size:15px">
+          <strong style="display:block">${escapeHtml(i.trainingTitle)}</strong>
+          <span style="color:#6b7378;font-size:14px">${escapeHtml(i.when)}</span>
+        </td>
+        <td style="padding:10px 0;border-top:1px solid var(--line,#e6ebee);text-align:right;white-space:nowrap">
+          <a href="${escapeHtml(i.href)}" style="font-size:14px;font-weight:600;color:#1b7e8d;text-decoration:none">Join room &rsaquo;</a>
+        </td>
+      </tr>`,
+    )
+    .join('');
+
+  const subject = today
+    ? list.length === 1
+      ? `Today: ${list[0].trainingTitle}`
+      : `Today: ${list.length} classes`
+    : `Coming up: ${list.length === 1 ? list[0].trainingTitle : `${list.length} classes`}`;
+
+  const text = list.map((i) => `${i.trainingTitle} — ${i.when}\n${i.href}`).join('\n\n');
+
   return {
     to: '',
-    subject: `Starting soon: ${opts.trainingTitle}`,
-    text: `"${opts.trainingTitle}" starts ${when}.\n\nJoin: ${href}`,
+    subject,
+    text: `${text}\n\nSessions are not recorded. Be on time.`,
     html: shell(
-      'Starting soon',
-      `<p style="margin:0 0 8px 0"><strong>${escapeHtml(opts.trainingTitle)}</strong> starts at ${escapeHtml(when)}.</p>
-       <p style="margin:0;color:#6b7378;font-size:14px">Sessions are not recorded. Be on time.</p>
-       ${button(href, 'Join the room')}`,
+      today ? 'Your class today' : 'Coming up',
+      `<p style="margin:0 0 14px 0;font-size:15px">${
+        today
+          ? 'You have a class today. Rooms are not recorded, so be on time.'
+          : 'You are booked into these. Rooms are not recorded, so be on time.'
+      }</p>
+       <table role="presentation" style="width:100%;border-collapse:collapse">${rows}</table>
+       ${button(absoluteUrl('/me/registrations'), 'All my seats')}`,
     ),
   };
 }
