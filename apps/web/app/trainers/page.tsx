@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, getAccess } from '@/lib/client-auth';
+import { SkeletonCard } from '../components/Skeleton';
 import SiteNav from '../components/SiteNav';
 import VerifiedBadge from '../components/VerifiedBadge';
 
@@ -12,7 +13,10 @@ type Trainer = {
 };
 
 export default function Trainers() {
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  // null means loading, [] means genuinely no trainers. Initialised to [] the page rendered
+  // "No trainers yet" the instant it mounted, then replaced it with the real list a moment
+  // later -- so every visit flashed an empty state at somebody who does have trainers.
+  const [trainers, setTrainers] = useState<Trainer[] | null>(null);
   const [following, setFollowing] = useState<Set<string>>(new Set());
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -37,12 +41,22 @@ export default function Trainers() {
       <p className="sub">Follow trainers to hear about new trainings first.</p>
       {msg && <div className="err">{msg}</div>}
       <div className="grid2" style={{ marginTop: 18 }}>
-        {trainers.length === 0 && (
+        {/* Loading. Skeleton cards the same shape as the .course they stand in for, so the
+            page does not reflow when the real ones arrive. */}
+        {trainers === null && (
+          <>
+            <SkeletonCard height={148} />
+            <SkeletonCard height={148} />
+            <SkeletonCard height={148} />
+            <SkeletonCard height={148} />
+          </>
+        )}
+        {trainers !== null && trainers.length === 0 && (
           <div className="course"><span className="status">Empty</span><span className="ctitle">No trainers yet</span>
           <span className="cmeta">Be the first — complete your profile.</span>
           <span className="cfoot"><Link href="/onboarding">Become a trainer →</Link></span></div>
         )}
-        {trainers.map((t) => (
+        {trainers?.map((t) => (
           <div className="course" key={t.userId}>
             <span className="status">{t.topics.join(' · ') || 'Trainer'}</span>
             <span className="ctitle">

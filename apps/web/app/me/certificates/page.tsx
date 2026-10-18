@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAccess } from '@/lib/client-auth';
+import { SkeletonCard } from '../../components/Skeleton';
 import SiteNav from '../../components/SiteNav';
 
 type Cert = {
@@ -77,7 +78,13 @@ export default function MyCertificates() {
       <h1>My certificates.</h1>
       <p className="sub">Download and share anywhere — each number verifies online.</p>
       <div style={{ marginTop: 18, display: 'grid', gap: 0 }}>
-        {certs === null && <p className="muted">Log in to see your certificates.</p>}
+        {/* Same defect as the seats page: null means loading, and it was rendering "Log in". */}
+        {certs === null && (
+          <div style={{ display: 'grid', gap: 12 }}>
+            <SkeletonCard height={104} />
+            <SkeletonCard height={104} />
+          </div>
+        )}
         {certs !== null && certs.length === 0 && <p className="muted">None yet — finish a training past its minimum attendance.</p>}
         {dlError && (
           <p className="muted" role="alert" style={{ color: '#b42318', margin: '10px 0 0' }}>

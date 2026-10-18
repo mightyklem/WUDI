@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, getAccess } from '@/lib/client-auth';
+import { SkeletonCard } from '../../components/Skeleton';
 import { lagosWhenLabel } from '@/lib/lagos';
 import SiteNav from '../../components/SiteNav';
 
@@ -77,7 +78,17 @@ export default function MyRegistrations() {
       <p className="sub">Free cancel until the first session starts.</p>
       {msg && <div className="okmsg">{msg}</div>}
       <div style={{ marginTop: 18, display: 'grid', gap: 0 }}>
-        {regs === null && <p className="muted">Log in to see your registrations.</p>}
+        {/* Was "Log in to see your registrations." while the data loaded, which is why the page
+            flashed a login prompt on the way in. `regs === null` means LOADING, not signed
+            out, and the two had been given the same value. Three states, three outputs:
+            null is a skeleton, [] is genuinely empty, populated is the list. Being sent to
+            log in is authFetch's job when the token is genuinely dead, not this page's. */}
+        {regs === null && (
+          <div style={{ display: 'grid', gap: 12, marginTop: 18 }}>
+            <SkeletonCard height={104} />
+            <SkeletonCard height={104} />
+          </div>
+        )}
         {regs !== null && regs.length === 0 && <p className="muted">No seats yet — go find a training.</p>}
         {regs?.map((r) => {
           const p = progress[r.training.id];
