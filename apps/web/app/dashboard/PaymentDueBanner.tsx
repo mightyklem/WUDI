@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 
 type Due = {
   registrationId: string; title: string; slug: string; amountNgn: number;
@@ -26,7 +26,7 @@ export default function PaymentDueBanner() {
   const load = useCallback(async () => {
     const access = getAccess();
     if (!access) return;
-    const r = await fetch('/api/me/due', { headers: { authorization: `Bearer ${access}` } });
+    const r = await authFetch('/api/me/due', { headers: { authorization: `Bearer ${access}` } });
     if (r.ok) {
       const j = await r.json();
       setDue(j.due || []);
@@ -40,7 +40,7 @@ export default function PaymentDueBanner() {
     setMsg(null);
     const access = getAccess();
     try {
-      const r = await fetch('/api/payments/reconcile', {
+      const r = await authFetch('/api/payments/reconcile', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({}),

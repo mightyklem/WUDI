@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 
 type Bank = { code: string; name: string };
@@ -23,14 +23,14 @@ export default function PayoutSettings() {
 
   useEffect(() => {
     if (!access) return;
-    fetch('/api/trainer/payout-account', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/trainer/payout-account', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (!j) return;
         setAccount(j.account);
         if (j.account) setBankCode(j.account.bankCode);
       });
-    fetch('/api/trainer/payout-account/banks', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/trainer/payout-account/banks', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (j?.banks) setBanks(j.banks);
@@ -44,7 +44,7 @@ export default function PayoutSettings() {
     setMsg(null);
     setErr(null);
     try {
-      const r = await fetch('/api/trainer/payout-account', {
+      const r = await authFetch('/api/trainer/payout-account', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({

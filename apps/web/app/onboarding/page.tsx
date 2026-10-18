@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../components/SiteNav';
 
 /**
@@ -45,7 +45,7 @@ export default function Onboarding() {
   useEffect(() => {
     const access = getAccess();
     if (!access) { setMe({}); return; }
-    fetch('/api/me', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/me', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         setMe(j || {});
@@ -68,7 +68,7 @@ export default function Onboarding() {
     setBusy(true);
     setMsg(null);
     try {
-      const r = await fetch('/api/trainer/profile', {
+      const r = await authFetch('/api/trainer/profile', {
         method: 'PUT',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({
@@ -79,7 +79,7 @@ export default function Onboarding() {
       });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not save');
       setMsg({ ok: true, text: 'Saved. Your profile is live.' });
-      const j = await fetch('/api/me', { headers: { authorization: `Bearer ${access}` } }).then((x) => x.json());
+      const j = await authFetch('/api/me', { headers: { authorization: `Bearer ${access}` } }).then((x) => x.json());
       setMe(j || {});
     } catch (err) {
       setMsg({ ok: false, text: err instanceof Error ? err.message : 'Something went wrong.' });

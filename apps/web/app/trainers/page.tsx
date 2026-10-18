@@ -21,13 +21,13 @@ export default function Trainers() {
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/trainers').then((r) => r.json()).then((j) => setTrainers(j.trainers || []));
+    authFetch('/api/trainers').then((r) => r.json()).then((j) => setTrainers(j.trainers || []));
   }, []);
 
   async function follow(id: string) {
     const access = getAccess();
     if (!access) return setMsg('Log in first to follow trainers.');
-    const r = await fetch(`/api/trainers/${id}/follow`, {
+    const r = await authFetch(`/api/trainers/${id}/follow`, {
       method: 'POST', headers: { authorization: `Bearer ${access}` },
     });
     if (!r.ok) return setMsg('Follow failed.');

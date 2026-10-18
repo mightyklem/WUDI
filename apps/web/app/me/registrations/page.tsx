@@ -95,7 +95,7 @@ export default function MyRegistrations() {
   async function buyCert(regId: string) {
     const access = getAccess();
     if (!access) return;
-    const r = await fetch(`/api/registrations/${regId}/checkout`, {
+    const r = await authFetch(`/api/registrations/${regId}/checkout`, {
       method: 'POST', headers: { authorization: `Bearer ${access}` },
     });
     const j = await r.json();

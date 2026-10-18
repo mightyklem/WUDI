@@ -3,6 +3,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import SiteNav from '../../components/SiteNav';
 import VerifiedBadge from '../../components/VerifiedBadge';
+import { authFetch } from '@/lib/client-auth';
 
 type Data = {
   trainer: {
@@ -24,7 +25,7 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
   const [missing, setMissing] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/trainers/${id}`)
+    authFetch(`/api/trainers/${id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => (j ? setData(j) : setMissing(true)));
   }, [id]);

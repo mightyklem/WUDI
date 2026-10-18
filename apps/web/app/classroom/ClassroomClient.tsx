@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { useRoomConnection } from './client/useClassroom';
 import type { Role } from './client/model';
 import Lobby from './client/Lobby';
@@ -51,7 +51,7 @@ const [viewerId, setViewerId] = useState<string | null>(null);
     const access = getAccess();
     if (!access) return;
     let dead = false;
-    fetch('/api/me', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/me', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => { if (!dead && j?.user?.id) setViewerId(j.user.id); })
       .catch(() => {});
@@ -66,7 +66,7 @@ const [viewerId, setViewerId] = useState<string | null>(null);
     const access = getAccess();
     if (!access) return;
     let dead = false;
-    fetch(`/api/sessions/${sessionId}/token`, {
+    authFetch(`/api/sessions/${sessionId}/token`, {
       method: 'GET',
       headers: { authorization: `Bearer ${access}` },
       cache: 'no-store',
@@ -86,7 +86,7 @@ const [viewerId, setViewerId] = useState<string | null>(null);
       setErr('Log in first, then join from your training page.');
       return null;
     }
-    const r = await fetch(`/api/sessions/${sessionId}/token`, {
+    const r = await authFetch(`/api/sessions/${sessionId}/token`, {
       method: 'POST',
       headers: { authorization: `Bearer ${access}` },
     });
@@ -119,7 +119,7 @@ const [admitted, setAdmitted] = useState(false);
   const [liveIntro, setLiveIntro] = useState<Intro | null>(null);
 
   useEffect(() => {
-    fetch(`/api/sessions/${sessionId}/token`, {
+    authFetch(`/api/sessions/${sessionId}/token`, {
       method: 'GET',
       headers: { authorization: `Bearer ${getAccess() ?? ''}` },
       cache: 'no-store',
@@ -204,7 +204,7 @@ useEffect(() => {
     if (state !== 'connected' || !pass) return;
     if (pass.role !== 'trainer') return;
     let cancelled = false;
-    fetch(`/api/sessions/${sessionId}/moderate`, {
+    authFetch(`/api/sessions/${sessionId}/moderate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${getAccess() ?? ''}` },
       body: JSON.stringify({ action: 'admit' }),
@@ -237,7 +237,7 @@ useEffect(() => {
     let stop = false;
     const check = async () => {
       try {
-        const r = await fetch(`/api/sessions/${sessionId}/live`, { cache: 'no-store' });
+        const r = await authFetch(`/api/sessions/${sessionId}/live`, { cache: 'no-store' });
         if (!r.ok) return;
         const j = await r.json();
         if (stop) return;

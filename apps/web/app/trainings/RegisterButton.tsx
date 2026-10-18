@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import CertConsent from './CertConsent';
 
 export default function RegisterButton({ trainingId, full, label }: { trainingId: string; full: boolean; label?: string }) {
@@ -16,7 +16,7 @@ export default function RegisterButton({ trainingId, full, label }: { trainingId
     setBusy(true);
     setMsg(null);
     try {
-      const r = await fetch(`/api/trainings/${trainingId}/register`, {
+      const r = await authFetch(`/api/trainings/${trainingId}/register`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ certConsentPublic }),
@@ -29,7 +29,7 @@ export default function RegisterButton({ trainingId, full, label }: { trainingId
 
       // Paid class: the seat is held, now send them straight to payment.
       if (j.requiresPayment) {
-        const pay = await fetch(`/api/registrations/${j.registration.id}/checkout`, {
+        const pay = await authFetch(`/api/registrations/${j.registration.id}/checkout`, {
           method: 'POST',
           headers: { authorization: `Bearer ${access}` },
         });

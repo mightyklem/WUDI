@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 
 // Trainer composer for one training: upload a ≤60s video / image, or auto-generate the e-card.
 export default function PostComposer({ trainingId }: { trainingId: string }) {
@@ -16,7 +16,7 @@ export default function PostComposer({ trainingId }: { trainingId: string }) {
     form.append('trainingId', trainingId);
     form.append('type', type);
     if (file) form.append('file', file);
-    const r = await fetch('/api/feed', { method: 'POST', headers: { authorization: `Bearer ${access}` }, body: form });
+    const r = await authFetch('/api/feed', { method: 'POST', headers: { authorization: `Bearer ${access}` }, body: form });
     const j = await r.json();
     setMsg(r.ok ? 'Post is live on Explore.' : (j.error || 'Publish failed'));
   }

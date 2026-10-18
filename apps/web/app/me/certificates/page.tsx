@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { SkeletonCard } from '../../components/Skeleton';
 import SiteNav from '../../components/SiteNav';
 
@@ -30,7 +30,10 @@ export default function MyCertificates() {
     try {
       const access = getAccess();
       if (!access) throw new Error('Your session has expired. Log in again to download.');
-      const r = await fetch(c.pdfUrl, { headers: { authorization: `Bearer ${access}` } });
+      // pdfUrl is our own /api/certificates/<id>/download, which is gated on the holder -- so it
+      // needs the token, and needs it to be a current one, or a download that used to work
+      // starts returning 401 the moment a token ages.
+      const r = await authFetch(c.pdfUrl);
       if (!r.ok) {
         const body = await r.json().catch(() => ({ error: 'Download failed' }));
         // 404 from this route means "not yours to have", not "no such file".
@@ -63,10 +66,10 @@ export default function MyCertificates() {
     const headers = { authorization: `Bearer ${access}` };
     // This page is where Paystack returns the participant after paying. If the webhook
     // never reached us, settle them here before rendering, otherwise they see nothing.
-    fetch('/api/payments/reconcile', { method: 'POST', headers })
+    authFetch('/api/payments/reconcile', { method: 'POST', headers })
       .catch(() => undefined)
       .finally(() => {
-        fetch('/api/certificates/mine', { headers })
+        authFetch('/api/certificates/mine', { headers })
           .then((r) => r.json())
           .then((j) => setCerts(j.certificates || []));
       });

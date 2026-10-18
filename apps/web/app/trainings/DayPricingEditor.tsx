@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { formatNgn, PRICING_TIERS, tierRangeText } from '@learnovize/shared';
 
 export type EditableDay = {
@@ -43,7 +43,7 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType }:
     setSaving(day.id);
     setMsg(null);
     try {
-      const r = await fetch(`/api/trainings/${trainingId}/days`, {
+      const r = await authFetch(`/api/trainings/${trainingId}/days`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({

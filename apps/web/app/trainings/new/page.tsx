@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { PRICING_TIERS, formatNgn, quote, tierRangeText } from '@learnovize/shared';
 import { lagosDateOptions, lagosRangeLabel, lagosTimeOptions, lagosToUtcIso, utcToLagosParts } from '@/lib/lagos';
 
@@ -80,7 +80,7 @@ export default function NewTraining() {
     if (!access) return setMsg({ ok: false, text: 'Log in as a trainer first.' });
     if (badRow) return setMsg({ ok: false, text: badRow.error });
 
-    const r = await fetch('/api/trainings', {
+    const r = await authFetch('/api/trainings', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 import StandingPanel from '../../components/StandingPanel';
 
@@ -20,7 +20,7 @@ export default function Earnings() {
   function load() {
     const access = getAccess();
     if (!access) return;
-    fetch('/api/trainer/earnings', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/trainer/earnings', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => { if (j) { setRows(j.rows); setTotals(j.totals); setPlan(j.plan); } });
   }
@@ -30,7 +30,7 @@ export default function Earnings() {
   async function upgrade(p: string) {
     const access = getAccess();
     if (!access) return;
-    const r = await fetch('/api/trainer/plan', {
+    const r = await authFetch('/api/trainer/plan', {
       method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({ plan: p }),
     });

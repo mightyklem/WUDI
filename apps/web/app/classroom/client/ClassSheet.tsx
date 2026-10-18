@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import ProductTypeGrid, { type ProductType } from './ProductTypeGrid';
+import { authFetch } from '@/lib/client-auth';
 
 export type Intro = {
   title: string;
@@ -115,7 +116,7 @@ const state = useMemo(() => {
     setOpening(true);
     try {
       const { getAccess } = await import('@/lib/client-auth');
-      const r = await fetch(`/api/sessions/${sessionId}/moderate`, {
+      const r = await authFetch(`/api/sessions/${sessionId}/moderate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${getAccess()}` },
         body: JSON.stringify({ action: 'admit' }),

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 
 export default function Approval() {
@@ -21,7 +21,7 @@ export default function Approval() {
   const [ID_CONSENT_TEXT, setConsentText] = useState('');
 
   useEffect(() => {
-    fetch('/api/trainer/approval/consent-text')
+    authFetch('/api/trainer/approval/consent-text')
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => j && setConsentText(j.text))
       .catch(() => setConsentText('I agree that Learnovize may store and review the identity document I upload, for the sole purpose of verifying my identity and deciding whether I may issue paid certificates.'));
@@ -30,7 +30,7 @@ export default function Approval() {
   function load() {
     const access = getAccess();
     if (!access) return;
-    fetch('/api/trainer/approval', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/trainer/approval', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => j && setState(j));
   }
@@ -42,7 +42,7 @@ export default function Approval() {
     const form = new FormData();
     form.append('file', file);
     form.append('kind', kind);
-    const up = await fetch('/api/uploads', {
+    const up = await authFetch('/api/uploads', {
       method: 'POST', headers: { authorization: `Bearer ${access}` }, body: form,
     });
     const uj = await up.json().catch(() => ({}));
@@ -76,7 +76,7 @@ export default function Approval() {
       if (bank.ok && bank.key) bankKey = bank.key;
     }
 
-    const r = await fetch('/api/trainer/approval', {
+    const r = await authFetch('/api/trainer/approval', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({

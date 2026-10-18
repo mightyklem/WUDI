@@ -32,7 +32,7 @@ export default function DeleteAccount() {
     setNameMsg(null);
     setNameErr(null);
     try {
-      const r = await fetch('/api/me', {
+      const r = await authFetch('/api/me', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${getAccess() ?? ''}` },
         body: JSON.stringify({ fullName: name }),
@@ -55,7 +55,7 @@ export default function DeleteAccount() {
     setErr(null);
     const access = getAccess();
     try {
-      const r = await fetch('/api/me', {
+      const r = await authFetch('/api/me', {
         method: 'DELETE',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ password: pw }),

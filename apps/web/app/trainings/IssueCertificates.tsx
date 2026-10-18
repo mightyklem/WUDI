@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 
 /**
  * Corrections and attestations.
@@ -71,7 +71,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
     const access = authed();
     if (!access) return;
     const headers = { authorization: `Bearer ${access}` };
-    fetch(`/api/trainings/${trainingId}/eligible`, { headers })
+    authFetch(`/api/trainings/${trainingId}/eligible`, { headers })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (!j) return;
@@ -83,7 +83,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
     // learner saying "the webhook says I was absent and I was not" produced a line of
     // text and nothing else. They are pulled in here because answering one is the same
     // job as correcting attendance.
-    fetch(`/api/trainings/${trainingId}/attendance`, { headers })
+    authFetch(`/api/trainings/${trainingId}/attendance`, { headers })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => j && setCorrections(j.correctionsPending || []));
   }
@@ -101,7 +101,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
     if (!access) return;
     setBusy(true);
     try {
-      const r = await fetch(`/api/sessions/${cell.sessionId}/attendance`, {
+      const r = await authFetch(`/api/sessions/${cell.sessionId}/attendance`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ userId: row.userId, present, reason: why }),
@@ -126,7 +126,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
     if (!access) return;
     setBusy(true);
     try {
-      const r = await fetch(`/api/trainings/${trainingId}/certificates/issue`, {
+      const r = await authFetch(`/api/trainings/${trainingId}/certificates/issue`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ userIds: [row.userId], attest: true, reason: why }),
@@ -148,7 +148,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
     if (!access) return;
     setBusy(true);
     try {
-      const r = await fetch(`/api/trainings/${trainingId}/certificates/issue`, {
+      const r = await authFetch(`/api/trainings/${trainingId}/certificates/issue`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ userIds: [row.userId] }),
@@ -174,7 +174,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
     if (!access) return;
     setBusy(true);
     try {
-      const r = await fetch(`/api/certificates/${row.certificateId}/revoke`, {
+      const r = await authFetch(`/api/certificates/${row.certificateId}/revoke`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ reason }),

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import AdminNav from '../../components/AdminNav';
 
 type Blocker = { code: string; message: string };
@@ -23,7 +23,7 @@ export default function AdminPayouts() {
   const load = useCallback(async () => {
     const access = getAccess();
     if (!access) return;
-    const r = await fetch('/api/admin/payouts', { headers: { authorization: `Bearer ${access}` } });
+    const r = await authFetch('/api/admin/payouts', { headers: { authorization: `Bearer ${access}` } });
     if (r.ok) setData(await r.json());
     else setErr('Could not load payouts.');
   }, []);
@@ -36,7 +36,7 @@ export default function AdminPayouts() {
     setErr(null);
     const access = getAccess();
     try {
-      const r = await fetch('/api/admin/payouts/release', {
+      const r = await authFetch('/api/admin/payouts/release', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ payoutId: id }),

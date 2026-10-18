@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { formatNgn } from '@learnovize/shared';
 import CertConsent from './CertConsent';
 
@@ -49,7 +49,7 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
     setBusy(true);
     setMsg(null);
     try {
-      const r = await fetch(`/api/trainings/${trainingId}/register`, {
+      const r = await authFetch(`/api/trainings/${trainingId}/register`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
         body: JSON.stringify({ certConsentPublic, dayIds: picked }),
@@ -60,7 +60,7 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
         return;
       }
       if (j.requiresPayment) {
-        const pay = await fetch(`/api/registrations/${j.registration.id}/checkout`, {
+        const pay = await authFetch(`/api/registrations/${j.registration.id}/checkout`, {
           method: 'POST',
           headers: { authorization: `Bearer ${access}` },
         });

@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { authFetch } from '@/lib/client-auth';
 
 type Giveaway = {
   id: string;
@@ -31,7 +32,7 @@ export default function GiveawayPanel({
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/sessions/${sessionId}/giveaways`, { cache: 'no-store' });
+      const r = await authFetch(`/api/sessions/${sessionId}/giveaways`, { cache: 'no-store' });
       const j = await r.json().catch(() => ({}));
       if (r.ok && Array.isArray(j.giveaways)) setRows(j.giveaways as Giveaway[]);
     } catch { /* the class still works without this */ }
@@ -43,7 +44,7 @@ export default function GiveawayPanel({
     const { getAccess } = await import('@/lib/client-auth');
     setBusy(true);
     try {
-      const r = await fetch(`/api/sessions/${sessionId}/giveaways`, {
+      const r = await authFetch(`/api/sessions/${sessionId}/giveaways`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${getAccess()}` },
         body: JSON.stringify(body),

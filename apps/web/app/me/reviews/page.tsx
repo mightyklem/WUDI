@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 
 type Row = {
@@ -19,7 +19,7 @@ export default function MyReviews() {
   function load() {
     const access = getAccess();
     if (!access) { setRows([]); return; }
-    fetch('/api/me/reviews', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/me/reviews', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => setRows(j?.sessions || []));
   }
@@ -32,7 +32,7 @@ export default function MyReviews() {
     setMsg(null);
     const access = getAccess();
     if (!access) return;
-    const r = await fetch(`/api/trainers/${trainerId}/reviews`, {
+    const r = await authFetch(`/api/trainers/${trainerId}/reviews`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({ sessionId, rating, body: texts[sessionId] }),

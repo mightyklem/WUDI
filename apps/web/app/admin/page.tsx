@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../components/SiteNav';
 
 type Metrics = {
@@ -29,10 +29,10 @@ export default function AdminConsole() {
   function auth() { return { authorization: `Bearer ${getAccess()}` }; }
   function load() {
     if (!getAccess()) return;
-    fetch('/api/admin/metrics', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setMetrics(j));
-    fetch('/api/admin/reports?status=open', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setReports(j.reports));
-    fetch('/api/admin/audit?take=30', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setAudit(j.audit));
-    fetch('/api/admin/analytics', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setAnalytics(j));
+    authFetch('/api/admin/metrics', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setMetrics(j));
+    authFetch('/api/admin/reports?status=open', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setReports(j.reports));
+    authFetch('/api/admin/audit?take=30', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setAudit(j.audit));
+    authFetch('/api/admin/analytics', { headers: auth() }).then((r) => (r.ok ? r.json() : null)).then((j) => j && setAnalytics(j));
   }
   useEffect(load, []);
   if (metrics === null) return <div className="wrap"><p className="muted">Staff only — log in as an admin.</p></div>;
@@ -41,7 +41,7 @@ export default function AdminConsole() {
     // Reports target posts or trainers; for trainer targets the id is the user id.
     const reason = suspended ? (prompt('Suspension reason (logged + sent to user):') || '') : '';
     if (suspended && !reason) return;
-    const r = await fetch(`/api/admin/users/${targetId}/suspend`, {
+    const r = await authFetch(`/api/admin/users/${targetId}/suspend`, {
       method: 'POST', headers: { 'content-type': 'application/json', ...auth() },
       body: JSON.stringify({ suspended, reason }),
     });

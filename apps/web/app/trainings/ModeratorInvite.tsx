@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 
 export default function ModeratorInvite({ trainingId }: { trainingId: string }) {
   const [email, setEmail] = useState('');
@@ -9,7 +9,7 @@ export default function ModeratorInvite({ trainingId }: { trainingId: string }) 
     e.preventDefault();
     const access = getAccess();
     if (!access) return setMsg('Log in as the trainer first.');
-    const r = await fetch(`/api/trainings/${trainingId}/moderators`, {
+    const r = await authFetch(`/api/trainings/${trainingId}/moderators`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({ email }),
@@ -29,7 +29,7 @@ export default function ModeratorInvite({ trainingId }: { trainingId: string }) 
   async function accept() {
     const access = getAccess();
     if (!access) return setMsg('Log in first.');
-    const r = await fetch('/api/moderators/accept', {
+    const r = await authFetch('/api/moderators/accept', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({ trainingId }),

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAccess } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import AdminNav from '../../components/AdminNav';
 
 type Item = {
@@ -17,7 +17,7 @@ export default function AdminApprovals() {
   function load() {
     const access = getAccess();
     if (!access) return;
-    fetch('/api/admin/approvals?status=pending', { headers: { authorization: `Bearer ${access}` } })
+    authFetch('/api/admin/approvals?status=pending', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => j && setItems(j.queue));
   }
@@ -29,7 +29,7 @@ export default function AdminApprovals() {
     if (decision !== 'approve' && !reason) return;
     const access = getAccess();
     if (!access) return;
-    const r = await fetch(`/api/admin/approvals/${id}`, {
+    const r = await authFetch(`/api/admin/approvals/${id}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({ decision, reason }),
@@ -44,7 +44,7 @@ export default function AdminApprovals() {
     // Goes through the audited route rather than reading storage directly. That route
     // writes the access record on the way to the bytes, so it is the only way staff
     // should ever be able to open a document.
-    const r = await fetch(`/api/admin/approvals/${approvalId}/document/${index}`, {
+    const r = await authFetch(`/api/admin/approvals/${approvalId}/document/${index}`, {
       headers: { authorization: `Bearer ${access}` },
     });
     const j = await r.json().catch(() => ({}));
@@ -58,7 +58,7 @@ export default function AdminApprovals() {
     if (!access) return;
     // Same rule as the ID document: the audited route is the only way to reach the
     // bytes, so the access record cannot be bypassed by calling storage directly.
-    const r = await fetch(`/api/admin/approvals/${approvalId}/bank-statement`, {
+    const r = await authFetch(`/api/admin/approvals/${approvalId}/bank-statement`, {
       headers: { authorization: `Bearer ${access}` },
     });
     const j = await r.json().catch(() => ({}));
