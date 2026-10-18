@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import PaymentDueBanner from './PaymentDueBanner';
 import SiteNav from '../components/SiteNav';
 import StandingPanel from '../components/StandingPanel';
+import UpNext from '../components/UpNext';
 import { getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel } from '@/lib/lagos';
@@ -80,6 +81,8 @@ export default function Dashboard() {
           no progress percentage next to the bar and no record of what earned the points,
           so the learner could see they were Gold without being able to find out why.
           One component, one meaning. */}
+      <UpNext />
+
       <StandingPanel />
 
 {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (

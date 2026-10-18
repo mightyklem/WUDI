@@ -26,6 +26,42 @@ export function lagosToUtcIso(date: string, time: string): string | null {
   return new Date(asUtc - LAGOS_OFFSET_MINUTES * 60 * 1000).toISOString();
 }
 
+/**
+ * How long until then, in words a person reads quickly.
+ *
+ * The point is to remove arithmetic. "3:00pm on Tuesday" requires the reader to work out
+ * how far away that is, and a person doing that on a phone while getting somewhere is a
+ * person who might not make it. So the countdown is the thing on the card, not a
+ * calculation the reader is asked to perform.
+ *
+ * Deliberately coarse past an hour. "in 3 days" is the useful thing; "in 3 days, 4 hours
+ * and 22 minutes" is false precision that becomes wrong every minute the page is left open.
+ */
+export function lagosCountdownLabel(iso: string | Date, now: Date = new Date()): string {
+  const d = typeof iso === 'string' ? new Date(iso) : iso;
+  if (Number.isNaN(d.getTime())) return '';
+
+  const mins = Math.round((d.getTime() - now.getTime()) / 60000);
+
+  // Started, or about to. Both read as past tense, which is the point.
+  if (mins <= -1) {
+    const ago = Math.abs(mins);
+    if (ago < 60) return `${ago} min ago`;
+    const h = Math.round(ago / 60);
+    return h < 24 ? `${h} hour${h === 1 ? '' : 's'} ago` : `${Math.round(ago / 1440)} days ago`;
+  }
+  if (mins === 0) return 'now';
+
+  if (mins < 60) return `in ${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `in ${hours} hour${hours === 1 ? '' : 's'}`;
+  const days = Math.round(mins / 1440);
+  if (days < 7) return days === 1 ? 'tomorrow' : `in ${days} days`;
+  const weeks = Math.round(mins / 10080);
+  if (weeks < 5) return `in ${weeks} week${weeks === 1 ? '' : 's'}`;
+  return `in ${Math.round(mins / 43200)} months`;
+}
+
 /** Split a UTC instant into Lagos wall-clock date and HH:MM for editing. */
 export function utcToLagosParts(iso: string | Date): { date: string; time: string } {
   const d = typeof iso === 'string' ? new Date(iso) : iso;
