@@ -42,7 +42,13 @@ export async function remindUpcoming(userId: string) {
     },
   });
 
-  const due: { email: ReturnType<typeof sessionStartingEmail>; ref: string }[] = [];
+  const due: {
+    email: ReturnType<typeof sessionStartingEmail>;
+    ref: string;
+    sessionId: string;
+    title: string;
+    startsAtUtc: string;
+  }[] = [];
 
   for (const r of regs) {
     const s = r.training.sessions[0]; // soonest is the one worth a nudge about
@@ -56,17 +62,28 @@ export async function remindUpcoming(userId: string) {
       // Keyed on the session, not the day, so somebody booked into three sessions
       // tomorrow gets three distinct reminders and three distinct acknowledgements.
       ref: `session-reminder:${s.id}`,
+      sessionId: s.id,
+      title: r.training.title,
+      startsAtUtc: s.startsAtUtc.toISOString(),
     });
   }
   if (!due.length) return { sent: 0 };
 
   // Claim first, then send. Anything already claimed is skipped, which is what makes a
   // second call on the next login harmless.
+  //
+  // The payload carries sessionId and title, not just the dedupe ref, because this row is
+  // also what the Alerts page renders. Without them it would appear as an anonymous
+  // "Update" with nothing to click, which is a worse notification than sending nothing.
   const claimed: typeof due = [];
   for (const d of due) {
     try {
       await prisma.notification.create({
-        data: { userId, type: 'session-reminder', payload: { ref: d.ref } },
+        data: {
+          userId,
+          type: 'session-reminder',
+          payload: { ref: d.ref, sessionId: d.sessionId, title: d.title, startsAtUtc: d.startsAtUtc },
+        },
       });
       claimed.push(d);
     } catch {

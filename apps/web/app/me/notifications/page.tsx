@@ -17,6 +17,9 @@ type Note = {
 // never written. The API has been serving notifications the whole time.
 const TYPES: Record<string, { icon: string; tint: string; label: string }> = {
   'registration-confirmed': { icon: '🎟', tint: 'tint-leaf', label: 'Seat confirmed' },
+  // Also the record that stops a reminder being sent twice, which is why it lives here
+  // rather than in a separate table nobody would think to look in.
+  'session-reminder': { icon: '⏰', tint: 'tint-accent', label: 'Starting soon' },
   'attendance-recorded': { icon: '✓', tint: 'tint-leaf', label: 'Attendance recorded' },
   'attendance-at-risk': { icon: '⚠', tint: 'tint-clay', label: 'At risk of missing the minimum' },
   'attendance-corrected': { icon: '✎', tint: 'tint-accent', label: 'Attendance corrected' },
@@ -82,7 +85,31 @@ export default function Notifications() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <h1>Alerts</h1>
         {unread > 0 && <span className="badge">{unread} new</span>}
+        {/* Without this the count only ever climbs, and a counter that only climbs is a
+            counter people stop looking at. */}
+        {unread > 0 && (
+          <button
+            className="btn"
+            style={{ marginLeft: 'auto' }}
+            onClick={async () => {
+              const access = getAccess();
+              if (!access) return;
+              setMsg('Marking read…');
+              const r = await fetch('/api/me/notifications', {
+                method: 'POST',
+                headers: { authorization: `Bearer ${access}` },
+              }).catch(() => null);
+              if (!r || !r.ok) { setMsg('Could not mark as read. Try again.'); return; }
+              const now = new Date().toISOString();
+              setNotes((ns) => (ns ?? []).map((n) => (n.readAt ? n : { ...n, readAt: now })));
+              setMsg(null);
+            }}
+          >
+            Mark all read
+          </button>
+        )}
       </div>
+      {msg && <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{msg}</p>}
 
       {notes.length === 0 ? (
         <div className="surface surface-hero pat-dots" style={{ marginTop: 16, textAlign: 'center' }}>
