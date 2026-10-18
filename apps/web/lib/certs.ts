@@ -1,6 +1,6 @@
 import { randomBytes, createHash } from 'crypto';
 import { prisma } from '@/lib/db';
-import { programPct, isEligible } from '@learnovize/shared';
+import { programPct, isEligible, personName } from '@learnovize/shared';
 import { putPrivate } from '@/lib/storage';
 import { awardCertificate } from '@/lib/points';
 import { signCertificate } from '@/lib/cert-signing';
@@ -208,8 +208,13 @@ export async function issueCertificate(
     issuedAt,
   });
 
-  const pdf = await renderCertificatePdf({
-    participantName: user.email,
+const pdf = await renderCertificatePdf({
+      // The name the learner gave us, not their email address. This was printing
+      // user.email, so every certificate ever issued carries an email address where the
+      // recipient's name belongs -- which is precisely the document somebody does not show
+      // an employer. Falls back to the local part of the address rather than printing
+      // "null", so an account with no name yet still gets a readable document.
+      participantName: personName(user) ?? 'Learnovize Learner',
     trainingTitle: training.title,
     trainerName: training.trainer.displayName,
     dateText,

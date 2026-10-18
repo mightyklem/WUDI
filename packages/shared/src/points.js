@@ -156,6 +156,38 @@ export function pointsForCertificate() {
 export function normalisePoints(points) {
   const n = Number(points);
   if (!Number.isFinite(n)) return 0;
-  // Points can be clawed back, so a negative total still has to resolve to a rank.
   return Math.max(0, Math.floor(n));
+}
+
+/**
+ * What to print when we have to name a person.
+ *
+ * One function, because the alternative is every surface inventing its own version. The
+ * giveaway derived a name from an email, the roster did the same, and the certificate did
+ * something worse -- it printed the email address itself, so a paid graduate held a PDF
+ * with "mightyklemaugustine@gmail.com" across the middle of it. None of those should have
+ * existed as three separate decisions.
+ *
+ * Falls back to the local part of the address, which is a person in the way that the
+ * string itself is not, and returns null when there is nothing at all rather than printing
+ * "undefined" onto a credential.
+ */
+export function personName(user) {
+  if (!user) return null;
+  const full = typeof user.fullName === 'string' ? user.fullName.trim() : '';
+  if (full) return full;
+  const email = typeof user.email === 'string' ? user.email.trim() : '';
+  if (!email) return null;
+  const local = email.split('@')[0];
+  return local || null;
+}
+
+/**
+ * Whether a name was supplied rather than derived. Used where the difference matters:
+ * a certificate should be able to say the holder has not given their real name yet, rather
+ * than presenting a mangled email as if it were one.
+ */
+export function hasRealName(user) {
+  const full = typeof user?.fullName === 'string' ? user.fullName.trim() : '';
+  return full.length > 0;
 }

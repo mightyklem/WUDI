@@ -34,6 +34,9 @@ const STEPS = [
 export default function Signup() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  // The name printed on certificates. Optional so nobody is blocked at signup;
+  // a blank one falls back to the email local part until they set it.
+  const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState(0);
@@ -47,7 +50,7 @@ export default function Signup() {
     setBusy(true);
     const r = await fetch('/api/auth/signup', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, fullName: fullName.trim() || undefined }),
     });
     const j = await r.json();
     setBusy(false);
@@ -182,13 +185,29 @@ export default function Signup() {
 
   return (
     <div className="wrap">
-      <div className="surface surface-hero pat-arcs fade u-mt-3">
-        <span className="tile-icon tint-leaf" aria-hidden>🙂</span>
+<div className="surface surface-hero pat-arcs fade u-mt-3">
+        <span className="tile-icon tint-leaf" aria-hidden>🎓</span>
         <h1 className="u-mt-2">Create your account.</h1>
-        <p className="sub">Email and a password. That is all.</p>
+        <p className="sub">Your name, an email and a password.</p>
       </div>
 
       <form onSubmit={submit} className="card rise u-mt-2">
+        {/* Name first, and asked for now rather than at certificate time, because it is
+            printed on the certificate. Collecting it here means somebody who finishes a
+            paid programme holds a document with their own name on it, rather than one
+            with their email address -- which is what was happening, and is precisely the
+            document nobody shows an employer. */}
+        <label className="fl">Full name</label>
+        <input
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="As it should appear on your certificate"
+          autoComplete="name"
+        />
+        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '-6px 0 14px' }}>
+          Printed exactly as you type it. You can change it later.
+        </p>
+
         <label className="fl">Email</label>
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
         <label className="fl">Password (8+ characters)</label>

@@ -2,8 +2,42 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken, checkPassword } from '@/lib/auth';
 import { eraseAccount, erasureBlockers } from '@/lib/erasure';
+import { hasRealName } from '@learnovize/shared';
 
 export const dynamic = 'force-dynamic';
+
+// PATCH /api/me { fullName } — correct the name printed on certificates.
+//
+// Deliberately the only editable field. An account page that can only delete you is not
+// an account page, and a name that can only be set once at signup is a name nobody can fix
+// when they get it wrong -- which is exactly when it matters most, because the certificate
+// carrying it is meant to be shown to an employer.
+//
+// A certificate already issued is NOT rewritten by this. It is a signed document; changing
+// it silently would make the signature a decoration. A certificate issued with the wrong
+// name is re-issued, or corrected by the trainer on the record, both of which leave a trace.
+export async function PATCH(req: Request) {
+  const token = getBearer(req);
+  const userId = token ? await verifyAccessToken(token) : null;
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const body = (await req.json().catch(() => ({}))) as { fullName?: string };
+  const raw = typeof body.fullName === 'string' ? body.fullName : '';
+  const name = raw.trim().replace(/\s+/g, ' ').slice(0, 80);
+
+  // Clearing it is allowed -- some people would rather it fell back to the address than
+  // carry a name they have not chosen to. Anything else must at least look like a name.
+  if (name.length === 1) {
+    return NextResponse.json({ error: 'Please give a name of at least two characters' }, { status: 400 });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { fullName: name || null },
+    select: { id: true, email: true, fullName: true },
+  });
+  return NextResponse.json({ ok: true, user });
+}
 
 
 // GET /api/me — identity + role, so the app can route each person to the right home.
@@ -27,10 +61,14 @@ export async function GET(req: Request) {
   // Three roles. Admin wins, then trainer, then participant.
   const role = user.isAdmin ? 'admin' : user.trainerProfile ? 'trainer' : 'participant';
   return NextResponse.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      role,
+user: {
+        id: user.id,
+        email: user.email,
+        // So the account page can show the name it will print, and so any surface can
+        // name a person properly rather than deriving one from the address.
+        fullName: user.fullName,
+        hasRealName: hasRealName(user),
+        role,
       isTrainer: !!user.trainerProfile,
       isAdmin: user.isAdmin,
       verified: !!user.emailVerifiedAt,
