@@ -34,6 +34,9 @@ export default function Dashboard() {
   const [seats, setSeats] = useState<number | null>(null);
   const [certs, setCerts] = useState<number | null>(null);
   const [live, setLive] = useState<{ id: string; title: string } | null>(null);
+  // Which list of classes is open. One at a time: a trainer looking for the class they have
+  // to run next should not have to scroll past the ones they already ran.
+  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
 
   // Through authFetch, so an expired token renews itself instead of every one of these
   // four calls failing with a 401 and dumping the person at the login page.
@@ -164,20 +167,34 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Manage your classes. Upcoming first, then past -- the classes a trainer still has to
-          run are the ones they are looking for, and a class from last month is a record, not
-          a task. */}
+      {/* Manage your classes. Upcoming and past are separate lists behind their own tab,
+          not one long page: a class a trainer still has to run is a task, and a class from
+          last month is a record, and showing both at once is what made this feel like
+          clutter. The count on each tab is so the button says what is behind it before it
+          is pressed. */}
       {role === 'trainer' && trainings && trainings.length > 0 && (
         <section style={{ marginTop: 26 }}>
-          <h2 className="sec" style={{ color: '#FBBF24' }}>Manage your classes</h2>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 10, marginBottom: 14 }}>
-            <button className="btn primary" style={{ flex: 1 }}>Upcoming</button>
-            <button className="btn" style={{ flex: 1 }}>Past</button>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <button
+              className={tab === 'upcoming' ? 'btn primary' : 'btn'}
+              style={{ flex: 1 }}
+              onClick={() => setTab('upcoming')}
+              aria-pressed={tab === 'upcoming'}
+            >
+              Upcoming{upcoming.length ? ` (${upcoming.length})` : ''}
+            </button>
+            <button
+              className={tab === 'past' ? 'btn primary' : 'btn'}
+              style={{ flex: 1 }}
+              onClick={() => setTab('past')}
+              aria-pressed={tab === 'past'}
+            >
+              Past{past.length ? ` (${past.length})` : ''}
+            </button>
           </div>
 
           <div style={{ display: 'grid', gap: 12 }}>
-            {upcoming.map((t) => {
+            {tab === 'upcoming' && upcoming.map((t) => {
               const sessionId = t.nextSession as string;
               return (
                 <div
@@ -206,41 +223,33 @@ export default function Dashboard() {
               );
             })}
 
-            {past.length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <h3 className="sec" style={{ color: '#FBBF24' }}>Past classes</h3>
-                <div style={{ display: 'grid', gap: 12, marginTop: 10 }}>
-                  {past.map((t) => (
-                    <div
-                      key={t.id}
-                      className="card"
-                      style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', opacity: 0.65, borderLeft: '4px solid var(--warn)' }}
-                    >
-                      <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
-                      <div className="u-grow" style={{ minWidth: 160 }}>
-                        <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
-                        <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
-                          {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
-                        </p>
-                        <p className="muted u-sub-sm" style={{ margin: '4px 0 0', color: 'var(--warn)', fontWeight: 700 }}>
-                          Ended
-                        </p>
-                        <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
-                          This class has ended. Registration is closed.
-                        </p>
-                      </div>
-                      <div style={{ marginLeft: 'auto' }}>
-                        <Link className="btn" href={`/trainings/${t.id}`}>Class details</Link>
-                      </div>
-                    </div>
-                  ))}
+            {tab === 'past' && past.map((t) => (
+              <div
+                key={t.id}
+                className="card"
+                style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', opacity: 0.65, borderLeft: '4px solid var(--warn)' }}
+              >
+                <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
+                <div className="u-grow" style={{ minWidth: 160 }}>
+                  <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
+                  <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
+                    {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
+                  </p>
+                  <p className="muted u-sub-sm" style={{ margin: '4px 0 0', color: 'var(--warn)', fontWeight: 700 }}>
+                    Ended
+                  </p>
+                  <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
+                    This class has ended. Registration is closed.
+                  </p>
+                  <div style={{ marginLeft: 'auto' }}>
+                    <Link className="btn" href={`/trainings/${t.id}`}>Class details</Link>
+                  </div>
                 </div>
               </div>
-            )}
+              ))}
           </div>
         </section>
       )}
-
       {role === 'trainer' && trainings && trainings.length === 0 && (
         <div className="card u-empty">
           <div className="u-num" aria-hidden>＋</div>
