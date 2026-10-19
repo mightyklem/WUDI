@@ -1,7 +1,20 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { authFetch } from '@/lib/client-auth';
+import { authFetch, getAccess } from '@/lib/client-auth';
 import { Skeleton, SkeletonCard } from './Skeleton';
+
+/**
+ * Whether there is a session, resolved on the client.
+ *
+ * This used to live in a wrapper that took a render-prop function, and that is the one thing
+ * a Server Component cannot pass to a Client Component -- React rejects it at render time
+ * and the whole page 500s. The state belongs here, in the component that needs it.
+ */
+function useSignedIn() {
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => { setSignedIn(!!getAccess()); }, []);
+  return signedIn;
+}
 
 type Q = {
   id: string;
@@ -34,13 +47,8 @@ function ago(iso: string) {
  * Unanswered questions are not hidden. An unanswered question sitting there in public is a
  * trainer being told, quietly and publicly, what to write down.
  */
-export default function QuestionBox({
-  trainingId,
-  signedIn,
-}: {
-  trainingId: string;
-  signedIn: boolean;
-}) {
+export default function QuestionBox({ trainingId }: { trainingId: string }) {
+  const signedIn = useSignedIn();
   const [qs, setQs] = useState<Q[] | null>(null);
   const [draft, setDraft] = useState('');
   const [anon, setAnon] = useState(false);

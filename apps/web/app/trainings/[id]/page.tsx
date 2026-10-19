@@ -7,7 +7,6 @@ import CopyInviteLink from '../CopyInviteLink';
 import IssueCertificates from '../IssueCertificates';
 import PostComposer from '../PostComposer';
 import DayPricingEditor from '../DayPricingEditor';
-import SignedInGate from '../../components/SignedInGate';
 import QuestionBox from '../../components/QuestionBox';
 import CurriculumBuilder from '../../components/CurriculumBuilder';
 import { formatNgn, tierLabel } from '@learnovize/shared';
@@ -79,9 +78,7 @@ if (!t) return notFound();
 
       {/* Before the trainer-facing sections: a learner deciding whether to book wants an
           answer far more than they want to know the day-by-day price breakdown. */}
-      <SignedInGate>
-        {(signedIn) => <QuestionBox trainingId={t.id} signedIn={signedIn} />}
-      </SignedInGate>
+      <QuestionBox trainingId={t.id} />
 
       {/* Trainer only, and last: a learner deciding whether to book has no use for it, and it
           is the longest thing on the page. */}
