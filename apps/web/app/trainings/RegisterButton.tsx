@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import CertConsent from './CertConsent';
 
-export default function RegisterButton({ trainingId, full, label }: { trainingId: string; full: boolean; label?: string }) {
+export default function RegisterButton({ trainingId, full, label, hasEnded }: { trainingId: string; full: boolean; label?: string; hasEnded?: boolean }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Default false on purpose. Registration works either way; publishing does not happen
-  // by accident.
+  // Default false on purpose. Registration works either way; publishing does not
+  // happen by accident.
   const [certConsentPublic, setCertConsentPublic] = useState(false);
 
   async function go() {
@@ -52,6 +52,17 @@ export default function RegisterButton({ trainingId, full, label }: { trainingId
     } finally {
       setBusy(false);
     }
+  }
+
+  // If the class has ended or is full, show a message instead of the register button
+  if (full || hasEnded) {
+    return (
+      <span>
+        <p className="muted" style={{ marginTop: 10 }}>
+          {label ? `${label} — ` : ''}This class has ended. Registration is closed.
+        </p>
+      </span>
+    );
   }
 
   return (

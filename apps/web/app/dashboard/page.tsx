@@ -8,7 +8,7 @@ import StandingPanel from '../components/StandingPanel';
 import UpNext from '../components/UpNext';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
-import { lagosWhenLabel } from '@/lib/lagos';
+import { lagosWhenLabel, lagosSpanLabel } from '@/lib/lagos';
 import { Skeleton, SkeletonCard, SkeletonLines } from '../components/Skeleton';
 
 type Me = {
@@ -25,7 +25,7 @@ type MyTraining = {
 
 /**
  * Post-login home. Resolves the role server-side via /api/me and renders only what that
- * person can actually do. Icon tiles over prose — the header has to be readable at a glance.
+ * person can actually do. Icon tiles over prose -- the header has to be readable at a glance.
  */
 export default function Dashboard() {
   const router = useRouter();
@@ -85,6 +85,9 @@ export default function Dashboard() {
   const pendingTotal = (trainings || []).reduce((n, t) => n + t.pendingApproval, 0);
   const nextUp = (trainings || []).find((t) => t.nextSession);
 
+  const upcoming = (trainings || []).filter((t) => t.nextSession);
+  const past = (trainings || []).filter((t) => !t.nextSession);
+
   return (
     <div className="wrap">
       <SiteNav />
@@ -98,16 +101,11 @@ export default function Dashboard() {
       {/* Anything unpaid, before anything else on the page. */}
       <PaymentDueBanner />
 
-{/* Replaced a hand-written copy of this block. It worked, but it was a second
+      {/* Replaced a hand-written copy of this block. It worked, but it was a second
           definition of what a rank means -- and it had already drifted: this one showed
           no progress percentage next to the bar and no record of what earned the points,
           so the learner could see they were Gold without being able to find out why.
-          One component, one meaning.
-
-          The related links are stacked inside the same panel on purpose. Standing,
-          certificates and seats are one story about what turning up has been worth; split
-          across the page they read as three unrelated numbers, and the hierarchy that says
-          which is about now and which is about later is lost. */}
+          One component, one meaning. */}
       <UpNext />
 
       <StandingPanel
@@ -117,7 +115,8 @@ export default function Dashboard() {
         ]}
       />
 
-<h2 className="sec">Check your teaching</h2>
+      {/* Trainer-specific notices. The section heading was removed at the trainer's request;
+          the cards carry their own labels, so a heading here was a label for nothing. */}
       {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
         <div className="card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
           <div className="u-flex">
@@ -165,7 +164,95 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h2 className="sec">Go somewhere</h2>
+      {/* Manage your classes. Upcoming first, then past -- the classes a trainer still has to
+          run are the ones they are looking for, and a class from last month is a record, not
+          a task. */}
+      {role === 'trainer' && trainings && trainings.length > 0 && (
+        <section style={{ marginTop: 26 }}>
+          <h2 className="sec" style={{ color: '#FBBF24' }}>Manage your classes</h2>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, marginBottom: 14 }}>
+            <button className="btn primary" style={{ flex: 1 }}>Upcoming</button>
+            <button className="btn" style={{ flex: 1 }}>Past</button>
+          </div>
+
+          <div style={{ display: 'grid', gap: 12 }}>
+            {upcoming.map((t) => {
+              const sessionId = t.nextSession as string;
+              return (
+                <div
+                  key={t.id}
+                  className="card"
+                  style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', borderLeft: '4px solid var(--accent)' }}
+                >
+                  <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
+                  <div className="u-grow" style={{ minWidth: 160 }}>
+                    <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
+                    <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
+                      {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
+                      {t.pendingApproval > 0 ? ` · ${t.pendingApproval} to approve` : ''}
+                    </p>
+                    <p className="muted u-sub-sm" style={{ margin: '4px 0 0', color: 'var(--accent)', fontWeight: 600 }}>
+                      Next: {t.nextSessionAt ? lagosWhenLabel(t.nextSessionAt) : ''}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginLeft: 'auto' }}>
+                    <Link className="btn primary" href={`/classroom/${sessionId}`}>
+                      Join class <span aria-hidden>→</span>
+                    </Link>
+                    <Link className="btn" href={`/trainings/${t.id}#prepare`}>Prepare my class</Link>
+                  </div>
+                </div>
+              );
+            })}
+
+            {past.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <h3 className="sec" style={{ color: '#FBBF24' }}>Past classes</h3>
+                <div style={{ display: 'grid', gap: 12, marginTop: 10 }}>
+                  {past.map((t) => (
+                    <div
+                      key={t.id}
+                      className="card"
+                      style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', opacity: 0.65, borderLeft: '4px solid var(--warn)' }}
+                    >
+                      <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
+                      <div className="u-grow" style={{ minWidth: 160 }}>
+                        <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
+                        <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
+                          {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
+                        </p>
+                        <p className="muted u-sub-sm" style={{ margin: '4px 0 0', color: 'var(--warn)', fontWeight: 700 }}>
+                          Ended
+                        </p>
+                        <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
+                          This class has ended. Registration is closed.
+                        </p>
+                      </div>
+                      <div style={{ marginLeft: 'auto' }}>
+                        <Link className="btn" href={`/trainings/${t.id}`}>Class details</Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {role === 'trainer' && trainings && trainings.length === 0 && (
+        <div className="card u-empty">
+          <div className="u-num" aria-hidden>＋</div>
+          <p className="u-h-lg">No trainings yet</p>
+          <p className="muted u-sub">Host a free one right away</p>
+          <div className="btnrow u-center">
+            <Link className="btn primary" href="/trainings/new">Create</Link>
+          </div>
+        </div>
+      )}
+
+      <h2 className="sec" style={{ marginTop: 26 }}>Go somewhere</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 14 }}>
         {tiles.map((t) => (
           <Link
@@ -197,62 +284,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {role === 'trainer' && trainings && trainings.length > 0 && (
-        <>
-          <h2 className="sec">Manage your classes</h2>
-          {/* Two actions per class, and the card is no longer itself a link.
-              It used to be one link to the class page, which then presented pricing,
-              moderators, certificates, the explore post and the curriculum all at once --
-              five decisions stacked on a trainer who came here to get into a room. The
-              count that matters is still on the card, because knowing how many people
-              are coming is the one thing worth reading here. */}
-          <div style={{ display: 'grid', gap: 12 }}>
-            {trainings.map((t) => (
-              <div
-                key={t.id}
-                className="card"
-                style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}
-              >
-                <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
-                <div className="u-grow" style={{ minWidth: 160 }}>
-                  <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
-                  <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
-                    {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
-                    {t.pendingApproval > 0 ? ` · ${t.pendingApproval} to approve` : ''}
-                  </p>
-                </div>
-                {t.status === 'full' && <span className="badge rev">Full</span>}
-                {t.status === 'live' && <span className="badge ok">Live</span>}
-
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {t.nextSession ? (
-                    <Link className="btn primary" href={`/classroom/${t.nextSession}`}>
-                      Join class <span aria-hidden>→</span>
-                    </Link>
-                  ) : (
-                    <Link className="btn" href={`/trainings/${t.id}`}>Class details</Link>
-                  )}
-                  <Link className="btn" href={`/trainings/${t.id}#prepare`}>
-                    Prepare my class
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {role === 'trainer' && trainings && trainings.length === 0 && (
-        <div className="card u-empty">
-          <div className="u-num" aria-hidden>＋</div>
-          <p className="u-h-lg">No trainings yet</p>
-          <p className="muted u-sub">Host a free one right away</p>
-          <div className="btnrow u-center">
-            <Link className="btn primary" href="/trainings/new">Create</Link>
-          </div>
-        </div>
-      )}
-
       {role === 'participant' && seats === 0 && (
         <div className="card u-empty">
           <div className="u-num" aria-hidden>◎</div>
@@ -264,12 +295,12 @@ export default function Dashboard() {
         </div>
       )}
 
-{role === 'trainer' && (
-          <p className="u-mt-4">
-            Want to get paid?{' '}
-            <Link className="btn link" href="/trainer/approval">Verify your identity →</Link>
-          </p>
-        )}
+      {role === 'trainer' && (
+        <p className="u-mt-4">
+          Want to get paid?{' '}
+          <Link className="btn link" href="/trainer/approval">Verify your identity →</Link>
+        </p>
+      )}
 
       {role === 'participant' && (
         <p className="u-mt-4">

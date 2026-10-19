@@ -48,6 +48,15 @@ export default async function InvitePage({ params }: { params: Promise<{ slug: s
   const full = left <= 0 || t.status !== 'live';
   const paid = t.accessType === 'paid';
 
+  // A class whose last session has passed is over, whatever the training's status still says.
+  // The trainer may never have closed it, and a shared link to a finished class should not
+  // offer a seat that cannot happen -- or take money for it.
+  const nowMs = Date.now();
+  const lastEnd = t.sessions.length
+    ? Math.max(...t.sessions.map((s) => new Date(s.endsAtUtc).getTime()))
+    : null;
+  const hasEnded = lastEnd !== null && lastEnd <= nowMs;
+
   return (
     <div className="wrap">
       <SiteNav />
@@ -61,6 +70,20 @@ export default async function InvitePage({ params }: { params: Promise<{ slug: s
           {paid ? `${tierLabel(t.tier)} class` : 'Free class'}
         </p>
 
+        {/* A finished class says so, plainly, and offers nothing to click. This is the link
+            people share, so it is where somebody arrives after the class has run and finds
+            a Register button that would take their money for a session they cannot attend. */}
+        {hasEnded && (
+          <div className="card" style={{ marginTop: 16, background: 'var(--warn-soft)', borderLeft: '4px solid var(--warn)' }}>
+            <p className="u-h" style={{ margin: 0 }}>This class has ended</p>
+            <p className="muted u-sub" style={{ margin: '4px 0 0' }}>
+              It ran on {t.sessions.length ? new Date(lastEnd!).toUTCString().slice(0, 16) : 'its scheduled date'}.
+              Registration is closed.
+            </p>
+          </div>
+        )}
+
+        {!hasEnded && (
         <div style={{ marginTop: 18 }}>
           {t.days.length ? (
             <DayPicker
@@ -91,6 +114,7 @@ export default async function InvitePage({ params }: { params: Promise<{ slug: s
             </>
           )}
         </div>
+        )}
       </div>
       <p className="muted">Invite pages load fast and open directly from shared links — no app install needed.</p>
     </div>

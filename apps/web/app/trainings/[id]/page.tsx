@@ -52,6 +52,9 @@ if (!t) return notFound();
   const nextSession =
     t.sessions.find((s) => new Date(s.endsAtUtc).getTime() > nowMs) ?? t.sessions[0] ?? null;
   const otherSessions = t.sessions.filter((s) => s.id !== nextSession?.id);
+  
+  // Check if all sessions have ended
+  const hasEnded = t.sessions.length > 0 && t.sessions.every((s) => new Date(s.endsAtUtc).getTime() <= Date.now());
 
   return (
     <div className="wrap">
@@ -125,7 +128,7 @@ if (!t) return notFound();
         )}
 
         <div className="btnrow" style={{ marginTop: 12 }}>
-          <RegisterButton trainingId={t.id} full={full || t.status !== 'live'} />
+          <RegisterButton trainingId={t.id} full={full || t.status !== 'live'} hasEnded={hasEnded} />
         </div>
       </div>
 

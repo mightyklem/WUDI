@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const t = await prisma.training.findUnique({
     where: { id },
     include: {
-      sessions: { select: { startsAtUtc: true } },
+      sessions: { select: { startsAtUtc: true, endsAtUtc: true } },
       days: { orderBy: { dayIndex: 'asc' } },
     },
   });
@@ -56,6 +56,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const chosenDays = t.days.filter((d) => picked.includes(d.id));
+  
+  // Check if the training has already ended (all sessions have passed)
+  const lastSessionEnd = t.sessions.length
+    ? Math.max(...t.sessions.map((s) => new Date(s.endsAtUtc).getTime()))
+    : undefined;
+  if (lastSessionEnd !== undefined && lastSessionEnd <= Date.now()) {
+    return NextResponse.json({ error: 'This class has already ended. Registration is closed.' }, { status: 409 });
+  }
+
   const earliestSessionStart = t.sessions.length
     ? Math.min(...t.sessions.map((s) => new Date(s.startsAtUtc).getTime()))
     : undefined;
