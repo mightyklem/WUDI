@@ -10,6 +10,7 @@ type Session = {
   id: string;
   trainingId: string;
   trainingTitle: string;
+  trainingSlug: string;
   startsAtUtc: string;
   endsAtUtc: string;
   status: string;
@@ -20,7 +21,9 @@ type Session = {
 export default function MyRegistrations() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | string | null>(null);
+  const [activeTab, setActiveTab] = useState<'join' | 'share'>('join');
+  const [consentChecked, setConsentChecked] = useState(false);
 
   function load() {
     const access = getAccess();
@@ -49,6 +52,7 @@ export default function MyRegistrations() {
                 id: s.id,
                 trainingId: training.id,
                 trainingTitle: training.title,
+                trainingSlug: training.slug,
                 startsAtUtc: s.startsAtUtc,
                 endsAtUtc: s.endsAtUtc,
                 status: training.status,
@@ -72,12 +76,7 @@ export default function MyRegistrations() {
       .finally(() => setLoading(false));
   }
 
-  function formatDateTime(startsAtUtc: string) {
-    return {
-      date: lagosDayLabel(startsAtUtc),
-      time: lagosWhenLabel(startsAtUtc),
-    };
-  }
+  useEffect(load, []);
 
   function formatDateOnly(startsAtUtc: string) {
     return lagosDayLabel(startsAtUtc);
@@ -87,15 +86,16 @@ export default function MyRegistrations() {
     return lagosWhenLabel(startsAtUtc);
   }
 
-  useEffect(load, []);
+  // Check if all sessions for a training have passed
+  const allPast = sessions.length > 0 && sessions.every(s => !s.upcoming);
 
   return (
     <div className="wrap">
       <SiteNav />
       <h1>My sessions</h1>
-      <p className="sub">Upcoming first, then past. Checked = attended.</p>
+      <p className="sub">Your reserved seats. Sorted by date.</p>
 
-      {msg && <div className="okmsg">{msg}</div>}
+      {msg && <div className="okmsg">{typeof msg === 'string' ? msg : msg.text}</div>}
 
       <div style={{ marginTop: 18 }}>
         {loading && (
@@ -106,42 +106,108 @@ export default function MyRegistrations() {
           </div>
         )}
 
-        {!loading && sessions.length > 0 && (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {sessions.map((s) => {
-              const isPast = !s.upcoming;
-              const checked = !s.upcoming && s.attended;
+        {!loading && sessions.length === 0 && (
+          <p className="muted">No sessions yet — go find a training.</p>
+        )}
 
-              return (
-                <div key={s.id} className="rowitem" style={{ borderRadius: 12, padding: '12px 16px', background: 'var(--bg)', border: '1px solid var(--line)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 16, fontWeight: 600, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {s.trainingTitle}
-                      </p>
-                      <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
-                        {s.upcoming ? 'Upcoming · ' : 'Past · '}{lagosDayLabel(s.startsAtUtc)} · {lagosWhenLabel(s.startsAtUtc)}
-                      </p>
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+        {!loading && sessions.length > 0 && (
+          <>
+            {/* All past - show simple message instead of tabs */}
+            {sessions.every(s => !s.upcoming) && (
+              <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+                <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
+                  All your sessions have passed
+                </p>
+                <p className="muted" style={{ marginTop: 8 }}>
+                  You&apos;ve completed all your sessions. Check back for new trainings!
+                </p>
+              </div>
+            )}
+
+            {/* Has upcoming sessions - show tabs */}
+            {sessions.some(s => s.upcoming) && (
+              <>
+                {/* Tabs */}
+                <div className="btnrow" style={{ marginBottom: 12, gap: 8 }}>
+                  <button
+                    className={`btn ${activeTab === 'join' ? 'primary' : 'secondary'}`}
+                    onClick={() => setActiveTab('join')}
+                    style={{ flex: 1 }}
+                  >
+                    Join class
+                  </button>
+                  <button
+                    className={`btn ${activeTab === 'share' ? 'primary' : 'secondary'}`}
+                    onClick={() => setActiveTab('share')}
+                    style={{ flex: 1 }}
+                  >
+                    Share this class
+                  </button>
+                </div>
+
+                {/* Tab content */}
+                {activeTab === 'join' && (
+                  <div className="card" style={{ padding: 16 }}>
+                    <p className="muted" style={{ marginBottom: 16, fontSize: 14 }}>
+                      By joining, you agree to our <a href="/terms" className="link">Terms of Service</a> and <a href="/privacy" className="link">Privacy Policy</a>.
+                    </p>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
                       <input
                         type="checkbox"
-                        checked={checked}
-                        disabled
+                        checked={consentChecked}
+                        onChange={(e) => setConsentChecked(e.target.checked)}
                         style={{ width: 20, height: 20, accentColor: 'var(--accent)' }}
                       />
-                      <span className="muted" style={{ fontSize: 13 }}>
-                        {s.upcoming ? 'Upcoming' : checked ? 'Attended' : 'Missed'}
+                      <span style={{ fontSize: 14 }}>
+                        I agree to the terms and consent to recording
                       </span>
                     </label>
-                    <Link className="btn link" href={`/classroom/${s.id}`} style={{ marginLeft: 'auto' }}>
-                      {s.upcoming ? 'Join' : 'View'}
-                    </Link>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {sessions
+                        .filter(s => s.upcoming)
+                        .sort((a, b) => new Date(a.startsAtUtc).getTime() - new Date(b.startsAtUtc).getTime())
+                        .map((s) => (
+                          <Link key={s.id} className="btn primary" href={`/classroom/${s.id}`} style={{ width: '100%', textAlign: 'center', padding: '14px 16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <p style={{ fontWeight: 600, margin: 0 }}>{s.trainingTitle}</p>
+                                <p className="muted" style={{ fontSize: 13, margin: '2px 0 0' }}>
+                                  {lagosDayLabel(s.startsAtUtc)} · {lagosWhenLabel(s.startsAtUtc)}
+                                </p>
+                              </div>
+                              <span aria-hidden>→</span>
+                            </div>
+                          </Link>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                )}
+
+                {activeTab === 'share' && (
+                  <div className="card" style={{ padding: 16 }}>
+                    <p className="muted" style={{ marginBottom: 12, fontSize: 14 }}>
+                      Copy the link to share this class with others
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/t/${sessions[0]?.trainingSlug || ''}/register`}
+                        style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14 }}
+                      />
+                      <button className="btn" onClick={() => {
+                        const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/t/${sessions[0]?.trainingSlug || ''}/register`;
+                        navigator.clipboard.writeText(url);
+                        setMsg({ ok: true, text: 'Link copied!' });
+                      }}>
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
 
         {!loading && sessions.length === 0 && (
