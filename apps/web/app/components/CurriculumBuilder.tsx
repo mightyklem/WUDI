@@ -75,6 +75,7 @@ const emptyDraft = (): Draft => ({
 });
 
 export default function CurriculumBuilder({ trainingId }: { trainingId: string }) {
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [busy, setBusy] = useState(false);
@@ -95,7 +96,9 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
     } catch { /* the page stays usable without it */ }
   }, [trainingId]);
 
-  useEffect(() => { void load(); }, [load]);
+  // Only fetched once it is opened. A trainer who never prepares anything should not pay
+  // for a request on every visit to their own class page.
+  useEffect(() => { if (open) void load(); }, [open, load]);
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) =>
     setDraft((d) => (d ? { ...d, [k]: v } : d));
@@ -145,6 +148,18 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
     })();
   }
 
+  // Closed by default. This is a long editor sitting at the bottom of a page most visitors
+  // scroll past, and an empty form is worse than no form -- it reads as a broken feature.
+  // One line says what it is, one button opens it.
+  if (!open) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Write it once, then teach from it.</p>
+        <button className="btn primary" onClick={() => setOpen(true)}>Prepare your class</button>
+      </div>
+    );
+  }
+
   if (!draft) {
     return (
       <div style={{ display: 'grid', gap: 12 }}>
@@ -161,6 +176,13 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
         This is yours to write. The document at the end is only as good as what is in here —
         nobody else can answer any of these for you.
       </p>
+      <button
+        className="btn link"
+        onClick={() => setOpen(false)}
+        style={{ marginBottom: 8, fontSize: 13 }}
+      >
+        ▾ Close and keep this page short
+      </button>
 
       {/* ---- positioning */}
       <h3 className="u-h-md" style={{ marginTop: 20 }}>The shape of it</h3>

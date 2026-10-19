@@ -154,7 +154,7 @@ export async function issueCertificate(
   if (existing) {
     if (existing.status === 'valid') return existing;
     throw Object.assign(
-      new Error('This learner holds a revoked certificate Ã¢â‚¬â€ restore it rather than issuing another'),
+      new Error('This learner holds a revoked certificate — restore it rather than issuing another'),
       { code: 'REVOKED' },
     );
   }

@@ -4,7 +4,7 @@ import { getBearer, verifyAccessToken } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/trainer/verification/checkout â€” RETIRED. Always refuses.
+ * POST /api/trainer/verification/checkout — RETIRED. Always refuses.
  *
  * The paid badge is gone. It charged N10,000 to open a review, then unlocked nothing:
  * after the rule change that stopped paid classes needing approval, the badge's stated
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       error: 'The paid verification badge has been retired.',
       detail:
         'It is no longer charged for, and nothing was taken from your account. ' +
-        'Identity verification is free and unlocks your first payout â€” start it at ' +
+        'Identity verification is free and unlocks your first payout — start it at ' +
         '/trainer/approval.',
       retired: true,
     },

@@ -58,7 +58,7 @@ overflow: hidden;
 }
 
 /* min-width:0 plus an ellipsis on BOTH lines. Without it the title column refuses to
-   shrink below its longest word, and "12:00 AM � 3:00 AM WAT" breaks between characters --
+   shrink below its longest word, and "12:00 AM - 3:00 AM WAT" breaks between characters --
    which is how a clock ends up rendered as a vertical stack of letters. */
 .croom-head-title {
   flex: 1 1 auto;

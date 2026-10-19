@@ -45,35 +45,92 @@ if (!t) return notFound();
   const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3100').replace(/\/$/, '');
   const inviteUrl = `${appOrigin}/t/${t.slug}/register`;
   const full = left <= 0 || t.status === 'full';
+  // The next session that has not finished is the one somebody opening this page on
+  // the day is actually here to attend. Everything else is a date they will come back for.
+  const nowMs = Date.now();
+  const nextSession =
+    t.sessions.find((s) => new Date(s.endsAtUtc).getTime() > nowMs) ?? t.sessions[0] ?? null;
+  const otherSessions = t.sessions.filter((s) => s.id !== nextSession?.id);
+
   return (
     <div className="wrap">
       <SiteNav />
-      <div className="card" style={{ marginTop: 12 }}>
-        <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
-        <CopyInviteLink url={inviteUrl} />
-      </div>
-      <p className="eyebrow">{t.topic || 'Training'} Â· {t.format === 'audio' ? 'Audio-only' : 'Video + audio'} Â· {t.trainer.displayName}{t.accessType === 'paid' ? ` Â· ${tierLabel(t.tier)} class` : ' Â· Free class'}</p>
+
+      <p className="eyebrow" style={{ marginTop: 14 }}>
+        {t.topic || 'Training'} · {t.format === 'audio' ? 'Audio-only' : 'Video + audio'} ·{' '}
+        {t.trainer.displayName}
+        {t.accessType === 'paid' ? ` · ${tierLabel(t.tier)}` : ' · Free'}
+      </p>
       <h1 style={{ color: 'var(--ink)' }}>{t.title}</h1>
-      <p className="sub">{t.description}</p>
-      <p className="sub">
+
+      {/* The trainer's own words, in their words. Nothing wrapped around it. */}
+      {t.description && <p style={{ fontSize: 16, lineHeight: 1.55, marginTop: 8 }}>{t.description}</p>}
+
+      {/* The price as a figure. It was a sentence of prose explaining what a number already
+          says, which is what pushed the actual answer below the fold on a phone. */}
+      <p style={{ fontSize: 19, fontWeight: 800, marginTop: 14 }}>
         {t.accessType === 'paid' ? (
           <>
-            <b>{formatNgn(price.pricePerDayNgn ?? 0)}</b> per day Ã— {price.days} day{price.days === 1 ? '' : 's'} ={' '}
-            <b>{formatNgn(price.totalNgn)}</b> total.
-            {t.certMode === 'paid'
-              ? ` Certificate included â€” attend at least ${t.minPct}% of sessions to earn it.`
-              : ` Attend at least ${t.minPct}% of sessions.`}
+            {formatNgn(price.totalNgn)}
+            <span className="muted" style={{ fontSize: 15, fontWeight: 600 }}>
+              {' '}total · {formatNgn(price.pricePerDayNgn ?? 0)} × {price.days} day{price.days === 1 ? '' : 's'}
+            </span>
           </>
         ) : (
-          <>Free class â€” anyone can attend. No certificate is issued, but attendees earn points.</>
+          <>Free</>
         )}
       </p>
-      <div className="card" style={{ marginTop: 18 }}>
-        <p className="eyebrow">{t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} Â· {left} / {t.cap} seats left {full && '(FULL)'}</p>
-        {t.sessions.map((s) => (
-          <p key={s.id} className="meta">ðŸ—“ {lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)} <Link className="btn link" href={`/classroom/${s.id}`}>Join classroom â†’</Link></p>
-        ))}
-        <div className="btnrow"><RegisterButton trainingId={t.id} full={full || t.status !== 'live'} /></div>
+      <p className="muted" style={{ fontSize: 14, marginTop: 4 }}>
+        {t.accessType === 'paid' && t.certMode === 'paid' ? 'Certificate included' : 'No certificate'} ·{' '}
+        {t.minPct}% attendance needed
+      </p>
+
+      {/* Join gets the emphasis. It was a faint link in a list the same size as the dates,
+          on the one page where somebody may be trying to get to a class right now. */}
+      <div className="card" style={{ marginTop: 16, padding: 16 }}>
+        <p className="eyebrow" style={{ marginBottom: 10 }}>
+          {t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} · {left} of {t.cap} seats left
+          {full && ' · FULL'}
+        </p>
+
+        {nextSession && (
+          <div style={{ marginBottom: otherSessions.length ? 12 : 0 }}>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+              {lagosSpanLabel(nextSession.startsAtUtc, nextSession.endsAtUtc)}
+            </p>
+            <div style={{ marginTop: 9 }}>
+              <Link className="btn primary lg" href={`/classroom/${nextSession.id}`}>
+                Join classroom
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {otherSessions.length > 0 && (
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {otherSessions.map((s) => (
+              <li
+                key={s.id}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  gap: 10, padding: '7px 0', borderTop: '1px solid var(--line)', fontSize: 14,
+                }}
+              >
+                <span className="muted">{lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)}</span>
+                <Link className="btn link" href={`/classroom/${s.id}`}>Join</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="btnrow" style={{ marginTop: 12 }}>
+          <RegisterButton trainingId={t.id} full={full || t.status !== 'live'} />
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12, padding: 16 }}>
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
+        <CopyInviteLink url={inviteUrl} />
       </div>
 
       {/* Before the trainer-facing sections: a learner deciding whether to book wants an

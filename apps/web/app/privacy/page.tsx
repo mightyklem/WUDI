@@ -8,7 +8,7 @@ export default function Privacy() {
     <div className="wrap">
       <SiteNav />
       <h1>Privacy (draft).</h1>
-      <p className="sub">Plain-words summary under the Nigeria Data Protection Act 2023 â€” final wording confirmed with counsel before launch.</p>
+      <p className="sub">Plain-words summary under the Nigeria Data Protection Act 2023 — final wording confirmed with counsel before launch.</p>
       <div className="card" style={{ marginTop: 18, fontSize: 15 }}>
         <p><b>1. What we store.</b> Account details, trainings, registrations, attendance logs, payments, and certificates.</p>
         <p><b>2. Trainer IDs.</b> Identity documents are stored encrypted in a private bucket, used only for teaching verification, and auto-purged after a decision window. Access is logged.</p>

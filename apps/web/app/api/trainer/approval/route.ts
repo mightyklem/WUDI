@@ -117,7 +117,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ approval }, { status: 201 });
 }
 
-// GET /api/trainer/approval â€” my latest request + state
+// GET /api/trainer/approval — my latest request + state
 //
 // Also returns who has opened my identity documents. The consent text says staff access
 // is recorded, which is only a real commitment if the trainer can actually see it --
