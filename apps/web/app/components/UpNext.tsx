@@ -55,7 +55,10 @@ export default function UpNext() {
   return (
     <section className="card" style={{ marginTop: 14, borderLeft: '3px solid var(--accent)' }}>
       <h2 style={{ margin: '0 0 10px', fontSize: 16 }}>
-        {live ? 'Join now' : 'Your next class'}
+        {/* Stable heading. It used to switch between "Join now" and "Your next class" depending
+          on whether anything was live, so the section renamed itself every hour. The
+          urgency belongs on the button inside, not on the heading above it. */}
+        See what&rsquo;s next
       </h2>
 
       {live && (

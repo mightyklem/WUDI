@@ -53,7 +53,7 @@ export default function Earnings() {
           A trainer's rank was already being computed and awarded -- from reviews, and now
           from classes they actually taught -- and had never been rendered anywhere on the
           trainer's side. */}
-      <StandingPanel title="Your standing" />
+      <StandingPanel title="Check your points" />
 
       <div className="card" style={{ marginTop: 18 }}>
         <p className="eyebrow">Totals — gross ₦{totals.gross} · fees ₦{totals.fees} · commission ₦{totals.commission} · net ₦{totals.net}</p>

@@ -201,7 +201,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
 
   return (
     <div>
-      <h2 className="sec">Corrections &amp; attestations</h2>
+      <h2 className="sec">Correct the record</h2>
       <div className="card">
         <p className="eyebrow">
           Certificates are issued automatically once a session ends. Open this when

@@ -56,7 +56,7 @@ export default function AdminConsole() {
       <p className="sub">Activity, review queue, and audit trail.</p>
       {msg && <div className="okmsg">{msg}</div>}
 
-      <h2 className="sec">Metrics</h2>
+      <h2 className="sec">Watch the numbers</h2>
       <div className="card">
         <p style={{ margin: 0, fontSize: 15 }}>
           {metrics.users} users · {metrics.trainers} trainers · {metrics.trainings} trainings ({metrics.trainingsLive} live) ·
@@ -67,7 +67,7 @@ export default function AdminConsole() {
         </p>
       </div>
 
-      <h2 className="sec">Success metrics (§10)</h2>
+      <h2 className="sec">See what&rsquo;s working (§10)</h2>
       <div className="card">
         {!analytics && <p className="muted">Loading analytics…</p>}
         {analytics && (
@@ -82,7 +82,7 @@ export default function AdminConsole() {
         )}
       </div>
 
-      <h2 className="sec">Review queue ({reports.length} open)</h2>      <div className="card">
+      <h2 className="sec">Clear the review queue ({reports.length} open)</h2>      <div className="card">
         {reports.length === 0 && <p className="muted">Queue empty. Auto-flags (scam keywords, 3+ reports/hour) float to the top.</p>}
         {reports.map((r) => (
           <div key={r.id} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>
@@ -101,7 +101,7 @@ export default function AdminConsole() {
         ))}
       </div>
 
-      <h2 className="sec">Audit trail</h2>
+      <h2 className="sec">Check the audit trail</h2>
       <div className="card">
         {audit.map((a) => (
           <p key={a.id} style={{ fontSize: 13, margin: '6px 0' }}>

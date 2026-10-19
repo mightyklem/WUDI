@@ -30,7 +30,7 @@ const REASON_COPY: Record<string, string> = {
  */
 export default function StandingPanel({
   /** Whose standing. Null renders nothing rather than a broken shell. */
-  title = 'Your standing',
+  title = 'Check your points',
   /**
    * Things the points sit next to: certificates held, seats taken, rewards.
    *
@@ -63,53 +63,86 @@ export default function StandingPanel({
   if (failed) return null;
   if (!data) return null;
 
+  // Collapsed by default. The balance and the progress bar are glanceable -- somebody wants
+  // to know "am I still on track?" at a glance, and getting that meant scrolling past a full
+  // award history and two links first. The breakdown is real information, but it is
+  // information you go and ask for, so it waits behind a click.
+  const [open, setOpen] = useState(false);
+  const panelId = 'standing-details';
+
   return (
     <section className="card" style={{ marginTop: 14 }}>
-      <h2 style={{ margin: '0 0 2px', fontSize: 16 }}>{title}</h2>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 10 }}>
-        <span
-          aria-hidden
-          style={{
-            background: 'var(--warn-soft)',
-            color: 'var(--warn)',
-            fontSize: 24,
-            width: 52,
-            height: 52,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 12,
-          }}
-        >
-          {data.rank.icon}
-        </span>
-        <div style={{ flex: 1, minWidth: 170 }}>
-          <p className="u-h" style={{ margin: 0 }}>
-            <span className="sr-only">{data.rank.label}</span>
-            {data.points} point{data.points === 1 ? '' : 's'}
-          </p>
-          <p className="muted u-sub" style={{ margin: '2px 0 0' }}>
-            {data.next
-              ? `${data.next.needed.toLocaleString()} to ${data.next.icon} ${data.next.label}`
-              : `Top rank · ${data.rank.label}`}
-          </p>
-          <div
+      {/* The whole summary is the control. A small chevron in the corner is a target most
+          people will not find, and a heading that looks like a heading but is not clickable
+          is the thing that makes a page feel stuck. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        style={{
+          display: 'block', width: '100%', textAlign: 'left',
+          background: 'none', border: 0, padding: 0, margin: 0,
+          font: 'inherit', color: 'inherit', cursor: 'pointer',
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span
+            aria-hidden
             style={{
-              marginTop: 8, height: 8, borderRadius: 999,
-              background: 'var(--line)', overflow: 'hidden', maxWidth: 280,
+              background: 'var(--warn-soft)',
+              color: 'var(--warn)',
+              fontSize: 24,
+              width: 52,
+              height: 52,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 12,
             }}
-            role="progressbar"
-            aria-valuenow={data.progress.pct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Progress to ${data.next ? data.next.label : 'top rank'}`}
           >
-            <div style={{ width: `${data.progress.pct}%`, height: '100%', background: 'var(--warn)' }} />
-          </div>
-        </div>
-      </div>
+            {data.rank.icon}
+          </span>
+          <span style={{ flex: 1, minWidth: 170, display: 'block' }}>
+            <span style={{ display: 'block', fontWeight: 700 }}>
+              <span className="sr-only">{data.rank.label}</span>
+              {title}
+            </span>
+            <span className="muted" style={{ display: 'block', fontSize: 13, marginTop: 2 }}>
+              {data.points.toLocaleString()} points ·{' '}
+              {data.next
+                ? `${data.next.needed.toLocaleString()} to ${data.next.icon} ${data.next.label}`
+                : `Top rank · ${data.rank.label}`}
+            </span>
+            <span
+              style={{
+                display: 'block', marginTop: 8, height: 8, borderRadius: 999,
+                background: 'var(--line)', overflow: 'hidden', maxWidth: 280,
+              }}
+              role="progressbar"
+              aria-valuenow={data.progress.pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Progress to ${data.next ? data.next.label : 'top rank'}`}
+            >
+              <span style={{ display: 'block', width: `${data.progress.pct}%`, height: '100%', background: 'var(--warn)' }} />
+            </span>
+          </span>
+          <span
+            aria-hidden
+            style={{
+              flexShrink: 0, marginLeft: 'auto', color: 'var(--mut, #6b7378)',
+              transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease',
+              fontSize: 14,
+            }}
+          >
+            ▾
+          </span>
+        </span>
+      </button>
 
+      {open && (
+      <div id={panelId} style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 4 }}>
       {/* The record. A number on its own is a score; the list of what produced it is what
           people actually feel loyalty towards, and it is the only part that explains an
           unexpected total. */}
@@ -169,6 +202,8 @@ export default function StandingPanel({
             ))}
           </div>
         </>
+      )}
+      </div>
       )}
     </section>
   );

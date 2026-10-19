@@ -74,7 +74,7 @@ export default function MyReviews() {
 
       {outstanding.length > 0 && (
         <>
-          <h2 className="sec">Waiting for your rating ({outstanding.length})</h2>
+          <h2 className="sec">Rate your sessions ({outstanding.length})</h2>
           <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
             {outstanding.map((r) => (
               <div className="card" key={r.sessionId}>
@@ -122,7 +122,7 @@ export default function MyReviews() {
 
       {rows.some((r) => r.myRating !== null) && (
         <>
-          <h2 className="sec">Already rated</h2>
+          <h2 className="sec">See your ratings</h2>
           <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
             {rows.filter((r) => r.myRating !== null).map((r) => (
               <div className="card" key={r.sessionId} style={{ padding: 14 }}>

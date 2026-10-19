@@ -81,7 +81,7 @@ export default function DeleteAccount() {
   return (
     <>
       <div className="card" style={{ marginTop: 12 }}>
-        <h2 className="sec">Your details</h2>
+        <h2 className="sec">Check your details</h2>
         <p className="muted" style={{ fontSize: 14 }}>
           This is the name printed on every certificate you earn. Get it right — it goes
           straight onto a document you may show an employer.

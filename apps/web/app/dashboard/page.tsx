@@ -117,7 +117,7 @@ export default function Dashboard() {
         ]}
       />
 
-<h2 className="sec">Teaching</h2>
+<h2 className="sec">Check your teaching</h2>
       {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
         <div className="card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
           <div className="u-flex">
@@ -199,7 +199,7 @@ export default function Dashboard() {
 
       {role === 'trainer' && trainings && trainings.length > 0 && (
         <>
-          <h2 className="sec">Your trainings</h2>
+          <h2 className="sec">Manage your classes</h2>
           <div style={{ display: 'grid', gap: 12 }}>
             {trainings.map((t) => (
               <Link

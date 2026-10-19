@@ -25,8 +25,8 @@ export function roleOf(user: { isAdmin: boolean; isTrainer: boolean }): Role {
 }
 
 export function headlineFor(role: Role) {
-  if (role === 'admin') return { icon: '🛡', title: 'Admin console' };
-  if (role === 'trainer') return { icon: '🎥', title: 'Your studio' };
+  if (role === 'admin') return { icon: '🛡', title: 'Run the platform' };
+  if (role === 'trainer') return { icon: '🎥', title: 'Run your classes' };
   return { icon: '🙂', title: 'Welcome back' };
 }
 

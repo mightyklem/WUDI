@@ -94,7 +94,7 @@ if (!t) return notFound();
         />
       </div>
 
-      <h2 className="sec">Moderators</h2>
+      <h2 className="sec">Manage moderators</h2>
       <div className="card"><ModeratorInvite trainingId={t.id} /></div>
       <IssueCertificates trainingId={t.id} />
       <h2 className="sec">Explore post</h2>

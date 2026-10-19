@@ -85,7 +85,7 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
 
       {reviews.recent.length > 0 && (
         <>
-          <h2 className="sec">What learners said</h2>
+          <h2 className="sec">See what learners said</h2>
           <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
             {reviews.recent.map((r, i) => (
               <div className="card" key={i} style={{ padding: 14 }}>
