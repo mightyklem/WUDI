@@ -8,6 +8,7 @@ import IssueCertificates from '../IssueCertificates';
 import PostComposer from '../PostComposer';
 import DayPricingEditor from '../DayPricingEditor';
 import QuestionBox from '../../components/QuestionBox';
+import CurriculumBuilder from '../../components/CurriculumBuilder';
 import TrainerOnly from '../../components/TrainerOnly';
 import Collapsible from '../../components/Collapsible';
 import { formatNgn, tierLabel } from '@learnovize/shared';
@@ -148,9 +149,19 @@ if (!t) return notFound();
           What the trainer sees is the two things scheduling is FOR -- share the class, and
           put it in front of people -- plus a closed "Class settings" at the bottom for the
           three things they need occasionally but not while deciding whether to run it.
-          Prepare my class is not here either; it is one of the two buttons on Manage your
-          classes, next to Join class. */}
+
+          Prepare my class lives here too, because this is where the "Prepare my class"
+          button on Manage your classes lands: /trainings/<id>#prepare. It was moved out of
+          this page by mistake, which left that button pointing at a page with no builder on
+          it -- the tabs never appeared because there was nothing here to show them. */}
       <TrainerOnly trainingId={t.id}>
+        <section style={{ marginTop: 26 }}>
+          <h2 className="sec">Prepare your class</h2>
+          <div className="card" style={{ marginTop: 12 }}>
+            <CurriculumBuilder trainingId={t.id} />
+          </div>
+        </section>
+
         <section style={{ marginTop: 26 }}>
           <h2 className="sec">Put it in front of people</h2>
           <div className="card"><PostComposer trainingId={t.id} /></div>
