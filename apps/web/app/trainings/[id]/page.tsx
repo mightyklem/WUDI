@@ -8,8 +8,8 @@ import IssueCertificates from '../IssueCertificates';
 import PostComposer from '../PostComposer';
 import DayPricingEditor from '../DayPricingEditor';
 import QuestionBox from '../../components/QuestionBox';
-import CurriculumBuilder from '../../components/CurriculumBuilder';
 import TrainerOnly from '../../components/TrainerOnly';
+import Collapsible from '../../components/Collapsible';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import { quoteFor } from '@/lib/pricing';
 import { lagosSpanLabel } from '@/lib/lagos';
@@ -138,48 +138,51 @@ if (!t) return notFound();
           answer far more than they want to know the day-by-day price breakdown. */}
       <QuestionBox trainingId={t.id} />
 
-      {/* Trainer tooling. Gated on ownership, because this page is rendered for everyone
-          and a learner should never see somebody else's pricing, moderators or
-          certificate controls -- not even for the moment it takes to find out they are
-          not the owner. */}
+      {/* Trainer tooling, gated on ownership: this page is rendered for everyone, and a
+          learner should never see somebody else's pricing or moderator controls, not even
+          for the moment it takes to find out they are not the owner.
+
+          What the trainer sees is the two things scheduling is FOR -- share the class, and
+          put it in front of people -- plus a closed "Class settings" at the bottom for the
+          three things they need occasionally but not while deciding whether to run it.
+          Prepare my class is not here either; it is one of the two buttons on Manage your
+          classes, next to Join class. */}
       <TrainerOnly trainingId={t.id}>
         <section style={{ marginTop: 26 }}>
-          <h2 className="sec">Prepare your class</h2>
-          <p className="sub" style={{ marginTop: -6 }}>
-            Write the plan you will actually teach from, with the timing worked out, and take it
-            away as a PDF or a Markdown file.
-          </p>
-          <div className="card" style={{ marginTop: 12 }}>
-            <CurriculumBuilder trainingId={t.id} />
-          </div>
+          <h2 className="sec">Put it in front of people</h2>
+          <div className="card"><PostComposer trainingId={t.id} /></div>
         </section>
 
-        <h2 className="sec">Days &amp; pricing</h2>
-        <div className="card">
-          <DayPricingEditor
-            trainingId={t.id}
-            tier={t.tier}
-            accessType={t.accessType}
-            days={t.days.map((d) => ({
-              id: d.id,
-              dayIndex: d.dayIndex,
-              topic: d.topic,
-              dateUtc: d.dateUtc,
-              accessType: d.accessType,
-              priceNgn: d.priceNgn,
-              sessionCount: d._count.sessions,
-              enrolled: d._count.enrollments,
-              sold: d._count.enrollments,
-              started: d.sessions.some((s) => new Date(s.startsAtUtc).getTime() <= Date.now()),
-            }))}
-          />
-        </div>
+        <Collapsible
+          title="Class settings"
+          hint="Day prices, moderators and certificates. Rarely needed once a class is running."
+        >
+          <h3 className="sec">Days &amp; pricing</h3>
+          <div className="card">
+            <DayPricingEditor
+              trainingId={t.id}
+              tier={t.tier}
+              accessType={t.accessType}
+              days={t.days.map((d) => ({
+                id: d.id,
+                dayIndex: d.dayIndex,
+                topic: d.topic,
+                dateUtc: d.dateUtc,
+                accessType: d.accessType,
+                priceNgn: d.priceNgn,
+                sessionCount: d._count.sessions,
+                enrolled: d._count.enrollments,
+                sold: d._count.enrollments,
+                started: d.sessions.some((s) => new Date(s.startsAtUtc).getTime() <= Date.now()),
+              }))}
+            />
+          </div>
 
-        <h2 className="sec">Manage moderators</h2>
-        <div className="card"><ModeratorInvite trainingId={t.id} /></div>
-        <IssueCertificates trainingId={t.id} />
-        <h2 className="sec">Explore post</h2>
-        <div className="card"><PostComposer trainingId={t.id} /></div>
+          <h3 className="sec">Moderators</h3>
+          <div className="card"><ModeratorInvite trainingId={t.id} /></div>
+
+          <IssueCertificates trainingId={t.id} />
+        </Collapsible>
       </TrainerOnly>
     </div>
   );
