@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { authFetch } from '@/lib/client-auth';
 import { Skeleton, SkeletonCard } from './Skeleton';
+import Tabs from './Tabs';
 
 type Module = { id?: string; position: number; title: string; minutes: number; body: string; sessionId: string | null };
 type Faq = { id?: string; position: number; question: string; answer: string };
@@ -36,6 +37,7 @@ const emptyDraft = (): Draft => ({
 
 export default function CurriculumBuilder({ trainingId }: { trainingId: string }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'plan' | 'stories'>('plan');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [busy, setBusy] = useState(false);
@@ -150,100 +152,118 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
       <button
         className="btn link"
         onClick={() => setOpen(false)}
-        style={{ marginBottom: 8, fontSize: 13 }}
+        style={{ marginBottom: 10, fontSize: 13 }}
       >
         ▾ Close and keep this page short
       </button>
 
-      {/* ---- modules first, because that is the part that is hard to think up. The
-          positioning questions that used to sit above it are gone: a trainer who has to
-          answer "who is this not for" before they can write down what they are teaching
-          writes nothing at all. */}
-      <h3 className="u-h-md" style={{ marginTop: 20 }}>Modules and timing</h3>
-      {draft.modules.map((m, i) => (
-        <div className="card" key={i} style={{ padding: 14, marginBottom: 10 }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-            <span className="u-num" aria-hidden>{i + 1}</span>
-            <input
-              type="text"
-              value={m.title}
-              onChange={(e) => {
-                const v = e.target.value;
-                setDraft((d) => d && { ...d, modules: d.modules.map((x, j) => (j === i ? { ...x, title: v } : x)) });
-              }}
-              placeholder="Module title"
-              style={{ flex: 1 }}
-            />
-            <input
-              type="text"
-              inputMode="numeric"
-              value={String(m.minutes)}
-              onChange={(e) => {
-                const v = Number(e.target.value.replace(/\D/g, '')) || 0;
-                setDraft((d) => d && { ...d, modules: d.modules.map((x, j) => (j === i ? { ...x, minutes: v } : x)) });
-              }}
-              aria-label="Minutes"
-              style={{ width: 76 }}
-            />
-            <span className="muted" style={{ fontSize: 12 }}>min</span>
-            <button
-              className="btn link"
-              onClick={() => setDraft((d) => d && { ...d, modules: d.modules.filter((_, j) => j !== i) })}
-              aria-label={`Remove module ${i + 1}`}
-            >✕</button>
+      {/* Two things go in a curriculum and they are edited in completely different ways:
+          the plan is a list with numbers in it, the stories are a page of prose. Stacked, they
+          made a single long form that looked like paperwork. Tabbed, each is one job. */}
+      <Tabs
+        tabs={[
+          { key: 'plan', label: 'Plan', count: draft.modules.length },
+          { key: 'stories', label: 'Stories' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+
+      {tab === 'plan' && (
+        <div style={{ marginTop: 14 }}>
+          {/* Modules first, because that is the part that is hard to think up. The positioning
+              questions that used to sit above it are gone: a trainer who has to answer "who is
+              this not for" before they can write down what they are teaching writes nothing. */}
+          {draft.modules.map((m, i) => (
+            <div className="card" key={i} style={{ padding: 14, marginBottom: 10 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                <span className="u-num" aria-hidden>{i + 1}</span>
+                <input
+                  type="text"
+                  value={m.title}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDraft((d) => d && { ...d, modules: d.modules.map((x, j) => (j === i ? { ...x, title: v } : x)) });
+                  }}
+                  placeholder="Module title"
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={String(m.minutes)}
+                  onChange={(e) => {
+                    const v = Number(e.target.value.replace(/\D/g, '')) || 0;
+                    setDraft((d) => d && { ...d, modules: d.modules.map((x, j) => (j === i ? { ...x, minutes: v } : x)) });
+                  }}
+                  aria-label="Minutes"
+                  style={{ width: 76 }}
+                />
+                <span className="muted" style={{ fontSize: 12 }}>min</span>
+                <button
+                  className="btn link"
+                  onClick={() => setDraft((d) => d && { ...d, modules: d.modules.filter((_, j) => j !== i) })}
+                  aria-label={`Remove module ${i + 1}`}
+                >✕</button>
+              </div>
+              <textarea
+                className="ta"
+                rows={2}
+                value={m.body}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDraft((d) => d && { ...d, modules: d.modules.map((x, j) => (j === i ? { ...x, body: v } : x)) });
+                }}
+                placeholder="What you actually do in this block"
+                maxLength={4000}
+              />
+            </div>
+          ))}
+
+          <button
+            className="btn"
+            onClick={() => setDraft((d) => d && { ...d, modules: [...d.modules, { position: d.modules.length, title: '', minutes: 60, body: '', sessionId: null }] })}
+          >＋ Add a module</button>
+
+          {/* ---- the check that earns its keep */}
+          <div className="card" style={{ marginTop: 14, padding: 14, background: 'var(--pill)' }}>
+            <p style={{ margin: 0, fontSize: 13.5 }}>
+              <b>{planned}</b> min planned
+              {sessions.length > 0 && <> · <b>{scheduled}</b> min scheduled across {sessions.length} session{sessions.length === 1 ? '' : 's'}</>}
+            </p>
+            {over > 0 && sessions.length > 0 && (
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--warn)' }}>
+                ⚠ This is <b>{over} minutes longer</b> than the time you have scheduled. Trim it or add a session — this is the kind of thing you should find now, not on the day.
+              </p>
+            )}
           </div>
+        </div>
+      )}
+
+      {tab === 'stories' && (
+        <div style={{ marginTop: 14 }}>
+          {/* One box, not a form. Stories, wins, mistakes, the thing you would tell somebody
+              on day one -- whatever the trainer actually wants to write down, in their own
+              order. The structured prompts that used to sit here asked for the same material
+              in a fixed order, and the fixed order was the problem: asked as separate fields,
+              people answer the easiest one and leave the rest. */}
+          <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+            Anything you want in front of the room — how you started, what went wrong, what
+            finally worked. Write it however you like.
+          </p>
           <textarea
             className="ta"
-            rows={2}
-            value={m.body}
-            onChange={(e) => {
-              const v = e.target.value;
-              setDraft((d) => d && { ...d, modules: d.modules.map((x, j) => (j === i ? { ...x, body: v } : x)) });
-            }}
-            placeholder="What you actually do in this block"
+            rows={10}
+            value={draft.storyAdvice}
+            onChange={(e) => set('storyAdvice', e.target.value)}
+            placeholder={'I did this for free for two years because I did not know what to charge.\n\nWhat finally worked: I stopped copying what other people charged and priced the outcome instead.\n\nWhat I would tell you on day one: do not start until you have a real one to practise on.'}
             maxLength={4000}
           />
         </div>
-      ))}
+      )}
 
-      <button
-        className="btn"
-        onClick={() => setDraft((d) => d && { ...d, modules: [...d.modules, { position: d.modules.length, title: '', minutes: 60, body: '', sessionId: null }] })}
-      >＋ Add a module</button>
-
-      {/* ---- the check that earns its keep */}
-      <div className="card" style={{ marginTop: 14, padding: 14, background: 'var(--pill)' }}>
-        <p style={{ margin: 0, fontSize: 13.5 }}>
-          <b>{planned}</b> min planned
-          {sessions.length > 0 && <> · <b>{scheduled}</b> min scheduled across {sessions.length} session{sessions.length === 1 ? '' : 's'}</>}
-        </p>
-        {over > 0 && sessions.length > 0 && (
-          <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--warn)' }}>
-            ⚠ This is <b>{over} minutes longer</b> than the time you have scheduled. Trim it or add a session — this is the kind of thing you should find now, not on the day.
-          </p>
-        )}
-      </div>
-
-      {/* ---- one box, not a form. Stories, wins, mistakes, the thing you would tell
-          somebody on day one -- whatever the trainer actually wants to write down, in
-          their own order. The structured prompts that used to sit here asked for the same
-          material in a fixed order, and the fixed order was the problem: asked as separate
-          fields, people answer the easiest one and leave the rest. */}
-      <h3 className="u-h-md" style={{ marginTop: 24 }}>Success stories and notes to take away</h3>
-      <p className="muted" style={{ fontSize: 13, marginTop: -4 }}>
-        Anything you want in front of the room — how you started, what went wrong, what finally
-        worked. Write it however you like.
-      </p>
-      <textarea
-        className="ta"
-        rows={8}
-        value={draft.storyAdvice}
-        onChange={(e) => set('storyAdvice', e.target.value)}
-        placeholder={'I did this for free for two years because I did not know what to charge.\n\nWhat finally worked: I stopped copying what other people charged and priced the outcome instead.\n\nWhat I would tell you on day one: do not start until you have a real one to practise on.'}
-        maxLength={4000}
-      />
-
-      {/* ---- save + export */}
+      {/* ---- save + export. Always visible, because saving and taking the file away are
+          not part of either tab -- they apply to the whole document. */}
       <div className="btnrow" style={{ marginTop: 22 }}>
         <button className="btn primary lg" onClick={save} disabled={busy}>
           {busy ? 'Saving…' : 'Save curriculum'}

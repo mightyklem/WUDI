@@ -10,6 +10,7 @@ import { authFetch, getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel, lagosSpanLabel } from '@/lib/lagos';
 import { Skeleton, SkeletonCard, SkeletonLines } from '../components/Skeleton';
+import Tabs from '../components/Tabs';
 
 type Me = {
   user: { id: string; email: string; role: 'admin' | 'trainer' | 'participant'; verified: boolean };
@@ -174,24 +175,15 @@ export default function Dashboard() {
           is pressed. */}
       {role === 'trainer' && trainings && trainings.length > 0 && (
         <section style={{ marginTop: 26 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            <button
-              className={tab === 'upcoming' ? 'btn primary' : 'btn'}
-              style={{ flex: 1 }}
-              onClick={() => setTab('upcoming')}
-              aria-pressed={tab === 'upcoming'}
-            >
-              Upcoming{upcoming.length ? ` (${upcoming.length})` : ''}
-            </button>
-            <button
-              className={tab === 'past' ? 'btn primary' : 'btn'}
-              style={{ flex: 1 }}
-              onClick={() => setTab('past')}
-              aria-pressed={tab === 'past'}
-            >
-              Past{past.length ? ` (${past.length})` : ''}
-            </button>
-          </div>
+          <Tabs
+            tabs={[
+              { key: 'upcoming', label: 'Upcoming', count: upcoming.length },
+              { key: 'past', label: 'Past', count: past.length },
+            ]}
+            value={tab}
+            onChange={(k) => setTab(k as 'upcoming' | 'past')}
+            accent="#FBBF24"
+          />
 
           <div style={{ display: 'grid', gap: 12 }}>
             {tab === 'upcoming' && upcoming.map((t) => {
