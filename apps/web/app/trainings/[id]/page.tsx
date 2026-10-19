@@ -9,6 +9,7 @@ import PostComposer from '../PostComposer';
 import DayPricingEditor from '../DayPricingEditor';
 import SignedInGate from '../../components/SignedInGate';
 import QuestionBox from '../../components/QuestionBox';
+import CurriculumBuilder from '../../components/CurriculumBuilder';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import { quoteFor } from '@/lib/pricing';
 import { lagosSpanLabel } from '@/lib/lagos';
@@ -81,6 +82,19 @@ if (!t) return notFound();
       <SignedInGate>
         {(signedIn) => <QuestionBox trainingId={t.id} signedIn={signedIn} />}
       </SignedInGate>
+
+      {/* Trainer only, and last: a learner deciding whether to book has no use for it, and it
+          is the longest thing on the page. */}
+      <section style={{ marginTop: 26 }}>
+        <h2 className="sec">Prepare your class</h2>
+        <p className="sub" style={{ marginTop: -6 }}>
+          Write the plan you will actually teach from, with the timing worked out, and take it
+          away as a PDF or a Markdown file.
+        </p>
+        <div className="card" style={{ marginTop: 12 }}>
+          <CurriculumBuilder trainingId={t.id} />
+        </div>
+      </section>
 
       <h2 className="sec">Days &amp; pricing</h2>
       <div className="card">

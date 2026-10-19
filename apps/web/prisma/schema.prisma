@@ -19,9 +19,9 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  phone        String?  @unique
+  id                String    @id @default(cuid())
+  email             String    @unique
+  phone             String?   @unique
   // The name that goes on a certificate.
   //
   // There was no name here at all, so the certificate printed user.email -- a learner who
@@ -32,19 +32,19 @@ model User {
   // Nullable, not required, because rows exist already and a name is not worth losing an
   // account over. Everything that prints a person falls back to the email until it is set,
   // and the certificate says so rather than inventing one.
-  fullName     String?
-  passwordHash String
-  isAdmin      Boolean  @default(false)
-  suspended    Boolean  @default(false)
+  fullName          String?
+  passwordHash      String
+  isAdmin           Boolean   @default(false)
+  suspended         Boolean   @default(false)
   // Learnovize's own content team. Verified accounts can publish ecards, videos and
   // info to Explore and are badged as official (FR-12).
-  isOfficial   Boolean  @default(false)
+  isOfficial        Boolean   @default(false)
   // Points and level rank. Attendance awards points on free and paid classes alike (FR-13).
-  points       Int      @default(0)
+  points            Int       @default(0)
   // Cached mirror of rankFor(points). The ladder is Stone/Bronze/Silver/Gold,
   // so the default must match rankFor(0) — anything else shows a rank that
   // does not exist in the ladder. Read rankFor() where correctness matters.
-  rank         String   @default("Stone")
+  rank              String    @default("Stone")
   // Email ownership proof (ADR-002). Null hash = nothing pending; null verifiedAt = unverified.
   emailVerifiedAt   DateTime?
   emailOtpHash      String?
@@ -54,28 +54,28 @@ model User {
   // than deleted because payment and payout records have a statutory retention period
   // and must not vanish with the identity. Everything that identifies a human is
   // replaced; what remains is a pseudonymous counterparty in the ledger.
-  deletedAt    DateTime?
-  createdAt    DateTime @default(now())
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
 
-  trainerProfile TrainerProfile?
-  refreshTokens  RefreshToken[]
-  passwordResets PasswordResetToken[]
-  registrations  Registration[]
-  attendanceLogs AttendanceLog[]
-  certificates   Certificate[]
-  moderating     Moderator[]
-  auditActs      AuditLog[]      @relation("AuditActor")
-  notifications  Notification[]
-  pushTokens     PushToken[]
-  pointEvents    PointsEvent[]
-  orgMemberships OrgMember[]
-  questions      Question[]
-  ownedOrgs      Organization[]     @relation("OrgOwner")
-  authoredPosts  FeedPost[]         @relation("PostAuthor")
-reviewsWritten TrainerReview[]   @relation("ReviewAuthor")
-    speechGrants   SpeechGrant[]
-    giveawayEntries GiveawayEntry[]
-  }
+  trainerProfile  TrainerProfile?
+  refreshTokens   RefreshToken[]
+  passwordResets  PasswordResetToken[]
+  registrations   Registration[]
+  attendanceLogs  AttendanceLog[]
+  certificates    Certificate[]
+  moderating      Moderator[]
+  auditActs       AuditLog[]           @relation("AuditActor")
+  notifications   Notification[]
+  pushTokens      PushToken[]
+  pointEvents     PointsEvent[]
+  orgMemberships  OrgMember[]
+  questions       Question[]
+  ownedOrgs       Organization[]       @relation("OrgOwner")
+  authoredPosts   FeedPost[]           @relation("PostAuthor")
+  reviewsWritten  TrainerReview[]      @relation("ReviewAuthor")
+  speechGrants    SpeechGrant[]
+  giveawayEntries GiveawayEntry[]
+}
 
 /// One award or clawback of points. Append-only so a rank can always be re-derived.
 ///
@@ -85,19 +85,19 @@ reviewsWritten TrainerReview[]   @relation("ReviewAuthor")
 /// null sessionId is distinct from every other null in Postgres, so a constraint
 /// built on it would silently allow duplicate program-completion awards.
 model PointsEvent {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  points    Int
-  reason    String   // session_attended|program_completed|certificate_earned|manual_adjustment
-  ref       String   // session id, or training id for program/certificate awards
-  sessionId String?
-  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points     Int
+  reason     String // session_attended|program_completed|certificate_earned|manual_adjustment
+  ref        String // session id, or training id for program/certificate awards
+  sessionId  String?
+  session    Session?     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   trainingId String?
-  training  Training? @relation(fields: [trainingId], references: [id], onDelete: Cascade)
-  dayId     String?
-  day       TrainingDay? @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  training   Training?    @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  dayId      String?
+  day        TrainingDay? @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
 
   @@unique([userId, ref])
   @@index([userId, createdAt])
@@ -106,48 +106,48 @@ model PointsEvent {
 /// Institutions and organizations with an official verified account. They can host
 /// trainings themselves and can also sponsor individual trainer profiles (FR-12).
 model Organization {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   name         String
-  slug         String   @unique
-  type         String   @default("organization") // institution|organization
+  slug         String    @unique
+  type         String    @default("organization") // institution|organization
   about        String?
   logoUrl      String?
   website      String?
   // Verification is granted by an admin, never self-declared.
-  verification String   @default("pending") // pending|verified|rejected|revoked
+  verification String    @default("pending") // pending|verified|rejected|revoked
   verifiedAt   DateTime?
   verifiedById String?
   ownerId      String
-  owner        User     @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
+  owner        User      @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
 
-  members    OrgMember[]
-  trainings  Training[]
-  trainers   TrainerProfile[]
-  posts      FeedPost[]
-  approvals  OrganizationApproval[]
+  members   OrgMember[]
+  trainings Training[]
+  trainers  TrainerProfile[]
+  posts     FeedPost[]
+  approvals OrganizationApproval[]
 }
 
 model OrgMember {
-  orgId    String
-  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role     String       @default("member") // owner|admin|trainer|member
-  createdAt DateTime    @default(now())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String       @default("member") // owner|admin|trainer|member
+  createdAt DateTime     @default(now())
 
   @@id([orgId, userId])
 }
 
 model OrganizationApproval {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   docUrls        String[]
-  status         String   @default("pending") // pending|verified|rejected|revoked
+  status         String       @default("pending") // pending|verified|rejected|revoked
   reviewerId     String?
   decidedAt      DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 }
 
 model RefreshToken {
@@ -182,25 +182,25 @@ model PasswordResetToken {
 }
 
 model TrainerApplication {
-  id         String @id @default(cuid())
-  trainerId  String
-  trainer    TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  trainerId    String
+  trainer      TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
   /// The sixteen questionnaire answers, as data rather than markup so the scoring in
   /// packages/shared is the same arithmetic everywhere.
-  answers    Json
+  answers      Json
   /// Skill depth + teaching experience + reach. Proof is NOT included: that is graded
   /// by a person, so the form alone can never reach the 70-point strong boundary.
-  formSubtotal Int @default(0)
+  formSubtotal Int            @default(0)
   /// none | weak | clear — set by a reviewer looking at the applicant's evidence.
   proofGrade   String?
   totalScore   Int?
-  band         String?      // strong | promising | general
+  band         String? // strong | promising | general
   /// A | B | C — the human judgement after verification.
   finalRating  String?
   reviewNotes  String?
   reviewedById String?
   reviewedAt   DateTime?
-  status       String  @default("draft") // draft|submitted|in_review|verified|rejected
+  status       String         @default("draft") // draft|submitted|in_review|verified|rejected
 
   // Paid badge. Paying buys entry to review; passing the bar earns the badge. The
   // two are deliberately separate fields so a purchase can never stand in for a
@@ -209,7 +209,7 @@ model TrainerApplication {
   paymentRef     String?
   paidAt         DateTime?
   /// Paid but not yet decided. Held so it can be refunded if review says no.
-  refundPending  Boolean  @default(false)
+  refundPending  Boolean   @default(false)
   refundedAt     DateTime?
   badgeExpiresAt DateTime?
 
@@ -226,16 +226,16 @@ model TrainerApplication {
 /// An ungated review can be written by anyone with an account, which makes the whole
 /// number meaningless and the points worth farming.
 model TrainerReview {
-  id         String   @id @default(cuid())
-  trainerId  String
-  trainer    TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
-  authorId   String
-  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  id        String         @id @default(cuid())
+  trainerId String
+  trainer   TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  authorId  String
+  author    User           @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   /// The session whose attendance qualified the author to review.
-  sessionId  String
-  rating     Int
-  body       String?
-  createdAt  DateTime @default(now())
+  sessionId String
+  rating    Int
+  body      String?
+  createdAt DateTime       @default(now())
 
   /// One review per person per session. Without this a single attendee can rate the
   /// same trainer repeatedly and manufacture a reputation.
@@ -244,65 +244,65 @@ model TrainerReview {
 }
 
 model TrainerProfile {
-  userId            String  @id
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName       String
-  photoUrl          String?
-  bio               String?
-  topics            String[]
-  logoUrl           String?
-  signatureUrl      String?
-paidCertApproved  Boolean @default(false)
-  approvalState     String  @default("none") // none|pending|approved|rejected|revoked
-  rejectionReason   String?
-  plan              String  @default("free") // free|pro|business — drives caps + commission
+  userId           String        @id
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName      String
+  photoUrl         String?
+  bio              String?
+  topics           String[]
+  logoUrl          String?
+  signatureUrl     String?
+  paidCertApproved Boolean       @default(false)
+  approvalState    String        @default("none") // none|pending|approved|rejected|revoked
+  rejectionReason  String?
+  plan             String        @default("free") // free|pro|business — drives caps + commission
   // An institution can verify and sponsor an individual trainer (FR-12).
-  organizationId    String?
-  organization      Organization? @relation(fields: [organizationId], references: [id])
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id])
 
-  approvals TrainerApproval[]
-  trainings Training[]
-  payoutAccounts PayoutAccount[]
-  application    TrainerApplication?
+  approvals       TrainerApproval[]
+  trainings       Training[]
+  payoutAccounts  PayoutAccount[]
+  application     TrainerApplication?
   reviewsReceived TrainerReview[]
 }
 
 model TrainerApproval {
-  id                String   @id @default(cuid())
+  id                String         @id @default(cuid())
   trainerId         String
   trainer           TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
-idDocUrls         String[] // private bucket only, never public
-    expertiseEvidence String?
+  idDocUrls         String[] // private bucket only, never public
+  expertiseEvidence String?
 
-    // Which document was supplied, and its number.
-    //
-    // Uploading "an ID photo" without saying what it is means a reviewer has to guess,
-    // and the guess is unverifiable. Recording the type and the number makes the claim
-    // checkable: one National Identification Number is one person.
-    //
-    // identityNumber is sensitive personal data under the NDPA. It is never returned by
-    // a public API, never included in any verify page, and is audit-logged whenever
-    // staff read it, exactly like the document image itself.
-    identityType     String? // nin | passport
-    identityNumber   String?
+  // Which document was supplied, and its number.
+  //
+  // Uploading "an ID photo" without saying what it is means a reviewer has to guess,
+  // and the guess is unverifiable. Recording the type and the number makes the claim
+  // checkable: one National Identification Number is one person.
+  //
+  // identityNumber is sensitive personal data under the NDPA. It is never returned by
+  // a public API, never included in any verify page, and is audit-logged whenever
+  // staff read it, exactly like the document image itself.
+  identityType   String? // nin | passport
+  identityNumber String?
 
-    // A bank statement, asked for because the payout account otherwise proves nothing
-    // about ownership. The account number is resolved against the bank and stored, but
-    // the resolved name was never compared to the trainer, so anyone could nominate
-    // an account belonging to somebody else and be paid into it. A statement in the same
-    // name closes that.
-    bankStatementKey String?
+  // A bank statement, asked for because the payout account otherwise proves nothing
+  // about ownership. The account number is resolved against the bank and stored, but
+  // the resolved name was never compared to the trainer, so anyone could nominate
+  // an account belonging to somebody else and be paid into it. A statement in the same
+  // name closes that.
+  bankStatementKey String?
 
-    // When the trainer agreed to us storing their identity document, and which wording
-    // they agreed to. Without this there is no artifact proving consent was ever
-    // obtained -- the form collected no checkbox and nothing was recorded. Versioned so
-    // a change to the wording later can be shown to have been consented to separately.
-    consentAt         DateTime?
-    consentVersion    String?
-  status            String   @default("pending") // pending|approved|rejected|revoked
-  reviewerId        String?
-  decidedAt         DateTime?
-  createdAt         DateTime @default(now())
+  // When the trainer agreed to us storing their identity document, and which wording
+  // they agreed to. Without this there is no artifact proving consent was ever
+  // obtained -- the form collected no checkbox and nothing was recorded. Versioned so
+  // a change to the wording later can be shown to have been consented to separately.
+  consentAt      DateTime?
+  consentVersion String?
+  status         String    @default("pending") // pending|approved|rejected|revoked
+  reviewerId     String?
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
 }
 
 model Moderator {
@@ -316,29 +316,29 @@ model Moderator {
 }
 
 model Training {
-  id         String   @id @default(cuid())
-  slug       String   @unique
-  trainerId  String
-  trainer    TrainerProfile @relation(fields: [trainerId], references: [userId])
+  id             String         @id @default(cuid())
+  slug           String         @unique
+  trainerId      String
+  trainer        TrainerProfile @relation(fields: [trainerId], references: [userId])
   // An organization can host a training directly, alongside the named trainer (FR-12).
   organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  title      String
-  description String?
-  topic      String?
-  format     String   // video|audio
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  title          String
+  description    String?
+  topic          String?
+  format         String // video|audio
   // Free classes never issue a certificate. A certificate means paid attendance (FR-11).
-  accessType String   @default("free") // free|paid
-  tier       String?  // basic|standard|premium — required when accessType is paid
+  accessType     String         @default("free") // free|paid
+  tier           String? // basic|standard|premium — required when accessType is paid
   pricePerDayNgn Int? // whole naira, charged per billable day
-  certMode   String   @default("none") // none|paid
-  certPriceNgn Int?
-  minPct     Int      @default(60)
-  cap        Int
-  seatsTaken Int      @default(0)
-  plan       String   @default("free") // free|pro|business
-  status     String   @default("draft") // draft|live|full|cancelled|finished
-  createdAt  DateTime @default(now())
+  certMode       String         @default("none") // none|paid
+  certPriceNgn   Int?
+  minPct         Int            @default(60)
+  cap            Int
+  seatsTaken     Int            @default(0)
+  plan           String         @default("free") // free|pro|business
+  status         String         @default("draft") // draft|live|full|cancelled|finished
+  createdAt      DateTime       @default(now())
 
   sessions      Session[]
   days          TrainingDay[]
@@ -349,8 +349,73 @@ model Training {
   payouts       Payout[]
   pointEvents   PointsEvent[]
   questions     Question[]
+  curriculum    Curriculum?
 
   @@index([accessType, tier])
+}
+
+/// A trainer's own plan for their class: who it is for, what it covers, how the time is
+/// spent, and the questions they expect to be asked.
+///
+/// The point is that it is THEIRS. Every field is a prompt the trainer answers about their own
+/// experience -- what broke first, what they stopped doing, what they would tell someone on day
+/// one. A generated outline would hand every learner on Learnovize the same content their
+/// competitors have, which is the one thing a class page cannot win on.
+model Curriculum {
+  id         String   @id @default(cuid())
+  trainingId String   @unique
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  authorId   String
+
+  /// Who this is genuinely for, including who it is NOT for. The exclusion is the part that
+  /// saves somebody their money.
+  audience       String?
+  /// What somebody can do afterwards that they cannot do now. Concrete, or it is decoration.
+  outcomes       String?
+  /// The promise, in the trainer's own words. What life looks like on the other side.
+  promise        String?
+  /// Their story. Three prompts because they are three different lessons, and lumping them
+  /// into one box loses the useful one every time.
+  storyStart     String?
+  storyWentWrong String?
+  storyAdvice    String?
+
+  modules   CurriculumModule[]
+  faqs      CurriculumFaq[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+/// One module with a real time budget.
+///
+/// `minutes` is checked against the sessions actually scheduled rather than trusted: a
+/// curriculum promising six hours of content into four ninety-minute sessions only becomes
+/// obvious on the day, in front of paying learners.
+model CurriculumModule {
+  id           String     @id @default(cuid())
+  curriculumId String
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  position     Int
+  title        String
+  minutes      Int        @default(60)
+  body         String     @default("")
+  /// Pin a module to one session. Null means the trainer spreads them as they see fit, which
+  /// is the honest default -- a rigid mapping makes them fight the tool.
+  sessionId    String?
+
+  @@unique([curriculumId, position])
+}
+
+/// An objection the trainer expects to be asked, answered before it is asked.
+model CurriculumFaq {
+  id           String     @id @default(cuid())
+  curriculumId String
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  position     Int
+  question     String
+  answer       String
+
+  @@unique([curriculumId, position])
 }
 
 /// A learner's question about a class, and the trainer's answer.
@@ -372,17 +437,17 @@ model Question {
 
   /// The question as asked. Trimmed and length-capped on write: it is rendered inside a
   /// notification payload, and a notification should never be able to carry a wall of text.
-  body       String
+  body String
 
   /// Null means anonymous to other readers. The trainer still sees who asked.
-  anonymous  Boolean  @default(false)
+  anonymous Boolean @default(false)
 
   answer     String?
   /// Null until answered. Deliberately separate from createdAt: an answer four days later is
   /// not the same moment as a question four days ago, and both dates are worth showing.
   answeredAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([trainingId, createdAt])
   @@index([authorId])
@@ -396,14 +461,14 @@ model TrainingDay {
   id         String   @id @default(cuid())
   trainingId String
   training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
-  dayIndex   Int      // 1-based display order
-  dateUtc    String   // YYYY-MM-DD, the day this covers
+  dayIndex   Int // 1-based display order
+  dateUtc    String // YYYY-MM-DD, the day this covers
   topic      String?
   // A trainer can open a single day of an otherwise paid class for free.
   accessType String   @default("paid") // free|paid
   priceNgn   Int      @default(0)
 
-  sessions   Session[]
+  sessions    Session[]
   enrollments DayEnrollment[]
   pointEvents PointsEvent[]
 
@@ -414,148 +479,148 @@ model TrainingDay {
 /// A learner's choice to attend specific days of a training. Price is snapshotted
 /// so a later trainer change cannot alter what they already owe.
 model DayEnrollment {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   registrationId String
   registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
   dayId          String
-  day            TrainingDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  priceNgn       Int      @default(0)
-  paid           Boolean  @default(false)
+  day            TrainingDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  priceNgn       Int          @default(0)
+  paid           Boolean      @default(false)
 
   @@unique([registrationId, dayId])
   @@index([dayId])
 }
 
 model Session {
-  id          String   @id @default(cuid())
-  trainingId  String
-  training    Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
-  dayId       String?
-  day         TrainingDay? @relation(fields: [dayId], references: [id], onDelete: SetNull)
-  startsAtUtc DateTime
-  endsAtUtc   DateTime
-  livekitRoom String   @unique
-status      String   @default("scheduled") // scheduled|live|ended|cancelled
+  id               String       @id @default(cuid())
+  trainingId       String
+  training         Training     @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  dayId            String?
+  day              TrainingDay? @relation(fields: [dayId], references: [id], onDelete: SetNull)
+  startsAtUtc      DateTime
+  endsAtUtc        DateTime
+  livekitRoom      String       @unique
+  status           String       @default("scheduled") // scheduled|live|ended|cancelled
   // When the trainer actually ended the room. Not recorded before, so a dispute about a
   // class that ended early -- which cuts attendance and therefore certificates -- had
   // nothing to check against. Who ended it is in the audit log, under session.end.
-  endedAtUtc     DateTime?
-    // Webinar framing: a room can open early and hold people in a lobby before the
-    // trainer starts. Admitted controls whether people may enter the room itself.
-    opensAtUtc     DateTime?
-    admittedAtUtc  DateTime?
-    agenda          String?
-    // A product the trainer is demonstrating during this session. Shown in the
-    // webinar intro page and pinned in the room so nobody has to ask what they are
-    // being shown.
-    showcaseName     String?
-    showcaseUrl      String?
-    showcaseNote     String?
-    showcaseImageUrl String?
+  endedAtUtc       DateTime?
+  // Webinar framing: a room can open early and hold people in a lobby before the
+  // trainer starts. Admitted controls whether people may enter the room itself.
+  opensAtUtc       DateTime?
+  admittedAtUtc    DateTime?
+  agenda           String?
+  // A product the trainer is demonstrating during this session. Shown in the
+  // webinar intro page and pinned in the room so nobody has to ask what they are
+  // being shown.
+  showcaseName     String?
+  showcaseUrl      String?
+  showcaseNote     String?
+  showcaseImageUrl String?
 
-    attendanceLogs AttendanceLog[]
-    pointEvents    PointsEvent[]
-    speechGrants   SpeechGrant[]
-    giveaways      Giveaway[]
-    showcaseItems  ShowcaseItem[]
-  }
+  attendanceLogs AttendanceLog[]
+  pointEvents    PointsEvent[]
+  speechGrants   SpeechGrant[]
+  giveaways      Giveaway[]
+  showcaseItems  ShowcaseItem[]
+}
 
-  /// A learner the trainer has allowed to speak, kept in the database rather than
-  /// only in the LiveKit room.
-  ///
-  /// LiveKit permissions are per-connection. A learner who was granted speech and
-  /// then lost signal, backgrounded their phone, or reloaded the page silently
-  /// dropped back to listen-only and the hand-raise queue disagreed with the room.
-  /// Persisting the grant means the token route can re-apply it on every join.
-  model SpeechGrant {
-    id        String   @id @default(cuid())
-    sessionId String
-    session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    grantedAt DateTime @default(now())
-    revokedAt DateTime?
+/// A learner the trainer has allowed to speak, kept in the database rather than
+/// only in the LiveKit room.
+///
+/// LiveKit permissions are per-connection. A learner who was granted speech and
+/// then lost signal, backgrounded their phone, or reloaded the page silently
+/// dropped back to listen-only and the hand-raise queue disagreed with the room.
+/// Persisting the grant means the token route can re-apply it on every join.
+model SpeechGrant {
+  id        String    @id @default(cuid())
+  sessionId String
+  session   Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grantedAt DateTime  @default(now())
+  revokedAt DateTime?
 
-    @@unique([sessionId, userId])
-    @@index([userId, sessionId])
-  }
+  @@unique([sessionId, userId])
+  @@index([userId, sessionId])
+}
 
-  /// A giveaway running inside a session. Entries are recorded on the server so a
-  /// winner can be drawn fairly and, more importantly, so the draw can be
-  /// demonstrated afterwards.
-  model Giveaway {
-    id        String   @id @default(cuid())
-    sessionId String
-    session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-    prize     String
-    /// Free text shown to learners, e.g. "1 of 3 winners".
-    rules     String?
-    /// Draw is closed while open is true. Entries stop being accepted once closed.
-    open      Boolean  @default(true)
-    /// Winner count and the drawn winners, stored as a JSON array of user ids.
-    /// Null until drawn.
-    winners   String?
-    drawnAt   DateTime?
-    /// Whether entry required paying. False for a plain webinar giveaway, which is
-    /// the common case and the one with no legal surface around it.
-    requiresPayment Boolean @default(false)
-    createdAt DateTime @default(now())
+/// A giveaway running inside a session. Entries are recorded on the server so a
+/// winner can be drawn fairly and, more importantly, so the draw can be
+/// demonstrated afterwards.
+model Giveaway {
+  id              String    @id @default(cuid())
+  sessionId       String
+  session         Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  prize           String
+  /// Free text shown to learners, e.g. "1 of 3 winners".
+  rules           String?
+  /// Draw is closed while open is true. Entries stop being accepted once closed.
+  open            Boolean   @default(true)
+  /// Winner count and the drawn winners, stored as a JSON array of user ids.
+  /// Null until drawn.
+  winners         String?
+  drawnAt         DateTime?
+  /// Whether entry required paying. False for a plain webinar giveaway, which is
+  /// the common case and the one with no legal surface around it.
+  requiresPayment Boolean   @default(false)
+  createdAt       DateTime  @default(now())
 
-    entries   GiveawayEntry[]
+  entries GiveawayEntry[]
 
-    @@index([sessionId, open])
-  }
+  @@index([sessionId, open])
+}
 
-  /// One learner, one entry per giveaway. The unique constraint is the fairness
-  /// guarantee: refreshing the page or hammering the button cannot add a name twice.
-  model GiveawayEntry {
-    id         String   @id @default(cuid())
-    giveawayId String
-    giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
-    userId     String
-    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    createdAt  DateTime @default(now())
+/// One learner, one entry per giveaway. The unique constraint is the fairness
+/// guarantee: refreshing the page or hammering the button cannot add a name twice.
+model GiveawayEntry {
+  id         String   @id @default(cuid())
+  giveawayId String
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 
-    @@unique([giveawayId, userId])
-    @@index([userId])
-  }
+  @@unique([giveawayId, userId])
+  @@index([userId])
+}
 
-  /// An item the trainer highlights during the session. Several per session so a
-  /// webinar can walk through a small catalogue without losing what came before.
-  model ShowcaseItem {
-    id        String   @id @default(cuid())
-    sessionId String
-    session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-    name      String
-    note      String?
-    url       String?
-    imageUrl  String?
-    /// Ordering the trainer chooses; the pinned item is the lowest number.
-    position  Int      @default(0)
-    createdAt DateTime @default(now())
+/// An item the trainer highlights during the session. Several per session so a
+/// webinar can walk through a small catalogue without losing what came before.
+model ShowcaseItem {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name      String
+  note      String?
+  url       String?
+  imageUrl  String?
+  /// Ordering the trainer chooses; the pinned item is the lowest number.
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
 
-    @@index([sessionId, position])
-  }
+  @@index([sessionId, position])
+}
 
 model Registration {
-  id                String   @id @default(cuid())
-  trainingId        String
-  training          Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  certConsentPublic Boolean  @default(false)
+  id                   String   @id @default(cuid())
+  trainingId           String
+  training             Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  certConsentPublic    Boolean  @default(false)
   // Set when the participant has paid for the class. On a paid class this covers
   // attendance AND the certificate, so it gates certificate eligibility (FR-11).
-  certPaid          Boolean  @default(false)
+  certPaid             Boolean  @default(false)
   // Snapshot of the quote taken when they registered. A later price change by the
   // trainer must not alter what this participant already owes.
   quotedPricePerDayNgn Int?
   quotedDays           Int?
   quotedTotalNgn       Int?
-  status            String   @default("active") // active|cancelled
-  createdAt         DateTime @default(now())
+  status               String   @default("active") // active|cancelled
+  createdAt            DateTime @default(now())
 
-  payments Payment[]
+  payments       Payment[]
   dayEnrollments DayEnrollment[]
 
   @@unique([trainingId, userId])
@@ -580,20 +645,20 @@ model AttendanceLog {
 }
 
 model Certificate {
-  id          String   @id @default(cuid())
-  number      String   @unique // LEARNOVIZE-YYYY-XXXXXX, validated in app
-  trainingId  String
-  training    Training @relation(fields: [trainingId], references: [id])
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  id              String   @id @default(cuid())
+  number          String   @unique // LEARNOVIZE-YYYY-XXXXXX, validated in app
+  trainingId      String
+  training        Training @relation(fields: [trainingId], references: [id])
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
   // A partial-attendance certificate must say what it covers, otherwise a
   // one-day certificate is indistinguishable from the full program.
-  scopeLabel  String   // e.g. "Days 1–2: Battery storage" or "Full program"
-  dayIds      String[] // the days actually attended
-  pctAttended Int      @default(0)
-  pdfUrl      String
-  imageUrl    String?
-  sha256      String
+  scopeLabel      String // e.g. "Days 1–2: Battery storage" or "Full program"
+  dayIds          String[] // the days actually attended
+  pctAttended     Int      @default(0)
+  pdfUrl          String
+  imageUrl        String?
+  sha256          String
   // Ed25519 signature over `snapshot`. The pair is what makes the document verifiable
   // without asking us: the snapshot is the claims a reader can see on the PDF,
   // canonicalised and signed with a key whose public half is published. sha256 alone
@@ -601,13 +666,13 @@ model Certificate {
   //
   // `snapshot` is also embedded in the PDF itself, which is what makes an offline
   // verification possible -- a holder is not holding a session with our API.
-  snapshot    String?
-  signature   String?
-  keyId       String?
+  snapshot        String?
+  signature       String?
+  keyId           String?
   templateVersion String?
-  status      String   @default("valid") // valid|revoked
-  revokedReason String?
-  createdAt   DateTime @default(now())
+  status          String   @default("valid") // valid|revoked
+  revokedReason   String?
+  createdAt       DateTime @default(now())
 
   // One certificate per learner per training, ever. issueCertificate checked with
   // findFirst and inserted with nothing behind it, so two issuances racing both saw an
@@ -624,37 +689,37 @@ model Certificate {
 }
 
 model Payment {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   registrationId String
   registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  provider       String   // paystack|flutterwave
-  providerRef    String   @unique
-  accessCode     String?  // Paystack hosted-checkout code — lets an abandoned checkout resume the same transaction
+  provider       String // paystack|flutterwave
+  providerRef    String       @unique
+  accessCode     String? // Paystack hosted-checkout code — lets an abandoned checkout resume the same transaction
   amountNgn      Int
-  providerFeeNgn Int      @default(0)
-  commissionNgn  Int      @default(0)
-  netNgn         Int      @default(0)
-  status         String   @default("pending") // pending|paid|refunded|failed
-  idempotencyKey String   @unique
+  providerFeeNgn Int          @default(0)
+  commissionNgn  Int          @default(0)
+  netNgn         Int          @default(0)
+  status         String       @default("pending") // pending|paid|refunded|failed
+  idempotencyKey String       @unique
   rawWebhook     Json?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   @@index([providerRef, idempotencyKey])
 }
 
 model Payout {
-  id         String   @id @default(cuid())
-  trainerId  String
-  trainingId String
-  training   Training @relation(fields: [trainingId], references: [id])
-  amountNet  Int
-  status     String   @default("pending") // pending|held|paid|failed
-  holdUntil  DateTime?
-  createdAt  DateTime @default(now())
+  id            String    @id @default(cuid())
+  trainerId     String
+  trainingId    String
+  training      Training  @relation(fields: [trainingId], references: [id])
+  amountNet     Int
+  status        String    @default("pending") // pending|held|paid|failed
+  holdUntil     DateTime?
+  createdAt     DateTime  @default(now())
   // Who released it, and when. Payouts are admin-approved, so the person who decided to
   // send real money is part of the record -- without it, "paid" is unfalsifiable.
-  approvedById String?
-  approvedAt   DateTime?
+  approvedById  String?
+  approvedAt    DateTime?
   // Paystack's transfer reference and numeric id, so a status can be reconciled against
   // the provider rather than inferred from our own optimistic update.
   transferRef   String?
@@ -674,51 +739,51 @@ model Payout {
 /// accountNumberLast4 exists so the settings screen can show which account is on file
 /// without decrypting anything.
 model PayoutAccount {
-  id                   String   @id @default(cuid())
-  trainerId            String
-  trainer              TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
-  bankCode             String
-  bankName             String
-  accountNumberEnc     String
-  accountNumberLast4   String
-  accountName          String
+  id                 String         @id @default(cuid())
+  trainerId          String
+  trainer            TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  bankCode           String
+  bankName           String
+  accountNumberEnc   String
+  accountNumberLast4 String
+  accountName        String
   // Paystack's reusable handle for this account. Creating it is what makes a later
   // transfer a two-line call rather than re-resolving every time.
-  recipientCode        String?
-  verifiedAt           DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  recipientCode      String?
+  verifiedAt         DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
   @@unique([trainerId, bankCode, accountNumberLast4])
   @@index([trainerId])
 }
 
 model FeedPost {
-  id            String   @id @default(cuid())
+  id             String        @id @default(cuid())
   // Nullable: official ecards, videos, info and announcements are not tied to a class.
-  trainingId    String?
-  training      Training? @relation(fields: [trainingId], references: [id], onDelete: Cascade)
-  type          String   // video|ecard|infographic
+  trainingId     String?
+  training       Training?     @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  type           String // video|ecard|infographic
   // What this post is: a trainer's class promo, an official announcement, or a paid ad.
-  kind          String   @default("training") // training|official|announcement|ad
+  kind           String        @default("training") // training|official|announcement|ad
   // Official accounts publish here and get the verified badge.
-  authorId      String?
-  author        User?    @relation("PostAuthor", fields: [authorId], references: [id])
+  authorId       String?
+  author         User?         @relation("PostAuthor", fields: [authorId], references: [id])
   organizationId String?
-  organization  Organization? @relation(fields: [organizationId], references: [id])
-  title         String?
-  body          String?
-  mediaUrl      String
-  thumbUrl      String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  title          String?
+  body           String?
+  mediaUrl       String
+  thumbUrl       String?
   // An ad promotes a specific organization or individual trainer.
-  isAd          Boolean  @default(false)
-  adTargetType  String?  // organization|trainer
-  adTargetId    String?
-  adStartsAt    DateTime?
-  adEndsAt      DateTime?
-  status        String   @default("live") // live|hidden|removed
-  reportsCount  Int      @default(0)
-  createdAt     DateTime @default(now())
+  isAd           Boolean       @default(false)
+  adTargetType   String? // organization|trainer
+  adTargetId     String?
+  adStartsAt     DateTime?
+  adEndsAt       DateTime?
+  status         String        @default("live") // live|hidden|removed
+  reportsCount   Int           @default(0)
+  createdAt      DateTime      @default(now())
 
   @@index([kind, status, createdAt])
 }
@@ -746,7 +811,7 @@ model Like {
 
 model Report {
   id         String   @id @default(cuid())
-  targetType String   // post|trainer|certificate
+  targetType String // post|trainer|certificate
   targetId   String
   reporterId String
   reason     String
