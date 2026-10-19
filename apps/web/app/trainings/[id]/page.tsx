@@ -7,6 +7,8 @@ import CopyInviteLink from '../CopyInviteLink';
 import IssueCertificates from '../IssueCertificates';
 import PostComposer from '../PostComposer';
 import DayPricingEditor from '../DayPricingEditor';
+import SignedInGate from '../../components/SignedInGate';
+import QuestionBox from '../../components/QuestionBox';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import { quoteFor } from '@/lib/pricing';
 import { lagosSpanLabel } from '@/lib/lagos';
@@ -73,6 +75,13 @@ if (!t) return notFound();
         ))}
         <div className="btnrow"><RegisterButton trainingId={t.id} full={full || t.status !== 'live'} /></div>
       </div>
+
+      {/* Before the trainer-facing sections: a learner deciding whether to book wants an
+          answer far more than they want to know the day-by-day price breakdown. */}
+      <SignedInGate>
+        {(signedIn) => <QuestionBox trainingId={t.id} signedIn={signedIn} />}
+      </SignedInGate>
+
       <h2 className="sec">Days &amp; pricing</h2>
       <div className="card">
         <DayPricingEditor

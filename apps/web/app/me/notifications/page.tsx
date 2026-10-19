@@ -20,6 +20,11 @@ const TYPES: Record<string, { icon: string; tint: string; label: string }> = {
   // Also the record that stops a reminder being sent twice, which is why it lives here
   // rather than in a separate table nobody would think to look in.
   'session-reminder': { icon: '⏰', tint: 'tint-accent', label: 'Starting soon' },
+  // Both directions of the class Q&A. The trainer hears about a question within seconds of
+  // it being asked, and the learner hears about the answer -- otherwise the question would be
+  // asked into a silence that looks exactly like being ignored.
+  'question-asked': { icon: '?', tint: 'tint-accent', label: 'New question about your class' },
+  'question-answered': { icon: '💬', tint: 'tint-leaf', label: 'Your question was answered' },
   'attendance-recorded': { icon: '✓', tint: 'tint-leaf', label: 'Attendance recorded' },
   'attendance-at-risk': { icon: '⚠', tint: 'tint-clay', label: 'At risk of missing the minimum' },
   'attendance-corrected': { icon: '✎', tint: 'tint-accent', label: 'Attendance corrected' },

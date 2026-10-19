@@ -69,6 +69,7 @@ model User {
   pushTokens     PushToken[]
   pointEvents    PointsEvent[]
   orgMemberships OrgMember[]
+  questions      Question[]
   ownedOrgs      Organization[]     @relation("OrgOwner")
   authoredPosts  FeedPost[]         @relation("PostAuthor")
 reviewsWritten TrainerReview[]   @relation("ReviewAuthor")
@@ -347,8 +348,45 @@ model Training {
   certificates  Certificate[]
   payouts       Payout[]
   pointEvents   PointsEvent[]
+  questions     Question[]
 
   @@index([accessType, tier])
+}
+
+/// A learner's question about a class, and the trainer's answer.
+///
+/// Public to anyone signed in, because a question asked in public is usually the reason a
+/// class page converts -- somebody reading "will this work if I am self-taught?" and finding
+/// a stranger already asked it is a stronger argument than any description could be.
+///
+/// Anonymous when the author asks for it. Some questions are about money, or about whether a
+/// class will get them work, or about an embarrassing gap in somebody's experience, and "who is
+/// asking?" changes what a person is willing to type. The trainer always sees the author, so
+/// they answer the real question rather than a guess at it.
+model Question {
+  id         String   @id @default(cuid())
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  /// The question as asked. Trimmed and length-capped on write: it is rendered inside a
+  /// notification payload, and a notification should never be able to carry a wall of text.
+  body       String
+
+  /// Null means anonymous to other readers. The trainer still sees who asked.
+  anonymous  Boolean  @default(false)
+
+  answer     String?
+  /// Null until answered. Deliberately separate from createdAt: an answer four days later is
+  /// not the same moment as a question four days ago, and both dates are worth showing.
+  answeredAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([trainingId, createdAt])
+  @@index([authorId])
+  @@index([answeredAt])
 }
 
 /// One billable, selectable day of a training (FR-11). A day is what learners
