@@ -200,25 +200,43 @@ export default function Dashboard() {
       {role === 'trainer' && trainings && trainings.length > 0 && (
         <>
           <h2 className="sec">Manage your classes</h2>
+          {/* Two actions per class, and the card is no longer itself a link.
+              It used to be one link to the class page, which then presented pricing,
+              moderators, certificates, the explore post and the curriculum all at once --
+              five decisions stacked on a trainer who came here to get into a room. The
+              count that matters is still on the card, because knowing how many people
+              are coming is the one thing worth reading here. */}
           <div style={{ display: 'grid', gap: 12 }}>
             {trainings.map((t) => (
-              <Link
+              <div
                 key={t.id}
-                href={`/trainings/${t.id}`}
                 className="card"
-                style={{ textDecoration: 'none', color: 'inherit', display: 'flex', gap: 14, alignItems: 'center', padding: 16 }}
+                style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}
               >
                 <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
-                <div className="u-grow">
-                  <p className="u-h">{t.title}</p>
-                  <p className="muted u-sub-sm">
+                <div className="u-grow" style={{ minWidth: 160 }}>
+                  <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
+                  <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
                     {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
                     {t.pendingApproval > 0 ? ` · ${t.pendingApproval} to approve` : ''}
                   </p>
                 </div>
                 {t.status === 'full' && <span className="badge rev">Full</span>}
                 {t.status === 'live' && <span className="badge ok">Live</span>}
-              </Link>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {t.nextSession ? (
+                    <Link className="btn primary" href={`/classroom/${t.nextSession}`}>
+                      Join class <span aria-hidden>→</span>
+                    </Link>
+                  ) : (
+                    <Link className="btn" href={`/trainings/${t.id}`}>Class details</Link>
+                  )}
+                  <Link className="btn" href={`/trainings/${t.id}#prepare`}>
+                    Prepare my class
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         </>

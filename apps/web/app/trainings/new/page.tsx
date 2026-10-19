@@ -10,28 +10,31 @@ const TIERS: readonly TierKey[] = ['basic', 'standard', 'premium'];
 
 type Slot = { date: string; start: string; end: string };
 
-// Seed with a sensible class two days out so the form is never empty on arrival.
+// ONE day, seeded two days out, and empty below it.
+//
+// It used to arrive with two days filled in, which read as "this is a two-day class" before
+// the trainer had decided anything. Most classes here are one day, and a second row that
+// needs deleting is a decision the trainer did not make. Adding a day is one button away.
 function defaultSlots(): Slot[] {
   const dates = lagosDateOptions(45);
-  const d1 = dates[2]?.value ?? '';
-  const d2 = dates[3]?.value ?? d1;
-  return [
-    { date: d1, start: '09:00', end: '11:00' },
-    { date: d2, start: '09:00', end: '11:00' },
-  ];
+  return [{ date: dates[2]?.value ?? '', start: '09:00', end: '11:00' }];
 }
 
 export default function NewTraining() {
   const router = useRouter();
   const [title, setTitle] = useState('Intro to Solar Installation');
   const [topic, setTopic] = useState('energy');
-  const [description, setDescription] = useState('Live hands-on basics. No replays — attend live.');
-  const [format, setFormat] = useState('video');
+  // Empty by default now. It is optional, and a prefilled paragraph is a paragraph the
+  // trainer has to read before deciding whether to keep it.
+  const [description, setDescription] = useState('');
+  // Format is fixed to video+audio and Min% to 60. Both were dropdowns whose default was
+  // right almost every time, which makes a control that only ever gets clicked once.
+  const format = 'video';
   const [accessType, setAccessType] = useState<'free' | 'paid'>('free');
   const [tier, setTier] = useState<TierKey>('basic');
   const [pricePerDay, setPricePerDay] = useState('1500');
   const [wantsCertificate, setWantsCertificate] = useState(true);
-  const [minPct, setMinPct] = useState('60');
+  const minPct = 60;
   const [cap, setCap] = useState('50');
   const [slots, setSlots] = useState<Slot[]>(defaultSlots);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -105,8 +108,11 @@ export default function NewTraining() {
         <input type="text" required minLength={3} value={title} onChange={(e) => setTitle(e.target.value)} style={{ maxWidth: '100%' }} />
         <label className="fl">Topic</label>
         <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} />
-        <label className="fl">Description</label>
-        <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+        <label className="fl">
+          Description <span className="muted" style={{ fontWeight: 500 }}>— optional</span>
+        </label>
+        <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)}
+          placeholder="What somebody will be able to do afterwards. You can leave this empty." />
 
         <label className="fl">Class type</label>
         <div className="u-chips">
@@ -154,10 +160,15 @@ export default function NewTraining() {
           </div>
         )}
 
+        {/* Format and Min% are gone from the form -- both had a default that was right
+            essentially always, so they were controls that got clicked once and never again.
+            Format is video+audio and the attendance bar is 60%, which is what the schema
+            defaults to anyway. */}
         <div className="btnrow">
-          <span><label className="fl">Format</label><select value={format} onChange={(e) => setFormat(e.target.value)}><option value="video">Video + audio</option><option value="audio">Audio-only</option></select></span>
-          <span><label className="fl">Min %</label><select value={minPct} onChange={(e) => setMinPct(e.target.value)}><option value="60">60% (default)</option><option value="80">80%</option><option value="100">100%</option></select></span>
-          <span><label className="fl">Cap</label><input type="text" inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value)} style={{ maxWidth: 100 }} /></span>
+          <span>
+            <label className="fl">Cap attendance</label>
+            <input type="text" inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value)} style={{ maxWidth: 100 }} />
+          </span>
         </div>
 
         <label className="fl" style={{ marginTop: 14 }}>Sessions · times are Africa/Lagos</label>
@@ -187,7 +198,7 @@ export default function NewTraining() {
           ))}
         </div>
         <div className="btnrow u-mt-half">
-          <button type="button" className="btn" onClick={() => setSlots((prev) => [...prev, { date: prev[prev.length - 1]?.date ?? '', start: '09:00', end: '11:00' }])}>
+          <button type="button" className="btn" onClick={() => setSlots((prev) => [...prev, { date: '', start: '09:00', end: '11:00' }])}>
             + Add a day
           </button>
         </div>

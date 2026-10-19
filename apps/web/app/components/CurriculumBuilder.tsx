@@ -26,47 +26,7 @@ type Draft = {
  * polish is ever added it should be opt-in, editable, and clearly marked as a draft.
  */
 
-const PROMPTS: { key: keyof Draft; label: string; hint: string; placeholder: string }[] = [
-  {
-    key: 'audience',
-    label: 'Who this is for — and who it is not',
-    hint: 'The exclusion is the part that saves somebody their money. "Not for you if you have never done X."',
-    placeholder: 'For Lagos-based freelancers who already have one client and want three. Not for you if you have never billed anyone before — start with the free class instead.',
-  },
-  {
-    key: 'outcomes',
-    label: 'What someone can do afterwards that they cannot do now',
-    hint: 'One per line. If it could be said of any course, it is not an outcome.',
-    placeholder: 'Price a project without guessing\nWrite a proposal that closes\nRun a handover that does not need you in the room',
-  },
-  {
-    key: 'promise',
-    label: 'The promise, in your own words',
-    hint: 'What life looks like on the other side. This sits at the top of the document.',
-    placeholder: 'You stop being the person who says yes to everything, and start being the one who prices it.',
-  },
-];
 
-const STORY: { key: keyof Draft; label: string; hint: string; placeholder: string }[] = [
-  {
-    key: 'storyStart',
-    label: 'How you got here',
-    hint: 'The short version. Where you were, and the moment it changed.',
-    placeholder: 'I was doing it for free for two years because I did not know what to charge. The moment that changed was losing a client I actually wanted.',
-  },
-  {
-    key: 'storyWentWrong',
-    label: 'What went wrong first',
-    hint: 'Nobody teaches this part. It is the reason people trust you more than a manual.',
-    placeholder: 'I priced by copying what another agency charged. I lost money for eight months before I noticed.',
-  },
-  {
-    key: 'storyAdvice',
-    label: 'What you would tell someone on day one',
-    hint: 'The thing you needed to hear and did not.',
-    placeholder: 'Do not take the course until you have a real project to practise on. You will not retain any of it.',
-  },
-];
 
 const emptyDraft = (): Draft => ({
   audience: '', outcomes: '', promise: '',
@@ -99,6 +59,13 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
   // Only fetched once it is opened. A trainer who never prepares anything should not pay
   // for a request on every visit to their own class page.
   useEffect(() => { if (open) void load(); }, [open, load]);
+
+  // "Prepare my class" on the dashboard links here with #prepare. Landing on a closed
+  // panel from that button looks like the button did nothing, so honour the hash. In an
+  // effect, never during render -- setting state while rendering is a React no-no.
+  useEffect(() => {
+    if (window.location.hash === '#prepare') setOpen(true);
+  }, []);
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) =>
     setDraft((d) => (d ? { ...d, [k]: v } : d));
@@ -148,9 +115,13 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
     })();
   }
 
-  // Closed by default. This is a long editor sitting at the bottom of a page most visitors
-  // scroll past, and an empty form is worse than no form -- it reads as a broken feature.
-  // One line says what it is, one button opens it.
+  // Closed by default. A long editor sitting at the bottom of a page most visitors scroll
+  // past, and an empty form is worse than no form -- it reads as a broken feature. One line
+  // says what it is, one button opens it.
+  //
+  // Opened automatically when the page was linked straight here with #prepare, because that
+  // link is the "Prepare my class" button on the dashboard and arriving at a closed panel
+  // from it looks like the button did nothing.
   if (!open) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -184,46 +155,11 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
         ▾ Close and keep this page short
       </button>
 
-      {/* ---- positioning */}
-      <h3 className="u-h-md" style={{ marginTop: 20 }}>The shape of it</h3>
-      {PROMPTS.map((p) => (
-        <div key={String(p.key)} style={{ marginBottom: 16 }}>
-          <label className="fl">{p.label}</label>
-          <p className="muted" style={{ fontSize: 12.5, margin: '-4px 0 6px' }}>{p.hint}</p>
-          <textarea
-            className="ta"
-            rows={p.key === 'outcomes' ? 3 : 2}
-            value={draft[p.key] as string}
-            onChange={(e) => set(p.key, e.target.value)}
-            placeholder={p.placeholder}
-            maxLength={4000}
-          />
-        </div>
-      ))}
-
-      {/* ---- their story */}
-      <h3 className="u-h-md" style={{ marginTop: 24 }}>Your experience</h3>
-      <p className="muted" style={{ fontSize: 13, marginTop: -4 }}>
-        These three stay separate on purpose. Asked as one question, everybody answers the
-        easiest one.
-      </p>
-      {STORY.map((p) => (
-        <div key={String(p.key)} style={{ marginBottom: 16 }}>
-          <label className="fl">{p.label}</label>
-          <p className="muted" style={{ fontSize: 12.5, margin: '-4px 0 6px' }}>{p.hint}</p>
-          <textarea
-            className="ta"
-            rows={3}
-            value={draft[p.key] as string}
-            onChange={(e) => set(p.key, e.target.value)}
-            placeholder={p.placeholder}
-            maxLength={4000}
-          />
-        </div>
-      ))}
-
-      {/* ---- modules */}
-      <h3 className="u-h-md" style={{ marginTop: 24 }}>Modules and timing</h3>
+      {/* ---- modules first, because that is the part that is hard to think up. The
+          positioning questions that used to sit above it are gone: a trainer who has to
+          answer "who is this not for" before they can write down what they are teaching
+          writes nothing at all. */}
+      <h3 className="u-h-md" style={{ marginTop: 20 }}>Modules and timing</h3>
       {draft.modules.map((m, i) => (
         <div className="card" key={i} style={{ padding: 14, marginBottom: 10 }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
@@ -288,47 +224,24 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
         )}
       </div>
 
-      {/* ---- FAQs */}
-      <h3 className="u-h-md" style={{ marginTop: 24 }}>Questions you get asked</h3>
+      {/* ---- one box, not a form. Stories, wins, mistakes, the thing you would tell
+          somebody on day one -- whatever the trainer actually wants to write down, in
+          their own order. The structured prompts that used to sit here asked for the same
+          material in a fixed order, and the fixed order was the problem: asked as separate
+          fields, people answer the easiest one and leave the rest. */}
+      <h3 className="u-h-md" style={{ marginTop: 24 }}>Success stories and notes to take away</h3>
       <p className="muted" style={{ fontSize: 13, marginTop: -4 }}>
-        Answer them once here instead of in the room, where three people ask at once.
+        Anything you want in front of the room — how you started, what went wrong, what finally
+        worked. Write it however you like.
       </p>
-      {draft.faqs.map((f, i) => (
-        <div className="card" key={i} style={{ padding: 14, marginBottom: 10 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-            <input
-              type="text"
-              value={f.question}
-              onChange={(e) => {
-                const v = e.target.value;
-                setDraft((d) => d && { ...d, faqs: d.faqs.map((x, j) => (j === i ? { ...x, question: v } : x)) });
-              }}
-              placeholder="The question"
-              style={{ flex: 1 }}
-            />
-            <button
-              className="btn link"
-              onClick={() => setDraft((d) => d && { ...d, faqs: d.faqs.filter((_, j) => j !== i) })}
-              aria-label={`Remove question ${i + 1}`}
-            >✕</button>
-          </div>
-          <textarea
-            className="ta"
-            rows={2}
-            value={f.answer}
-            onChange={(e) => {
-              const v = e.target.value;
-              setDraft((d) => d && { ...d, faqs: d.faqs.map((x, j) => (j === i ? { ...x, answer: v } : x)) });
-            }}
-            placeholder="Your answer"
-            maxLength={4000}
-          />
-        </div>
-      ))}
-      <button
-        className="btn"
-        onClick={() => setDraft((d) => d && { ...d, faqs: [...d.faqs, { position: d.faqs.length, question: '', answer: '' }] })}
-      >＋ Add a question</button>
+      <textarea
+        className="ta"
+        rows={8}
+        value={draft.storyAdvice}
+        onChange={(e) => set('storyAdvice', e.target.value)}
+        placeholder={'I did this for free for two years because I did not know what to charge.\n\nWhat finally worked: I stopped copying what other people charged and priced the outcome instead.\n\nWhat I would tell you on day one: do not start until you have a real one to practise on.'}
+        maxLength={4000}
+      />
 
       {/* ---- save + export */}
       <div className="btnrow" style={{ marginTop: 22 }}>

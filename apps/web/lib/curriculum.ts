@@ -130,16 +130,15 @@ export function curriculumMarkdown(c: Curriculum, sessions: SessionSpan[] = []):
     out.push('');
   }
 
-  // The three story prompts are kept as three sections. Merged into one they lose the part
-  // that is actually useful, every time.
+  // One free-text section. It used to be three fixed prompts, which reliably produced
+  // three thin answers to questions rather than the one thing the trainer actually wanted
+  // to say.
   const story: [string, string | null][] = [
-    ['How I got here', c.storyStart],
-    ['What went wrong first', c.storyWentWrong],
-    ['What I would tell you on day one', c.storyAdvice],
+    ['Success stories and notes to take away', c.storyAdvice],
   ];
   const told = story.filter(([, v]) => clean(v));
   if (told.length) {
-    out.push('## My experience, in my words');
+    out.push('## Success stories and notes to take away');
     out.push('');
     for (const [h, v] of told) {
       out.push(`### ${h}`);
@@ -307,13 +306,11 @@ export async function curriculumPdf(c: Curriculum, sessions: SessionSpan[] = [])
   }
 
   const story: [string, string | null][] = [
-    ['How I got here', c.storyStart],
-    ['What went wrong first', c.storyWentWrong],
-    ['What I would tell you on day one', c.storyAdvice],
+    ['Success stories and notes to take away', c.storyAdvice],
   ].filter(([, v]) => clean(v)) as [string, string | null][];
 
   if (story.length) {
-    heading('My experience, in my words');
+    heading('Success stories and notes to take away');
     for (const [h, v] of story) {
       subheading(h);
       para(clean(v), { size: 10, font: sans });
