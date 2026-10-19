@@ -3,142 +3,150 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import { SkeletonCard } from '../../components/Skeleton';
-import { lagosWhenLabel } from '@/lib/lagos';
+import { lagosWhenLabel, lagosDayLabel } from '@/lib/lagos';
 import SiteNav from '../../components/SiteNav';
 
-type Reg = {
+type Session = {
   id: string;
-  certPaid: boolean;
-  quotedTotalNgn: number | null;
-  quotedDays: number | null;
-  training: { id: string; title: string; slug: string; certMode: string; accessType: string; tier: string | null; pricePerDayNgn: number | null; sessions: { startsAtUtc: string }[] };
-};
-
-type Progress = {
-  presentCount: number; pct: number; remaining: number; atRisk: boolean; failed: boolean; minMet: boolean;
-  training: { minPct: number; total: number };
-  flags: { sessionId: string; present: boolean | null; upcoming: boolean }[];
+  trainingId: string;
+  trainingTitle: string;
+  startsAtUtc: string;
+  endsAtUtc: string;
+  status: string;
+  attended: boolean;
+  upcoming: boolean;
 };
 
 export default function MyRegistrations() {
-  const [regs, setRegs] = useState<Reg[] | null>(null);
-  const [progress, setProgress] = useState<Record<string, Progress>>({});
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
   function load() {
     const access = getAccess();
     if (!access) return;
+    setLoading(true);
     authFetch('/api/me/registrations')
       .then((r) => r.json())
       .then((j) => {
-        const list: Reg[] = j.registrations || [];
-        setRegs(list);
-        for (const r of list) {
+        const regs = j.registrations || [];
+        const fetches = regs.map((r: any) =>
           authFetch(`/api/me/attendance?trainingId=${r.training.id}`)
             .then((x) => x.json())
-            .then((p) => setProgress((prev) => ({ ...prev, [r.training.id]: p })))
-            .catch(() => {});
-        }
-      });
+            .then((p) => ({ training: r.training, progress: p }))
+            .catch(() => ({ training: r.training, progress: null }))
+        );
+        Promise.all(fetches).then((results) => {
+          const allSessions: Session[] = [];
+          for (const { training, progress } of results) {
+            if (!training?.sessions) continue;
+            const flags = progress?.flags || [];
+            for (const s of training.sessions) {
+              const flag = flags.find((f: any) => f.sessionId === s.id);
+              const upcoming = new Date(s.startsAtUtc).getTime() > Date.now();
+              const attended = flag?.present === true;
+              allSessions.push({
+                id: s.id,
+                trainingId: training.id,
+                trainingTitle: training.title,
+                startsAtUtc: s.startsAtUtc,
+                endsAtUtc: s.endsAtUtc,
+                status: training.status,
+                attended,
+                upcoming,
+              });
+            }
+          }
+          // Sort: upcoming first (by date asc), then past (most recent first)
+          allSessions.sort((a, b) => {
+            const aTime = new Date(a.startsAtUtc).getTime();
+            const bTime = new Date(b.startsAtUtc).getTime();
+            const aUp = a.upcoming, bUp = b.upcoming;
+            if (aUp !== bUp) return aUp ? -1 : 1; // upcoming first
+            return aUp ? aTime - bTime : bTime - aTime; // upcoming asc, past desc
+          });
+          setSessions(allSessions);
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }
+
+  function formatDateTime(startsAtUtc: string) {
+    return {
+      date: lagosDayLabel(startsAtUtc),
+      time: lagosWhenLabel(startsAtUtc),
+    };
+  }
+
+  function formatDateOnly(startsAtUtc: string) {
+    return lagosDayLabel(startsAtUtc);
+  }
+
+  function formatTimeOnly(startsAtUtc: string) {
+    return lagosWhenLabel(startsAtUtc);
+  }
+
   useEffect(load, []);
-
-  async function cancel(id: string) {
-    const access = getAccess();
-    if (!access) return;
-    const r = await authFetch(`/api/registrations/${id}/cancel`, {
-      method: 'POST',
-    });
-    const j = await r.json();
-    if (!r.ok) return setMsg(j.error || 'Cancel failed');
-    setMsg('Registration cancelled — seat freed.');
-    load();
-  }
-
-  async function requestCorrection(trainingId: string) {
-    const p = progress[trainingId];
-    if (!p) return;
-    const target = p.flags.find((f) => f.present === false && !f.upcoming) || p.flags.find((f) => f.present === null && !f.upcoming);
-    if (!target) return setMsg('Nothing to correct — all past sessions are marked present.');
-    const note = prompt('What happened? (e.g. network dropped at 10:24, rejoined 10:31)') || '';
-    const access = getAccess();
-    if (!access) return;
-    const r = await authFetch('/api/attendance/correction-request', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sessionId: target.sessionId, note }),
-    });
-    setMsg(r.ok ? 'Correction request sent to your trainer.' : 'Request failed.');
-  }
 
   return (
     <div className="wrap">
       <SiteNav />
-      <h1>My seats.</h1>
-      <p className="sub">Free cancel until the first session starts.</p>
+      <h1>My sessions</h1>
+      <p className="sub">Upcoming first, then past. Checked = attended.</p>
+
       {msg && <div className="okmsg">{msg}</div>}
-      <div style={{ marginTop: 18, display: 'grid', gap: 0 }}>
-        {/* Was "Log in to see your registrations." while the data loaded, which is why the page
-            flashed a login prompt on the way in. `regs === null` means LOADING, not signed
-            out, and the two had been given the same value. Three states, three outputs:
-            null is a skeleton, [] is genuinely empty, populated is the list. Being sent to
-            log in is authFetch's job when the token is genuinely dead, not this page's. */}
-        {regs === null && (
-          <div style={{ display: 'grid', gap: 12, marginTop: 18 }}>
-            <SkeletonCard height={104} />
-            <SkeletonCard height={104} />
+
+      <div style={{ marginTop: 18 }}>
+        {loading && (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <SkeletonCard height={56} />
+            <SkeletonCard height={56} />
+            <SkeletonCard height={56} />
           </div>
         )}
-        {regs !== null && regs.length === 0 && <p className="muted">No seats yet — go find a training.</p>}
-        {regs?.map((r) => {
-          const p = progress[r.training.id];
-  async function buyCert(regId: string) {
-    const access = getAccess();
-    if (!access) return;
-    const r = await authFetch(`/api/registrations/${regId}/checkout`, {
-      method: 'POST', headers: { authorization: `Bearer ${access}` },
-    });
-    const j = await r.json();
-    if (!r.ok) return setMsg(j.error || 'Checkout failed');
-    if (j.payUrl) {
-      window.location.href = j.payUrl; // Paystack hosted page
-      return;
-    }
-    // Mock provider (local dev): simulate the participant paying now.
-    const m = await fetch('/api/payments/mock/complete', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ reference: j.reference }),
-    });
-    setMsg(m.ok ? `Certificate paid (${j.reference}).` : 'Payment simulation failed.');
-  }
 
-  return (
-          <div className="rowitem" key={r.id} style={{ borderRadius: 16, marginBottom: 12 }}>
-            <div>
-              <p className="rtitle" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{r.training.title}</p>
-              <p className="muted" style={{ margin: '2px 0 0' }}>{r.training.sessions[0] ? lagosWhenLabel(r.training.sessions[0].startsAtUtc) : ''}</p>
-              {p && (
-                <p style={{ margin: '6px 0 0', fontSize: 14 }}>
-                  {p.presentCount} of {p.training.total} sessions · {p.pct}% — need {p.training.minPct}%
-                  {p.minMet ? ' ✓' : p.atRisk ? ' ⚠ at risk — join the next session!' : p.failed ? ' ✗ minimum missed' : ''}
-                  {' '}<button className="btn link" style={{ minHeight: 0, padding: 0 }} onClick={() => requestCorrection(r.training.id)}>Request correction</button>
-                </p>
-              )}
-            </div>
-            <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              <Link className="btn" href={`/trainings/${r.training.id}`}>View</Link>
-              {r.training.accessType === 'paid' && !r.certPaid && (
-                <button className="btn primary" onClick={() => buyCert(r.id)}>
-                  Pay {r.quotedTotalNgn ? `\u20a6${r.quotedTotalNgn.toLocaleString('en-NG')}` : ''}
-                </button>
-              )}
-              {r.training.accessType === 'paid' && r.certPaid && <span className="muted">\u2713 paid</span>}
-              {r.training.accessType === 'free' && <span className="muted">Free</span>}
-              <button className="btn" onClick={() => cancel(r.id)}>Cancel</button>
-            </span>
+        {!loading && sessions.length > 0 && (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {sessions.map((s) => {
+              const isPast = !s.upcoming;
+              const checked = !s.upcoming && s.attended;
+
+              return (
+                <div key={s.id} className="rowitem" style={{ borderRadius: 12, padding: '12px 16px', background: 'var(--bg)', border: '1px solid var(--line)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 16, fontWeight: 600, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {s.trainingTitle}
+                      </p>
+                      <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+                        {s.upcoming ? 'Upcoming · ' : 'Past · '}{lagosDayLabel(s.startsAtUtc)} · {lagosWhenLabel(s.startsAtUtc)}
+                      </p>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled
+                        style={{ width: 20, height: 20, accentColor: 'var(--accent)' }}
+                      />
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        {s.upcoming ? 'Upcoming' : checked ? 'Attended' : 'Missed'}
+                      </span>
+                    </label>
+                    <Link className="btn link" href={`/classroom/${s.id}`} style={{ marginLeft: 'auto' }}>
+                      {s.upcoming ? 'Join' : 'View'}
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          );
-        })}
+        )}
+
+        {!loading && sessions.length === 0 && (
+          <p className="muted">No sessions yet — go find a training.</p>
+        )}
       </div>
     </div>
   );
