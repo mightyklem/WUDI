@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { authFetch } from '@/lib/client-auth';
+import { useNotification } from '../../components/useNotification';
 
 type Giveaway = {
   id: string;
@@ -28,7 +29,7 @@ export default function GiveawayPanel({
   const [rows, setRows] = useState<Giveaway[]>([]);
   const [prize, setPrize] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const { showNotification } = useNotification();
 
   const load = useCallback(async () => {
     try {
@@ -50,11 +51,10 @@ export default function GiveawayPanel({
         body: JSON.stringify(body),
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setMsg(j.error || 'That did not work.'); return null; }
+      if (!r.ok) { return null; }
       await load();
       return j;
     } catch {
-      setMsg('Could not reach the server.');
       return null;
     } finally {
       setBusy(false);
@@ -67,13 +67,13 @@ export default function GiveawayPanel({
   const start = async () => {
     if (!prize.trim()) return;
     const r = await call({ action: 'create', prize: prize.trim() });
-    if (r) { setPrize(''); setMsg('Live. Ask people to enter.'); }
+    if (r) { setPrize(''); showNotification('Live. Ask people to enter.', 'success'); }
   };
 
   const draw = async () => {
     if (!live) return;
     const r = await call({ action: 'draw', giveawayId: live.id, count: 1 });
-    if (r) setMsg(`Drawn from ${r.entries} entries.`);
+    if (r) showNotification(`Drawn from ${r.entries} entries.`, 'success');
   };
 
   return (
@@ -118,9 +118,9 @@ export default function GiveawayPanel({
       {isTrainer && !live && (
         <>
           <p className="eyebrow" style={{ color: 'var(--croom-dim)', marginTop: 4 }}>Give away something</p>
-<input
-                type="text"
-                className="croom-input"
+          <input
+            type="text"
+            className="croom-input"
             value={prize}
             placeholder="Prize, e.g. Full course access"
             aria-label="Prize"
@@ -131,8 +131,6 @@ export default function GiveawayPanel({
           </button>
         </>
       )}
-
-      {msg && <p className="croom-notice">{msg}</p>}
     </div>
   );
 }
