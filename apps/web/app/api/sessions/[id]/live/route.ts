@@ -32,18 +32,32 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   });
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  const now = new Date();
+  const scheduledEnd = session.endsAtUtc.getTime();
+  const isPastScheduledEnd = now.getTime() > scheduledEnd;
+
+  // Auto-end sessions that have passed their scheduled end time
+  let status = session.status;
+  let endedAtUtc = session.endedAtUtc;
+  if (isPastScheduledEnd && session.status !== 'ended' && session.status !== 'cancelled') {
+    await prisma.session.update({
+      where: { id },
+      data: { status: 'ended', endedAtUtc: new Date() },
+    });
+    status = 'ended';
+  }
+
   return NextResponse.json(
     {
       admittedAtUtc: session.admittedAtUtc?.toISOString() ?? null,
       endedAtUtc: session.endedAtUtc?.toISOString() ?? null,
       startsAtUtc: session.startsAtUtc.toISOString(),
       endsAtUtc: session.endsAtUtc.toISOString(),
-      status: session.status,
-      // The one thing the client actually needs, precomputed so every caller agrees on it.
+      status,
       // True while the trainer is in the room, and -- crucially -- still true after the
       // scheduled end. Real classes overrun; the clock is not the authority on whether
       // this one is over, the trainer pressing End is.
-      roomOpen: !!session.admittedAtUtc && session.status !== 'ended',
+      roomOpen: !!session.admittedAtUtc && status !== 'ended',
     },
     // Must not be cached: the whole point is to notice a change.
     { headers: { 'cache-control': 'no-store' } },
