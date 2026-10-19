@@ -47,7 +47,20 @@ function ago(iso: string) {
  * Unanswered questions are not hidden. An unanswered question sitting there in public is a
  * trainer being told, quietly and publicly, what to write down.
  */
-export default function QuestionBox({ trainingId }: { trainingId: string }) {
+export default function QuestionBox({
+  trainingId,
+  readOnly = false,
+}: {
+  trainingId: string;
+  /**
+   * Show the questions that have been asked, and nothing else.
+   *
+   * The trainer's view of this is a reading list, not a form. Putting an "ask a question"
+   * box in front of the person who answers questions is a small absurdity, and the trainer
+   * has their own Questions tab with a filter for what is still unanswered.
+   */
+  readOnly?: boolean;
+}) {
   const signedIn = useSignedIn();
   const [qs, setQs] = useState<Q[] | null>(null);
   const [draft, setDraft] = useState('');
@@ -107,32 +120,38 @@ export default function QuestionBox({ trainingId }: { trainingId: string }) {
   if (!signedIn) return null;
 
   return (
-    <section style={{ marginTop: 18 }}>
-      <h2 className="sec">Ask before you book</h2>
+    <section>
+      {/* The form belongs to the learner, on the shared class page. The trainer's tab is a
+          reading list of what was asked -- putting an "ask a question" box in front of the
+          person who answers questions is a small absurdity. */}
+      {!readOnly && (
+        <>
+          <h2 className="sec">Ask before you book</h2>
+          <div className="card">
+            <label className="fl">Your question</label>
+            <textarea
+              className="ta"
+              rows={3}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Will this suit me if I am self-taught? What do I need to bring?"
+              maxLength={600}
+            />
+            <label className="u-flex" style={{ gap: 8, fontSize: 13, margin: '4px 0 12px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} style={{ width: 'auto' }} />
+              <span className="muted">Ask anonymously — other readers won&rsquo;t see my name. The trainer still can.</span>
+            </label>
+            <div className="btnrow">
+              <button className="btn primary" onClick={ask} disabled={busy || draft.trim().length < 8}>
+                {busy ? 'Sending…' : 'Send my question'}
+              </button>
+            </div>
+            {msg && <div className={msg.startsWith('Sent') || msg.startsWith('Answer') ? 'okmsg' : 'err'} style={{ marginTop: 10 }}>{msg}</div>}
+          </div>
+        </>
+      )}
 
-      <div className="card">
-        <label className="fl">Your question</label>
-        <textarea
-          className="ta"
-          rows={3}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Will this suit me if I am self-taught? What do I need to bring?"
-          maxLength={600}
-        />
-        <label className="u-flex" style={{ gap: 8, fontSize: 13, margin: '4px 0 12px', cursor: 'pointer' }}>
-          <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} style={{ width: 'auto' }} />
-          <span className="muted">Ask anonymously — other readers won&rsquo;t see my name. The trainer still can.</span>
-        </label>
-        <div className="btnrow">
-          <button className="btn primary" onClick={ask} disabled={busy || draft.trim().length < 8}>
-            {busy ? 'Sending…' : 'Send my question'}
-          </button>
-        </div>
-        {msg && <div className={msg.startsWith('Sent') || msg.startsWith('Answer') ? 'okmsg' : 'err'} style={{ marginTop: 10 }}>{msg}</div>}
-      </div>
-
-      <h3 style={{ margin: '20px 0 8px', fontSize: 15 }}>
+      <h3 style={{ margin: readOnly ? 0 : '20px 0 8px', fontSize: 15 }}>
         {qs?.length ? `${qs.length} question${qs.length === 1 ? '' : 's'}` : 'No questions yet'}
       </h3>
 

@@ -1,16 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import RegisterButton from '../RegisterButton';
-import ModeratorInvite from '../ModeratorInvite';
-import CopyInviteLink from '../CopyInviteLink';
-import IssueCertificates from '../IssueCertificates';
-import PostComposer from '../PostComposer';
-import DayPricingEditor from '../DayPricingEditor';
-import QuestionBox from '../../components/QuestionBox';
-import CurriculumBuilder from '../../components/CurriculumBuilder';
+import ClassWorkspace from '../../components/ClassWorkspace';
 import TrainerOnly from '../../components/TrainerOnly';
-import Collapsible from '../../components/Collapsible';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import { quoteFor } from '@/lib/pricing';
 import { lagosSpanLabel } from '@/lib/lagos';
@@ -40,22 +32,16 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
   });
 if (!t) return notFound();
   const price = quoteFor(t);
-  const left = t.cap - t.seatsTaken;
   // Absolute, not a path. The whole point of the copy button is that the trainer can
   // paste this straight into a message, and a relative /t/... is useless to whoever
   // receives it. NEXT_PUBLIC_APP_URL is the deployed origin.
   const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3100').replace(/\/$/, '');
   const inviteUrl = `${appOrigin}/t/${t.slug}/register`;
-  const full = left <= 0 || t.status === 'full';
-  // The next session that has not finished is the one somebody opening this page on
-  // the day is actually here to attend. Everything else is a date they will come back for.
+  // A class whose last session has passed is over, whatever its status still says. The
+  // trainer may never have closed it, and this page should not pretend otherwise.
   const nowMs = Date.now();
-  const nextSession =
-    t.sessions.find((s) => new Date(s.endsAtUtc).getTime() > nowMs) ?? t.sessions[0] ?? null;
-  const otherSessions = t.sessions.filter((s) => s.id !== nextSession?.id);
-  
-  // Check if all sessions have ended
-  const hasEnded = t.sessions.length > 0 && t.sessions.every((s) => new Date(s.endsAtUtc).getTime() <= Date.now());
+  const hasEnded = t.sessions.length > 0 && t.sessions.every((s) => new Date(s.endsAtUtc).getTime() <= nowMs);
+  const seatsLeft = t.cap - t.seatsTaken;
 
   return (
     <div className="wrap">
@@ -90,113 +76,55 @@ if (!t) return notFound();
         {t.minPct}% attendance needed
       </p>
 
-      {/* Join gets the emphasis. It was a faint link in a list the same size as the dates,
-          on the one page where somebody may be trying to get to a class right now. */}
-      <div className="card" style={{ marginTop: 16, padding: 16 }}>
-        <p className="eyebrow" style={{ marginBottom: 10 }}>
-          {t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} · {left} of {t.cap} seats left
-          {full && ' · FULL'}
-        </p>
-
-        {nextSession && (
-          <div style={{ marginBottom: otherSessions.length ? 12 : 0 }}>
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
-              {lagosSpanLabel(nextSession.startsAtUtc, nextSession.endsAtUtc)}
-            </p>
-            <div style={{ marginTop: 9 }}>
-              <Link className="btn primary lg" href={`/classroom/${nextSession.id}`}>
-                Join classroom
-              </Link>
-            </div>
-          </div>
+      {/* When the class runs, as information. The Join button that used to sit here is gone
+          -- a trainer gets into their room from Manage your classes or My sessions, and
+          putting a second one here meant two ways to do the same thing on one screen. */}
+      <p className="muted" style={{ fontSize: 14, marginTop: 6 }}>
+        {t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} · {seatsLeft} of {t.cap} seats left
+        {t.sessions.length > 0 && (
+          <> · {t.sessions.map((s) => lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)).join('  ·  ')}</>
         )}
+      </p>
 
-        {otherSessions.length > 0 && (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-            {otherSessions.map((s) => (
-              <li
-                key={s.id}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  gap: 10, padding: '7px 0', borderTop: '1px solid var(--line)', fontSize: 14,
-                }}
-              >
-                <span className="muted">{lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)}</span>
-                <Link className="btn link" href={`/classroom/${s.id}`}>Join</Link>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="btnrow" style={{ marginTop: 12 }}>
-          <RegisterButton trainingId={t.id} full={full || t.status !== 'live'} hasEnded={hasEnded} />
+      {hasEnded && (
+        <div className="card" style={{ marginTop: 12, background: 'var(--warn-soft)', borderLeft: '4px solid var(--warn)' }}>
+          <p className="u-h" style={{ margin: 0 }}>This class has ended</p>
+          <p className="muted u-sub" style={{ margin: '4px 0 0' }}>
+            Registration is closed and the share link no longer takes a seat.
+          </p>
         </div>
-      </div>
+      )}
 
-      <div className="card" style={{ marginTop: 12, padding: 16 }}>
-        <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
-        <CopyInviteLink url={inviteUrl} />
-      </div>
+      {/* The learner-facing controls are not on this page. Join and Reserve live on the
+          shared link -- /t/<slug>/register -- which is where somebody who is not the
+          trainer actually arrives, from the class list or from a shared message. Keeping
+          them here meant a trainer's own class page had a Reserve seat button for a seat
+          they did not need, and a consent checkbox for a document they were not signing.
 
-      {/* Before the trainer-facing sections: a learner deciding whether to book wants an
-          answer far more than they want to know the day-by-day price breakdown. */}
-      <QuestionBox trainingId={t.id} />
-
-      {/* Trainer tooling, gated on ownership: this page is rendered for everyone, and a
-          learner should never see somebody else's pricing or moderator controls, not even
-          for the moment it takes to find out they are not the owner.
-
-          What the trainer sees is the two things scheduling is FOR -- share the class, and
-          put it in front of people -- plus a closed "Class settings" at the bottom for the
-          three things they need occasionally but not while deciding whether to run it.
-
-          Prepare my class lives here too, because this is where the "Prepare my class"
-          button on Manage your classes lands: /trainings/<id>#prepare. It was moved out of
-          this page by mistake, which left that button pointing at a page with no builder on
-          it -- the tabs never appeared because there was nothing here to show them. */}
+          What is left is the trainer's side of the class: one tabbed workspace, five jobs. */}
       <TrainerOnly trainingId={t.id}>
         <section style={{ marginTop: 26 }}>
-          <h2 className="sec">Prepare your class</h2>
-          <div className="card" style={{ marginTop: 12 }}>
-            <CurriculumBuilder trainingId={t.id} />
-          </div>
+          <ClassWorkspace
+            trainingId={t.id}
+            inviteUrl={inviteUrl}
+            tier={t.tier}
+            accessType={t.accessType}
+            certMode={t.certMode}
+            minPct={t.minPct}
+            days={t.days.map((d) => ({
+              id: d.id,
+              dayIndex: d.dayIndex,
+              topic: d.topic,
+              dateUtc: d.dateUtc,
+              accessType: d.accessType,
+              priceNgn: d.priceNgn,
+              sessionCount: d._count.sessions,
+              enrolled: d._count.enrollments,
+              sold: d._count.enrollments,
+              started: d.sessions.some((s) => new Date(s.startsAtUtc).getTime() <= Date.now()),
+            }))}
+          />
         </section>
-
-        <section style={{ marginTop: 26 }}>
-          <h2 className="sec">Put it in front of people</h2>
-          <div className="card"><PostComposer trainingId={t.id} /></div>
-        </section>
-
-        <Collapsible
-          title="Class settings"
-          hint="Day prices, moderators and certificates. Rarely needed once a class is running."
-        >
-          <h3 className="sec">Days &amp; pricing</h3>
-          <div className="card">
-            <DayPricingEditor
-              trainingId={t.id}
-              tier={t.tier}
-              accessType={t.accessType}
-              days={t.days.map((d) => ({
-                id: d.id,
-                dayIndex: d.dayIndex,
-                topic: d.topic,
-                dateUtc: d.dateUtc,
-                accessType: d.accessType,
-                priceNgn: d.priceNgn,
-                sessionCount: d._count.sessions,
-                enrolled: d._count.enrollments,
-                sold: d._count.enrollments,
-                started: d.sessions.some((s) => new Date(s.startsAtUtc).getTime() <= Date.now()),
-              }))}
-            />
-          </div>
-
-          <h3 className="sec">Moderators</h3>
-          <div className="card"><ModeratorInvite trainingId={t.id} /></div>
-
-          <IssueCertificates trainingId={t.id} />
-        </Collapsible>
       </TrainerOnly>
     </div>
   );
