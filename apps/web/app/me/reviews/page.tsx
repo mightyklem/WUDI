@@ -58,7 +58,7 @@ export default function MyReviews() {
       <h1>Rate your trainers.</h1>
       <p className="sub">
         You can only rate classes you actually attended. Ratings are public, and good ones
-        raise a trainer's standing on Learnovize.
+        raise a trainer&rsquo;s standing on Learnovize.
       </p>
 
       {msg && <div className="okmsg" style={{ marginTop: 14 }}>{msg}</div>}

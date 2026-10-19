@@ -60,15 +60,15 @@ export default function StandingPanel({
 
   useEffect(() => { void load(); }, [load]);
 
-  if (failed) return null;
-  if (!data) return null;
-
-  // Collapsed by default. The balance and the progress bar are glanceable -- somebody wants
-  // to know "am I still on track?" at a glance, and getting that meant scrolling past a full
-  // award history and two links first. The breakdown is real information, but it is
-  // information you go and ask for, so it waits behind a click.
+  // Above the early returns on purpose. A hook placed after `if (!data) return null` is
+  // called on some renders and not others, and React tears the tree down with "Rendered
+  // more hooks than during the previous render". That crashes on the client only, so every
+  // server probe and every 200 stays green while the page is unusable.
   const [open, setOpen] = useState(false);
   const panelId = 'standing-details';
+
+  if (failed) return null;
+  if (!data) return null;
 
   return (
     <section className="card" style={{ marginTop: 14 }}>

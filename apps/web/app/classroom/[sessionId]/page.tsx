@@ -67,7 +67,7 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
         )}
         {now > ended && !session.admittedAtUtc && (
           <p className="muted" style={{ margin: '12px 0 0', fontSize: 14 }}>
-            This session's scheduled time has passed. If the trainer is still live you can
+            This session&rsquo;s scheduled time has passed. If the trainer is still live you can
             still join below; joining after it ends will not earn attendance.
           </p>
         )}

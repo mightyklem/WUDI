@@ -194,7 +194,7 @@ export default function Lobby({
       {perms === 'denied' && (
         <p className="croom-notice" style={{ margin: 12 }}>
           Camera and microphone were blocked. You can still join and listen, or allow
-          access in your browser's site settings and reload.
+          access in your browser&rsquo;s site settings and reload.
         </p>
       )}
       {perms === 'granted' && (micOn || camOn) && !(probe.mic || probe.cam) && (
