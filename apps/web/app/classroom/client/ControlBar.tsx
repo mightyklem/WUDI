@@ -15,12 +15,19 @@ export default function ControlBar({
   micOn,
   camOn,
   shareOn,
-mayPublish,
+ mayPublish,
     canScreenShare,
     cams,
     camId,
     camBusy,
     onSelectCamera,
+    mics,
+    micId,
+    micBusy,
+    onSelectMic,
+    canFullscreen,
+    isFullscreen,
+    onFullscreen,
     handUp,
   panel,
   onPanel,
@@ -37,21 +44,30 @@ onShare,
   micOn: boolean;
   camOn: boolean;
   shareOn: boolean;
-mayPublish: boolean;
+ mayPublish: boolean;
     /** False where the browser has no getDisplayMedia, so the control is disabled with a reason. */
     canScreenShare: boolean;
     /** Video inputs the device reports. Populated only once camera permission is granted. */
-    cams: MediaDeviceInfo[];
+  cams: MediaDeviceInfo[];
     camId: string | null;
     camBusy: boolean;
     onSelectCamera: (deviceId: string) => void;
+    /** Audio inputs. A laptop can have a built-in mic, a headset and a USB interface at once. */
+    mics: MediaDeviceInfo[];
+    micId: string | null;
+    micBusy: boolean;
+    onSelectMic: (deviceId: string) => void;
+    /** False where the browser cannot go fullscreen, so the control is hidden rather than dead. */
+    canFullscreen: boolean;
+    isFullscreen: boolean;
+    onFullscreen: () => void;
     handUp: boolean;
   panel: string | null;
   onPanel: (p: string | null) => void;
   onMic: () => void;
   onCam: () => void;
-  onShare: () => void;
-  onHand: () => void;
+onShare: () => void;
+    onHand: () => void;
   onReaction: (emoji: string) => void;
   onLeave: () => void;
   onEnd: () => void;
@@ -90,6 +106,26 @@ mayPublish: boolean;
         disabled={!mayPublish}
         onClick={onMic}
       />
+      {/* Every microphone, not a mute toggle alone. A laptop can have a built-in mic, a
+          headset and a USB interface all plugged in at once, and the one you want is
+          whichever is on the headset. There is no front-and-back flip for that. */}
+      {micOn && mics.length > 0 && (
+        <label className="croom-camsel">
+          <span className="sr-only">Microphone</span>
+          <select
+            value={micId ?? ''}
+            disabled={micBusy}
+            aria-label="Choose a microphone"
+            onChange={(e) => onSelectMic(e.target.value)}
+          >
+            {mics.map((m, i) => (
+              <option key={m.deviceId} value={m.deviceId}>
+                {m.label || `Microphone ${i + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <Btn
         on={camOn}
         off={!camOn}
@@ -188,6 +224,15 @@ onClick={onCam}
         </button>
         {more && (
           <div className="croom-menu" role="menu">
+            {/* The menu used to contain only the panels that only exist on a narrow
+                screen, plus reactions. On a desktop that left a button that opened a
+                strip of emoji and nothing else, which reads as broken. It now always
+                holds something worth opening. */}
+            {canFullscreen && (
+              <button type="button" className="croom-mini" onClick={() => { onFullscreen(); setMore(false); }}>
+                {isFullscreen ? '⤡ Leave full screen' : '⛶ Full screen'}
+              </button>
+            )}
             {compact && (
               <button type="button" className="croom-mini" onClick={() => { onPanel(panel === 'chat' ? null : 'chat'); setMore(false); }}>
                 💬 Chat
@@ -204,10 +249,11 @@ onClick={onCam}
               </button>
             )}
             {compact && (
-              <button type="button" className="croom-mini" onClick={onHand}>
+              <button type="button" className="croom-mini" onClick={() => { onHand(); setMore(false); }}>
                 ✋ {handUp ? 'Lower hand' : 'Raise hand'}
               </button>
             )}
+            <span className="croom-menu-label">React</span>
             {REACTION_CHOICES.map((e) => (
               <button
                 key={e}

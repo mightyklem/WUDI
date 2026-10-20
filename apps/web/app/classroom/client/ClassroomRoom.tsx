@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 import { Track, type Room, type TrackPublishOptions, type VideoCaptureOptions } from 'livekit-client';
 // The same constant the webhook decides presence with. A literal typed in here would be a
@@ -188,9 +188,32 @@ const lp = room.localParticipant;
     } catch { /* no permission yet, or no camera; the control simply stays hidden */ }
   }, [lp]);
 
+  /* ---------------- choosing a microphone ----------------
+     Same shape as the camera, for the same reason: a laptop can have a built-in mic, a
+     headset and a USB interface all at once, and a phone can have two. There is no
+     front-and-back flip for that, so it is a named list like the camera. */
+
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [micId, setMicId] = useState<string | null>(null);
+  const [micBusy, setMicBusy] = useState(false);
+
+  const loadMics = useCallback(async () => {
+    try {
+      const list = (await navigator.mediaDevices.enumerateDevices())
+        .filter((x) => x.kind === 'audioinput');
+      setMics(list);
+      // Seed from what is actually publishing, so the control opens on the live mic
+      // rather than the first one the device happens to list.
+      const live = lp.getTrackPublication(Track.Source.Microphone)?.track
+        ?.mediaStreamTrack?.getSettings()?.deviceId;
+      setMicId((cur) => cur ?? live ?? list[0]?.deviceId ?? null);
+    } catch { /* no permission yet, or no mic; the control simply stays hidden */ }
+  }, [lp]);
+
   // Device ids and labels are only populated once permission has been granted, so asking
   // before the camera is on returns an unusable list.
   useEffect(() => { if (lp.isCameraEnabled) void loadCams(); }, [lp.isCameraEnabled, loadCams]);
+  useEffect(() => { if (lp.isMicrophoneEnabled) void loadMics(); }, [lp.isMicrophoneEnabled, loadMics]);
 
   /**
    * Publish a different camera.
@@ -228,7 +251,35 @@ const lp = room.localParticipant;
       setCamBusy(false);
       void loadCams();
     }
-}, [camId, cams, d, explain, loadCams, lp]);
+  }, [camId, cams, d, explain, loadCams, lp]);
+
+  /**
+   * Publish a different microphone.
+   *
+   * The same trap as the camera, for the same reason: disabling the mic MUTES the
+   * publication and keeps the MediaStreamTrack, so enabling again unmutes the SAME track and
+   * never reads the deviceId. The track has to be unpublished outright before the new
+   * constraint means anything.
+   */
+  const selectMic = useCallback(async (deviceId: string) => {
+    if (!deviceId || deviceId === micId) return;
+    setMicBusy(true);
+    try {
+      const pub = lp.getTrackPublication(Track.Source.Microphone);
+      if (pub?.track) {
+        // stopOnUnpublish, so the device is released before the next one is asked to open.
+        await lp.unpublishTrack(pub.track, true);
+      }
+      await lp.setMicrophoneEnabled(true, { deviceId });
+      setMicId(deviceId);
+    } catch (e) {
+      d.setNotice(explain('microphone', e));
+    } finally {
+      setMicBusy(false);
+      void loadMics();
+    }
+  }, [d, explain, loadMics, lp, micId]);
+
 
   const toggleShare = useCallback(async () => {
     if (!canScreenShare) {
@@ -264,6 +315,65 @@ const lp = room.localParticipant;
     await mod.act('end');
     onEnd();
   }, [mod, onEnd]);
+
+  /* ---------------- fullscreen ----------------
+     The stage is the only thing worth filling a screen with. On a phone in landscape the
+     class header, the toolbar and the participant strip all take space the lesson needs.
+
+     iOS Safari on the iPhone has no Fullscreen API on arbitrary elements -- only on a
+     video element, and only in landscape. So the phone path goes through the video, and the
+     desktop path through the stage. If neither is available the button hides rather than
+     offering something that cannot work. */
+
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const canFullscreen = useMemo(() => {
+    if (typeof document === 'undefined') return false;
+    const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
+    return typeof el.requestFullscreen === 'function' || typeof el.webkitRequestFullscreen === 'function';
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => {
+      const el = document as Document & { webkitFullscreenElement?: Element | null };
+      setIsFullscreen(Boolean(document.fullscreenElement || el.webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => Promise<void>;
+    };
+    const el = document.documentElement as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void>;
+    };
+    try {
+      if (document.fullscreenElement || doc.webkitFullscreenElement) {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (doc.webkitExitFullscreen) await doc.webkitExitFullscreen();
+        return;
+      }
+      const stage = stageRef.current;
+      if (stage?.requestFullscreen) {
+        await stage.requestFullscreen();
+      } else if (el.webkitRequestFullscreen) {
+        // The iPhone path: fullscreen on a video element, and only in landscape.
+        const video = stage?.querySelector('video');
+        if (video) await el.webkitRequestFullscreen.call(video);
+      }
+    } catch {
+      d.setNotice('This browser would not go fullscreen.');
+    }
+  }, [d]);
+
 
   const count = d.remotes.length + 1;
   const qualityLabel = quality >= 3 ? 'Good' : quality === 2 ? 'Fair' : quality === 1 ? 'Poor' : 'Lost';
@@ -341,6 +451,7 @@ const lp = room.localParticipant;
               view={view}
               spotlight={spotlight}
               onSpotlight={(id) => setSpotlight((cur) => (cur === id ? null : id))}
+              stageRef={stageRef}
             />
             {mediaIssue && (
               <p className="croom-media-issue" role="alert">{mediaIssue}</p>
@@ -356,6 +467,13 @@ const lp = room.localParticipant;
         camId={camId}
         camBusy={camBusy}
         onSelectCamera={selectCamera}
+              mics={mics}
+              micId={micId}
+              micBusy={micBusy}
+              onSelectMic={selectMic}
+              canFullscreen={canFullscreen}
+              isFullscreen={isFullscreen}
+              onFullscreen={() => void toggleFullscreen()}
               handUp={handUp}
               panel={panel}
               onPanel={(p) => setPanel((cur) => (cur === p ? null : (p as Tab)))}

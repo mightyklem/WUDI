@@ -172,6 +172,72 @@ overflow: hidden;
 }
 .croom-video[data-share='true'] { object-fit: contain; }
 
+/* A guest brought up to speak, picture-in-picture over the slide. Wider than the usual
+   presenter inset, because the whole point of bringing somebody up is to see them, and
+   fitted rather than cropped so a face is not reduced to a letterbox. */
+.croom-pip[data-guest] {
+  width: clamp(150px, 34%, 300px);
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+}
+.croom-pip[data-guest] .croom-thumb-name {
+  background: rgba(27, 126, 141, 0.9);
+}
+
+/* ---------- full screen ----------
+   Only the stage goes full screen. The header and the toolbar are what the reader needs
+   when they want out of full screen, and the browser's own escape handles that. */
+.croom-stage:fullscreen,
+.croom-stage:-webkit-full-screen {
+  background: #000;
+  width: 100vw;
+  height: 100vh;
+}
+.croom-stage:fullscreen .croom-video-wrap,
+.croom-stage:-webkit-full-screen .croom-video-wrap {
+  padding: 0;
+}
+
+/* ---------- phone ----------
+   Portrait and landscape both have to fit the stage, because the difference between them
+   is only the shape of the box the video has to sit in. A camera at 16:9 in a portrait
+   phone leaves a letterbox the size of the screen; at 9:16 in a landscape phone it is
+   cropped in half. contain shows the whole frame in both, with the stage's own colour
+   filling the rest. */
+@media (max-width: 760px) {
+  .croom-tile[data-big] .croom-video {
+    object-fit: contain;
+  }
+  /* The participant strip is a thin strip on a phone, not a second screen of faces. */
+  .croom-strip {
+    max-height: 74px;
+  }
+  .croom-pip[data-guest] {
+    width: clamp(120px, 42%, 220px);
+    right: 8px;
+    bottom: 8px;
+  }
+}
+
+/* Landscape on a phone: the stage gets everything, and the header shrinks to one line,
+   because in landscape the height is the scarce thing. */
+@media (max-width: 960px) and (orientation: landscape) and (max-height: 500px) {
+  .croom-head {
+    padding: 6px 12px;
+  }
+  .croom-head-bar {
+    display: none;
+  }
+  .croom-strip {
+    max-height: 58px;
+  }
+  .croom-pip[data-guest] {
+    width: clamp(104px, 26%, 170px);
+  }
+}
+
+
 .croom-waiting {
   display: flex;
   flex-direction: column;
@@ -333,21 +399,41 @@ overflow: hidden;
 .croom-btn.danger { background: rgba(180, 85, 47, 0.2); border-color: rgba(180, 85, 47, 0.55); }
 
 .croom-menu {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  background: var(--croom-panel-2);
-  border: 1px solid var(--croom-line);
-  border-radius: var(--r-md);
-  padding: 6px;
-  display: flex;
-  gap: 6px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-  max-width: min(92vw, 520px);
-  overflow-x: auto;
-}
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    background: var(--croom-panel-2);
+    border: 1px solid var(--croom-line);
+    border-radius: var(--r-md);
+    padding: 6px;
+    display: flex;
+    gap: 6px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    max-width: min(92vw, 520px);
+    /* Wraps, and scrolls vertically if it still cannot fit. A single row of everything ran
+       off the side of a narrow screen, which is where the buttons a person most needs --
+       full screen, the panels -- ended up unreachable. */
+    flex-wrap: wrap;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 62vh;
+    justify-content: center;
+    align-items: center;
+  }
+  /* A label inside a row of buttons, so "React" is not a row of unexplained emoji. */
+  .croom-menu-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--croom-dim);
+    padding: 0 4px;
+    align-self: center;
+  }
+  .croom-menu .croom-mini {
+    white-space: nowrap;
+  }
 
 /* ---------- side panel ---------- */
 .croom-side {

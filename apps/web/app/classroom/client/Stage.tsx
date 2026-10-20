@@ -22,6 +22,7 @@ export default function Stage({
   view,
   spotlight,
   onSpotlight,
+  stageRef,
 }: {
   room: Room;
   role: Role;
@@ -29,6 +30,8 @@ export default function Stage({
   view: 'auto' | 'grid' | 'speaker';
   spotlight: string | null;
   onSpotlight: (identity: string | null) => void;
+  /** The stage element, so the room can put it fullscreen. */
+  stageRef?: React.Ref<HTMLDivElement | null>;
 }) {
   const [reactionsVisible, setReactionsVisible] = useState(true);
   // Landscape presentation mode. A slide deserves a real 16:9 block rather than
@@ -78,15 +81,25 @@ export default function Stage({
   // While a slide fills the stage, the presenter's face stays visible as an inset.
   // A learner watching a presentation still needs to see the person explaining it,
   // and dropping the camera into a thumbnail row made it easy to miss.
+  //
+  // When a GUEST has been brought up to speak, they take that inset instead. The slide
+  // stays on the stage -- that is what the class is about -- and the guest appears
+  // picture-in-picture over it, fitted whole rather than cropped. Before this, spotlighting
+  // a guest replaced the slide entirely, so the class lost the thing it was being taught
+  // at exactly the moment somebody was asked to explain it.
   const pipTrack = useMemo(() => {
+    if (spotlight) {
+      const guest = cameras.find((t) => t.participant.identity === spotlight);
+      if (guest) return guest;
+    }
     if (!share) return null;
     const presenter = share.participant;
     const own = cameras.find((t) => t.participant.identity === presenter.identity);
     return own ?? cameras.find((t) => t.participant.isSpeaking) ?? cameras[0] ?? null;
-  }, [share, cameras]);
+  }, [cameras, share, spotlight]);
 
   return (
-    <div className="croom-stage" data-wide={wide && !!share}>
+    <div className="croom-stage" data-wide={wide && !!share} ref={stageRef}>
       <div className="croom-video-wrap">
         {share && (
           <button
@@ -109,7 +122,7 @@ export default function Stage({
               // being taught.
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />
-            {pipTrack && <Pip track={pipTrack} name={displayName(pipTrack.participant)} />}
+            {pipTrack && <Pip track={pipTrack} name={displayName(pipTrack.participant)} guest={!!spotlight} />}
           </>
         ) : mode === 'grid' && hasCamera ? (
           <div className="croom-grid" style={gridStyle(tiles.length)}>
@@ -118,6 +131,9 @@ export default function Stage({
             ))}
           </div>
         ) : speaker ? (
+          /* Fitted, not cropped. A camera filling a portrait phone crops the sides off
+             somebody's face; contain shows the whole frame with the stage's own colour
+             behind it. The tile used to be object-fit:cover everywhere. */
           <VideoTile tile={speaker} big onClick={() => onSpotlight(speaker.identity)} />
         ) : (
           <EmptyStage role={role} room={room} />
@@ -215,7 +231,7 @@ function readRole(p: { identity: string; metadata?: string }): Role {
 }
 
 /** Presenter inset. Draggable, and flips side near an edge so it stays reachable. */
-function Pip({ track, name }: { track: unknown; name: string }) {
+function Pip({ track, name, guest }: { track: unknown; name: string; guest?: boolean }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragging = useRef<{ dx: number; dy: number } | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -249,6 +265,7 @@ function Pip({ track, name }: { track: unknown; name: string }) {
     <div
       ref={ref}
       className="croom-pip"
+      data-guest={guest || undefined}
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
@@ -261,7 +278,9 @@ function Pip({ track, name }: { track: unknown; name: string }) {
       }}
       title="Drag to move"
     >
-      <VideoTrack trackRef={track as never} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* contain for a guest: a person brought up to speak should be seen whole, not
+          cropped down to a face in a letterbox. */}
+      <VideoTrack trackRef={track as never} style={{ width: '100%', height: '100%', objectFit: guest ? 'contain' : 'cover' }} />
       <div className="croom-thumb-name">{name}</div>
     </div>
   );
@@ -272,6 +291,7 @@ function VideoTile({ tile, big, onClick }: { tile: Tile; big?: boolean; onClick?
     <div
       className="croom-tile"
       data-speaking={tile.speaking}
+      data-big={big || undefined}
       onClick={onClick}
       style={{ flex: big ? 1 : undefined, cursor: onClick ? 'pointer' : 'default', width: '100%', height: big ? '100%' : undefined }}
       title={onClick ? `Spotlight ${tile.name}` : undefined}
@@ -279,7 +299,11 @@ function VideoTile({ tile, big, onClick }: { tile: Tile; big?: boolean; onClick?
       <VideoTrack
         trackRef={tile.track as never}
         className="croom-video"
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        /* contain on the big tile. A camera filling a portrait phone crops the sides off
+           somebody's face; contain shows the whole frame, with the stage's own colour
+           behind it. The small grid tiles still cover, because a row of half-faces is
+           worse than a row of cropped faces. */
+        style={{ width: '100%', height: '100%', objectFit: big ? 'contain' : 'cover' }}
       />
       <div className="croom-thumb-name">
         {tile.self ? 'You' : tile.name}
