@@ -16,6 +16,7 @@ import { authFetch, getAccess } from '@/lib/client-auth';
 export default function PushButton() {
   const [state, setState] = useState<'unknown' | 'on' | 'off' | 'unsupported' | 'busy' | 'denied'>('unknown');
   const [msg, setMsg] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const supported = useCallback(() => {
     return (
@@ -101,14 +102,44 @@ export default function PushButton() {
     }
   }, [supported]);
 
+  /**
+   * Send one to this device, now, and say what happened.
+   *
+   * Push fails silently in every direction that matters: a permission that was never
+   * granted, a subscription the browser threw away, a keypair that does not match. Without a
+   * button that reports the reason, "I did not get it" is the only information anybody has.
+   */
+  const test = useCallback(async () => {
+    setTesting(true);
+    setMsg(null);
+    try {
+      const r = await authFetch('/api/push/probe', { method: 'POST' });
+      const j = await r.json().catch(() => ({}));
+      setMsg(j.reason || j.error || (r.ok ? 'Sent.' : 'Could not send.'));
+    } catch {
+      setMsg('Could not reach the server.');
+    } finally {
+      setTesting(false);
+    }
+  }, []);
+
   if (state === 'unsupported') return null;
 
   return (
     <div style={{ marginTop: 14 }}>
       {state === 'on' ? (
-        <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-          ✓ Notifications are on for this device.
-        </p>
+        <>
+          <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+            ✓ Notifications are on for this device.
+          </p>
+          {/* A button that sends yourself one, because the alternative is every person
+              who wants to check this having to work out how to call an API with a bearer
+              token. It also reports WHY a send failed, which is the only thing that
+              makes a silent failure diagnosable. */}
+          <button className="btn link" style={{ marginTop: 6, paddingLeft: 0 }} onClick={test} disabled={testing}>
+            {testing ? 'Sending…' : 'Send me a test notification'}
+          </button>
+        </>
       ) : state === 'denied' ? (
         <p className="muted" style={{ fontSize: 13, margin: 0 }}>
           Notifications are blocked for this site. Allow them in your browser&rsquo;s site settings to
