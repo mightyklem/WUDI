@@ -2,18 +2,19 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon, { type IconName } from '@/components/Icon';
 import { REACTION_CHOICES, type Role } from './model';
+import Sheet, { SheetRow } from './Sheet';
 
 /**
  * The toolbar is a row in the flex column, never an overlay. That is the whole
  * point: the previous version absolutely positioned it inside the stage, so it
  * covered the bottom of every shared slide -- the part of the screen the class is
- * actually about. Overflow actions collapse into a popover on narrow screens so
- * the row can never wrap onto the video either.
+ * actually about. Overflow actions collapse into a bottom sheet so the row can
+ * never wrap onto the video either.
  *
- * Device pickers live on a small caret attached to the mic and camera buttons
- * rather than as their own dropdowns in the row. A dropdown of camera names was
- * two hundred pixels wide and pushed every other control off the screen, which is
- * why the bar looked broken on a phone.
+ * Every menu is a SHEET, not a popover. The toolbar scrolls horizontally, which
+ * clips a popover anchored inside it, so a popover that opens upward from a bar
+ * at the bottom of the screen renders and is then cut off before anybody sees
+ * it. A sheet is anchored to the viewport and nothing can clip it.
  */
 export default function ControlBar({
   role,
@@ -78,271 +79,244 @@ export default function ControlBar({
   onEnd: () => void;
   busy: boolean;
 }) {
-  // One menu at a time. Three separate booleans meant two could open at once and
-  // overlap each other.
-  const [menu, setMenu] = useState<'more' | 'mic' | 'cam' | 'leave' | null>(null);
+  // One sheet at a time.
+  const [sheet, setSheet] = useState<'more' | 'mic' | 'cam' | 'leave' | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
   const isTrainer = role === 'trainer';
+  const close = () => setSheet(null);
 
-  // A narrow phone cannot fit seven labelled buttons, and a wrapped row pushes the stage
-  // up. Secondary actions move into a popover instead.
-  //
-  // Measured by whether the CONTENT overflows, not by the width of the container. The
-  // container is as wide as the screen on a phone, so measuring it said "plenty of room"
-  // on a 400px phone and the buttons were simply pushed off the edge -- the bar looked
-  // broken and the panels were unreachable.
+  // Escape closes the sheet. A keyboard user has no other way out of a dialog.
+  useEffect(() => {
+    if (!sheet) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [sheet]);
+
+  // The bar scrolls sideways, so the controls that do not fit are the ones a phone cannot
+  // reach. Rather than guess from the viewport width, measure whether the CONTENT overflows
+  // the container -- the container is as wide as the screen on a phone, so measuring it said
+  // "plenty of room" on a 400px phone and the buttons were pushed off the edge.
   const [compact, setCompact] = useState(false);
   useEffect(() => {
     const check = () => {
       const el = barRef.current;
       if (!el) return;
-      // Content wider than the space available means the row does not fit.
-      const overflowing = el.scrollWidth > el.clientWidth + 4;
-      setCompact(overflowing || window.innerWidth < 430);
+      setCompact(el.scrollWidth > el.clientWidth + 4 || window.innerWidth < 430);
     };
     check();
     window.addEventListener('resize', check);
-    // The device lists change the bar's width when they appear, so re-check after.
     const t = setInterval(check, 1000);
     return () => {
       window.removeEventListener('resize', check);
       clearInterval(t);
     };
-  }, [cams.length, mics.length]);
+  }, [cams.length, mics.length, sheet]);
 
-  useEffect(() => {
-    if (!menu) return;
-    const close = (e: MouseEvent) => {
-      if (!barRef.current?.contains(e.target as Node)) setMenu(null);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [menu]);
-
-  const close = () => setMenu(null);
+  const openSheet = (which: 'more' | 'mic' | 'cam' | 'leave') =>
+    setSheet((cur) => (cur === which ? null : which));
 
   return (
-    <div className="croom-bar" ref={barRef}>
-      {/* Mic, with a caret for picking a different input. */}
-      <div className="croom-btngroup">
+    <>
+      <div className="croom-bar" ref={barRef}>
+        {/* Mic, with an arrow that opens the input list. */}
+        <div className="croom-btngroup">
+          <Btn
+            on={micOn}
+            off={!micOn}
+            icon={micOn ? 'mic' : 'mic-off'}
+            label="Mute"
+            disabled={!mayPublish}
+            onClick={onMic}
+          />
+          {micOn && mics.length > 1 && (
+            <Caret
+              label="Choose a microphone"
+              expanded={sheet === 'mic'}
+              onClick={() => openSheet('mic')}
+            />
+          )}
+        </div>
+
+        {/* Camera, with an arrow that opens the input list. */}
+        <div className="croom-btngroup">
+          <Btn
+            on={camOn}
+            off={!camOn}
+            icon={camOn ? 'camera' : 'camera-off'}
+            label="Camera"
+            disabled={!mayPublish}
+            onClick={onCam}
+          />
+          {camOn && cams.length > 1 && (
+            <Caret
+              label="Choose a camera"
+              expanded={sheet === 'cam'}
+              onClick={() => openSheet('cam')}
+            />
+          )}
+        </div>
+
         <Btn
-          on={micOn}
-          off={!micOn}
-          icon={micOn ? 'mic' : 'mic-off'}
-          label="Mute"
-          disabled={!mayPublish}
-          onClick={onMic}
+          on={shareOn}
+          icon="share"
+          label="Share"
+          disabled={!mayPublish || !canScreenShare}
+          reason={
+            !mayPublish
+              ? 'The trainer has not given you speaking rights yet'
+              : 'This browser cannot share your screen'
+          }
+          onClick={onShare}
         />
-        {micOn && mics.length > 1 && (
-          <Caret
-            label="Choose a microphone"
-            expanded={menu === 'mic'}
-            onClick={() => setMenu(menu === 'mic' ? null : 'mic')}
+
+        {!compact && (
+          <Btn
+            on={handUp}
+            icon="hand"
+            label={handUp ? 'Lower' : 'Raise'}
+            onClick={onHand}
           />
         )}
-      </div>
 
-      {/* Camera, with a caret for picking a different one. */}
-      <div className="croom-btngroup">
-        <Btn
-          on={camOn}
-          off={!camOn}
-          icon={camOn ? 'camera' : 'camera-off'}
-          label="Camera"
-          disabled={!mayPublish}
-          onClick={onCam}
-        />
-        {camOn && cams.length > 1 && (
-          <Caret
-            label="Choose a camera"
-            expanded={menu === 'cam'}
-            onClick={() => setMenu(menu === 'cam' ? null : 'cam')}
-          />
+        {!compact && (
+          <button
+            type="button"
+            className="croom-btn"
+            aria-pressed={panel === 'chat'}
+            onClick={() => onPanel(panel === 'chat' ? null : 'chat')}
+          >
+            <b><Icon name="chat" size={19} /></b>
+            <span>Chat</span>
+          </button>
         )}
-      </div>
+        {!compact && (
+          <button
+            type="button"
+            className="croom-btn"
+            aria-pressed={panel === 'people'}
+            onClick={() => onPanel(panel === 'people' ? null : 'people')}
+          >
+            <b><Icon name="people" size={19} /></b>
+            <span>People</span>
+          </button>
+        )}
+        {!compact && (
+          <button
+            type="button"
+            className="croom-btn"
+            aria-pressed={panel === 'polls'}
+            onClick={() => onPanel(panel === 'polls' ? null : 'polls')}
+          >
+            <b><Icon name="poll" size={19} /></b>
+            <span>Polls</span>
+          </button>
+        )}
 
-      <Btn
-        on={shareOn}
-        icon="share"
-        label="Share"
-        disabled={!mayPublish || !canScreenShare}
-        reason={
-          !mayPublish
-            ? 'The trainer has not given you speaking rights yet'
-            : 'This browser cannot share your screen'
-        }
-        onClick={onShare}
-      />
-
-      {!compact && (
-        <Btn
-          on={handUp}
-          icon="hand"
-          label={handUp ? 'Lower' : 'Raise'}
-          onClick={onHand}
-        />
-      )}
-
-      {!compact && (
         <button
           type="button"
           className="croom-btn"
-          aria-pressed={panel === 'chat'}
-          onClick={() => onPanel(panel === 'chat' ? null : 'chat')}
-        >
-          <b><Icon name="chat" size={19} /></b>
-          <span>Chat</span>
-        </button>
-      )}
-      {!compact && (
-        <button
-          type="button"
-          className="croom-btn"
-          aria-pressed={panel === 'people'}
-          onClick={() => onPanel(panel === 'people' ? null : 'people')}
-        >
-          <b><Icon name="people" size={19} /></b>
-          <span>People</span>
-        </button>
-      )}
-      {!compact && (
-        <button
-          type="button"
-          className="croom-btn"
-          aria-pressed={panel === 'polls'}
-          onClick={() => onPanel(panel === 'polls' ? null : 'polls')}
-        >
-          <b><Icon name="poll" size={19} /></b>
-          <span>Polls</span>
-        </button>
-      )}
-
-      {/* More. Always holds something worth opening -- full screen, then the panels and the
-          hand on a narrow screen, then reactions. */}
-      <div style={{ position: 'relative', display: 'flex' }}>
-        <button
-          type="button"
-          className="croom-btn"
-          aria-expanded={menu === 'more'}
-          onClick={() => setMenu(menu === 'more' ? null : 'more')}
+          aria-expanded={sheet === 'more'}
+          onClick={() => openSheet('more')}
         >
           <b><Icon name="more" size={19} /></b>
           <span>More</span>
         </button>
-        {menu === 'more' && (
-          <div className="croom-menu" role="menu">
-            {canFullscreen && (
-              <button type="button" className="croom-mini" onClick={() => { onFullscreen(); close(); }}>
-                {isFullscreen ? '⤡ Leave full screen' : '⛶ Full screen'}
-              </button>
-            )}
-            {/* On a narrow screen these have nowhere else to live. */}
-            {compact && (
-              <button type="button" className="croom-mini" onClick={() => { onPanel(panel === 'chat' ? null : 'chat'); close(); }}>
-                💬 Chat
-              </button>
-            )}
-            {compact && (
-              <button type="button" className="croom-mini" onClick={() => { onPanel(panel === 'people' ? null : 'people'); close(); }}>
-                👥 People
-              </button>
-            )}
-            {compact && (
-              <button type="button" className="croom-mini" onClick={() => { onPanel(panel === 'polls' ? null : 'polls'); close(); }}>
-                📊 Polls
-              </button>
-            )}
-            {compact && (
-              <button type="button" className="croom-mini" onClick={() => { onHand(); close(); }}>
-                ✋ {handUp ? 'Lower hand' : 'Raise hand'}
-              </button>
-            )}
-            <span className="croom-menu-label">React</span>
-            {REACTION_CHOICES.map((e) => (
-              <button
-                key={e}
-                type="button"
-                className="croom-mini"
-                aria-label={`React ${e}`}
-                style={{ fontSize: 17 }}
-                onClick={() => { onReaction(e); close(); }}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Leave. Two ways out, because "I am stepping away" and "the class is over" are
-          different decisions and having them as two separate buttons put the destructive
-          one a thumb away from the ordinary one. */}
-      <div style={{ position: 'relative', display: 'flex' }}>
+        {/* Leave. Two ways out, because "I am stepping away" and "the class is over" are
+            different decisions, and having them as two separate buttons put the
+            destructive one a thumb away from the ordinary one. */}
         <button
           type="button"
           className="croom-btn leave"
-          aria-expanded={menu === 'leave'}
-          onClick={() => setMenu(menu === 'leave' ? null : 'leave')}
+          aria-expanded={sheet === 'leave'}
+          onClick={() => openSheet('leave')}
         >
           <b><Icon name="leave" size={19} /></b>
           <span>Leave</span>
         </button>
-        {menu === 'leave' && (
-          <div className="croom-menu" role="menu">
-            <button type="button" className="croom-mini" onClick={() => { onLeave(); close(); }}>
-              🚪 Take a break
-            </button>
-            {isTrainer && (
-              <button
-                type="button"
-                className="croom-mini"
-                disabled={busy}
-                style={{ color: 'var(--danger, #b42318)' }}
-                onClick={() => { onEnd(); close(); }}
-              >
-                ⏹ End meeting for everyone
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* The device pickers. */}
-      {menu === 'mic' && (
-        <div className="croom-menu" role="menu" style={{ bottom: 'auto', top: 'calc(100% + 8px)' }}>
-          <span className="croom-menu-label">Microphone</span>
-          {mics.map((m, i) => (
+      {/* ---------------- the sheets ---------------- */}
+
+      <Sheet open={sheet === 'mic'} onClose={close} title="Microphone">
+        {mics.map((m, i) => (
+          <SheetRow
+            key={m.deviceId}
+            label={m.label || `Microphone ${i + 1}`}
+            checked={m.deviceId === micId}
+            disabled={micBusy}
+            onClick={() => { onSelectMic(m.deviceId); close(); }}
+          />
+        ))}
+      </Sheet>
+
+      <Sheet open={sheet === 'cam'} onClose={close} title="Camera">
+        {cams.map((c, i) => (
+          <SheetRow
+            key={c.deviceId}
+            label={c.label || `Camera ${i + 1}`}
+            checked={c.deviceId === camId}
+            disabled={camBusy}
+            onClick={() => { onSelectCamera(c.deviceId); close(); }}
+          />
+        ))}
+      </Sheet>
+
+      <Sheet open={sheet === 'more'} onClose={close} title="More">
+        {canFullscreen && (
+          <SheetRow
+            icon="⛶"
+            label={isFullscreen ? 'Leave full screen' : 'View full screen'}
+            onClick={() => { onFullscreen(); close(); }}
+          />
+        )}
+        {/* On a narrow screen these have nowhere else to live. */}
+        {compact && (
+          <SheetRow icon="💬" label="Chat" onClick={() => { onPanel(panel === 'chat' ? null : 'chat'); close(); }} />
+        )}
+        {compact && (
+          <SheetRow icon="👥" label="People" onClick={() => { onPanel(panel === 'people' ? null : 'people'); close(); }} />
+        )}
+        {compact && (
+          <SheetRow icon="📊" label="Polls" onClick={() => { onPanel(panel === 'polls' ? null : 'polls'); close(); }} />
+        )}
+
+        <SheetRow
+          icon="✋"
+          label={handUp ? 'Lower your hand' : 'Raise your hand'}
+          onClick={() => { onHand(); close(); }}
+        />
+
+        <p className="croom-sheet-title" style={{ marginTop: 10 }}>React</p>
+        <div className="croom-sheet-reactions">
+          {REACTION_CHOICES.map((e) => (
             <button
-              key={m.deviceId}
+              key={e}
               type="button"
-              className="croom-mini"
-              disabled={micBusy}
-              aria-pressed={m.deviceId === micId}
-              onClick={() => { onSelectMic(m.deviceId); close(); }}
+              className="croom-sheet-emoji"
+              aria-label={`React ${e}`}
+              onClick={() => { onReaction(e); close(); }}
             >
-              {m.deviceId === micId ? '✓ ' : ''}{m.label || `Microphone ${i + 1}`}
+              {e}
             </button>
           ))}
         </div>
-      )}
-      {menu === 'cam' && (
-        <div className="croom-menu" role="menu" style={{ bottom: 'auto', top: 'calc(100% + 8px)' }}>
-          <span className="croom-menu-label">Camera</span>
-          {cams.map((c, i) => (
-            <button
-              key={c.deviceId}
-              type="button"
-              className="croom-mini"
-              disabled={camBusy}
-              aria-pressed={c.deviceId === camId}
-              onClick={() => { onSelectCamera(c.deviceId); close(); }}
-            >
-              {c.deviceId === camId ? '✓ ' : ''}{c.label || `Camera ${i + 1}`}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+      </Sheet>
+
+      <Sheet open={sheet === 'leave'} onClose={close} title="Leave the class">
+        <SheetRow icon="🚪" label="Take a break" onClick={() => { onLeave(); close(); }} />
+        {isTrainer && (
+          <SheetRow
+            icon="⏹"
+            label="End meeting for everyone"
+            danger
+            disabled={busy}
+            onClick={() => { onEnd(); close(); }}
+          />
+        )}
+      </Sheet>
+    </>
   );
 }
 
