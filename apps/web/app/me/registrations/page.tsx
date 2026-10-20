@@ -171,7 +171,13 @@ export default function MyRegistrations() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div>
                                 <p style={{ fontWeight: 600, margin: 0 }}>{s.trainingTitle}</p>
-                                <p className="muted" style={{ fontSize: 13, margin: '2px 0 0' }}>
+                                {/* White, not muted. The muted grey (#7A6A5C) on the teal button (#1B7E8D) is
+                                    1.09:1 -- the same luminance as the background, so the
+                                    date and time were rendered and completely unreadable.
+                                    White is 4.76:1, which clears AA. The hierarchy
+                                    between the title and the date comes from size and
+                                    weight instead of from making the date darker. */}
+                                <p style={{ fontSize: 13, margin: '2px 0 0', color: '#fff', fontWeight: 500 }}>
                                   {lagosDayLabel(s.startsAtUtc)} · {lagosWhenLabel(s.startsAtUtc)}
                                 </p>
                               </div>

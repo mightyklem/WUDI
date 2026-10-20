@@ -848,8 +848,12 @@ model PushToken {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   platform  String   @default("unknown") // ios|android|web
+  /// Web push subscription keys. A browser subscription cannot be encrypted for without
+  /// them, so an endpoint on its own is not enough to send to. Absent for Expo tokens,
+  /// which carry their own credentials in the token itself.
+  p256dh    String?
+  auth      String?
   createdAt DateTime @default(now())
-
   @@index([userId])
 }
 

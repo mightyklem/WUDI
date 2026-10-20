@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authFetch, getAccess, clearSession } from '@/lib/client-auth';
+import PushButton from '../../components/PushButton';
 
 export default function DeleteAccount() {
   const [pw, setPw] = useState('');
@@ -107,6 +108,18 @@ export default function DeleteAccount() {
             wrong, ask the trainer to reissue it — the record keeps what happened.
           </p>
         </form>
+      </div>
+
+      {/* Notifications. The bell in the header only reaches somebody who has the app open;
+          this is for the reminder that arrives when it is not -- a class starting, a
+          certificate issued, a trainer's new class. */}
+      <div className="card" style={{ marginTop: 12 }}>
+        <h2 className="sec">Notifications</h2>
+        <p className="muted" style={{ fontSize: 14 }}>
+          Get a message on this device when something needs you -- a class is about to start,
+          a certificate is ready, or a trainer you follow has opened a new class.
+        </p>
+        <PushButton />
       </div>
 
     <div className="card" style={{ marginTop: 12, borderColor: 'var(--bad-line)' }}>

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '../generated/prisma';
 import { emailEnabled, sendEmail } from '@/lib/email';
 import { pushEnabled, sendPush } from '@/lib/push';
+import { sendWebPush, webPushEnabled } from '@/lib/push-web';
 import { sendTermiiSms, sendTermiiWhatsapp, termiiEnabled } from '@/lib/termii';
 
 /**
@@ -72,19 +73,53 @@ if (PUSHABLE.includes(opts.type) && termiiEnabled() && opts.email) {
   }
 
   // Push fires only for events a user must act on soon; stored in-app regardless.
-  if (PUSHABLE.includes(opts.type) && pushEnabled()) {
-    const tokens = await prisma.pushToken.findMany({
-      where: { userId: { in: opts.userIds } }, select: { token: true },
-    });
-    if (tokens.length) {
-      const res = await sendPush({
-        tokens: tokens.map((t) => t.token),
-        title: PUSH_TITLES[opts.type] || 'Learnovize',
-        body: opts.email?.subject || PUSH_TITLES[opts.type] || opts.type,
-        data: (opts.payload || {}) as Record<string, unknown>,
+  //
+  // Two channels, because a learner and a trainer are not always on the same kind of
+  // device. Expo covers the native app; web push covers the browser, which is where most
+  // people actually are -- the app is a separate project with its own credentials and is
+  // not what anybody is using today.
+  if (PUSHABLE.includes(opts.type)) {
+    const title = PUSH_TITLES[opts.type] || 'Learnovize';
+
+    if (pushEnabled()) {
+      const tokens = await prisma.pushToken.findMany({
+        where: { userId: { in: opts.userIds } }, select: { token: true },
       });
-      // Only claim the channel if Expo accepted at least one ticket.
-      if (res.sent > 0) channels.push('push');
+      if (tokens.length) {
+        const res = await sendPush({
+          tokens: tokens.map((t) => t.token),
+          title,
+          body: opts.email?.subject || title,
+          data: (opts.payload || {}) as Record<string, unknown>,
+        });
+        // Only claim the channel if Expo accepted at least one ticket.
+        if (res.sent > 0) channels.push('push');
+      }
+    }
+
+    if (webPushEnabled()) {
+      // Only web subscription endpoints -- an Expo token sent to a VAPID endpoint is a
+      // guaranteed failure, and the provider answers with a 404 that would then get the
+      // token deleted, breaking the native app's delivery.
+      const webTokens = await prisma.pushToken.findMany({
+        where: { userId: { in: opts.userIds }, platform: 'web' },
+        select: { token: true, p256dh: true, auth: true },
+      });
+      const usable = webTokens.filter((t) => t.p256dh && t.auth);
+      if (usable.length) {
+        const sent = await sendWebPush({
+          tokens: usable.map((t) => ({
+            endpoint: t.token, p256dh: t.p256dh as string, auth: t.auth as string,
+          })),
+          title,
+          body: opts.email?.subject || title,
+          url: (opts.payload as { trainingId?: string } | undefined)?.trainingId
+            ? `/trainings/${(opts.payload as { trainingId: string }).trainingId}`
+            : '/',
+          tag: opts.type,
+        });
+        if (sent > 0) channels.push('push');
+      }
     }
   }
   return { channels };

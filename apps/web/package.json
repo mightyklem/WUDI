@@ -20,13 +20,15 @@
     "next": "^15.0.0",
     "pdf-lib": "^1.17.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "latest",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
+    "@types/web-push": "^3.6.4",
     "@typescript-eslint/parser": "^8.71.2",
     "eslint": "8",
     "eslint-config-next": "^14.2.15",

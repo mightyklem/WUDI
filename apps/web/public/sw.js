@@ -79,3 +79,54 @@ self.addEventListener('fetch', (event) => {
   // Anything not matched above falls through to the network untouched. No respondWith
   // means no interception, which is the safest default available.
 });
+
+/* ------------------------------------------------------------------ *
+ * Push
+ *
+ * The only thing this worker is allowed to show somebody is a
+ * notification the server sent. It never reaches the network for a
+ * payload on its own, and it never shows a message it did not receive.
+ * ------------------------------------------------------------------ */
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'Learnovize', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = data.title || 'Learnovize';
+  const options = {
+    body: data.body || '',
+    // Same tag replaces the previous notification rather than stacking, so a class that
+    // reminds you twice does not leave two on your lock screen.
+    tag: data.tag || 'learnovize',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: data.url || '/' },
+    requireInteraction: false,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      // A tab that is already open on the app should be brought to the front rather than a
+      // second copy of the app opening.
+      for (const client of list) {
+        if ('focus' in client) {
+          client.navigate(target);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+      return undefined;
+    }),
+  );
+});
