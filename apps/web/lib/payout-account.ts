@@ -72,9 +72,10 @@ export async function resolveAccount(
  */
 export async function savePayoutAccount(
   trainerId: string,
-  input: { bankCode: string; bankName: string; accountNumber: string; accountName: string },
+  input: { bankCode: string; bankName: string; accountNumber: string; accountName: string; holderType?: string },
 ) {
   const tail = last4(input.accountNumber);
+  const holderType = input.holderType === 'business' ? 'business' : 'personal';
 
   const existing = await prisma.payoutAccount.findFirst({ where: { trainerId } });
   const encrypted = encryptSecret(input.accountNumber.replace(/\s/g, ''));
@@ -88,6 +89,7 @@ export async function savePayoutAccount(
           accountNumberEnc: encrypted,
           accountNumberLast4: tail,
           accountName: input.accountName,
+          holderType,
           // Re-resolved above, so this is cleared until a fresh transferrecipient is made.
           recipientCode: null,
           verifiedAt: new Date(),
@@ -101,6 +103,7 @@ export async function savePayoutAccount(
           accountNumberEnc: encrypted,
           accountNumberLast4: tail,
           accountName: input.accountName,
+          holderType,
           verifiedAt: new Date(),
         },
       });
@@ -121,6 +124,7 @@ export async function payoutAccountFor(trainerId: string) {
     prisma.trainerProfile.findUnique({ where: { userId: trainerId }, select: { displayName: true } }),
   ]);
   const check = nameCheckFor(a.accountName, user?.fullName, profile?.displayName);
+  const business = (a.holderType || 'personal') === 'business';
 
   return {
     bankCode: a.bankCode,
@@ -129,10 +133,17 @@ export async function payoutAccountFor(trainerId: string) {
     accountLast4: a.accountNumberLast4,
     verified: !!a.verifiedAt,
     hasRecipient: !!a.recipientCode,
+    // Whose account it is. A business account is registered in the name of the
+    // business, so its name is not the trainer's name and is not compared with it.
+    holderType: a.holderType || 'personal',
     // The name we hold for this trainer, so the screen can show both and let them
     // see the difference for themselves.
     nameOnFile: user?.fullName || profile?.displayName || null,
-    nameCheck: check,
+    // A business account is in the name of the business, so a difference from the
+    // trainer's own name is expected and is said as such rather than as a warning.
+    nameCheck: business && check.result === 'mismatch'
+      ? { result: 'partial' as const, detail: `A business account, in the name “${a.accountName}”.` }
+      : check,
   };
 }
 

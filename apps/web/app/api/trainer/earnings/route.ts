@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
+import { MIN_PAYOUT_NGN } from '@/lib/payout-accounts';
+import { payoutBalance } from '@learnovize/shared/payout-balance';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,5 +39,15 @@ export async function GET(req: Request) {
     (a, r) => ({ gross: a.gross + r.gross, fees: a.fees + r.providerFees, commission: a.commission + r.commission, net: a.net + r.net }),
     { gross: 0, fees: 0, commission: 0, net: 0 },
   );
-  return NextResponse.json({ plan: profile.plan, rows, totals });
+
+  // The balance: everything earned across every class, added up, and how much more
+  // has to arrive before it is released. A trainer earning a little at a time should
+  // be able to see that the little is being kept, not lost.
+  const pending = await prisma.payout.findMany({
+    where: { trainerId: userId, status: { in: ['held', 'failed'] } },
+    select: { amountNet: true, holdUntil: true },
+  });
+  const balance = payoutBalance(pending, { minNgn: MIN_PAYOUT_NGN });
+
+  return NextResponse.json({ plan: profile.plan, rows, totals, balance, minPayoutNgn: MIN_PAYOUT_NGN });
 }

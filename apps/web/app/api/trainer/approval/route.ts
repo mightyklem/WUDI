@@ -45,11 +45,12 @@ export async function POST(req: Request) {
   const profile = await prisma.trainerProfile.findUnique({ where: { userId } });
   if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
 
-  const { idDocKeys, evidence, consent, identityType, identityNumber, bankStatementKey } =
+  const { idDocKeys, evidence, consent, identityType, identityNumber, bankStatementKey, idName } =
     (await req.json().catch(() => ({}))) as {
       idDocKeys?: string[]; evidence?: string; consent?: boolean;
-      identityType?: string; identityNumber?: string; bankStatementKey?: string;
+      identityType?: string; identityNumber?: string; bankStatementKey?: string; idName?: string;
     };
+
 
   // Enforced here, not just in the form. The form previously had no checkbox at all, so
   // an identity document was being stored with no recorded basis for processing it. The
@@ -74,18 +75,36 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const number = normaliseIdentityNumber(identityNumber, type as IdentityType);
-  if (!number) {
-    return NextResponse.json(
-      {
-        error:
-          type === 'nin'
-            ? 'A NIN is 11 digits. Check the number on your document.'
-            : 'A passport number is 6-12 letters and digits. Check the number on your document.',
-      },
-      { status: 400 },
-    );
-  }
+    const number = normaliseIdentityNumber(identityNumber, type as IdentityType);
+    if (!number) {
+      return NextResponse.json(
+        {
+          error:
+            type === 'nin'
+              ? 'A NIN is 11 digits. Check the number on your document.'
+              : 'A passport number is 6-12 letters and digits. Check the number on your document.',
+        },
+        { status: 400 },
+      );
+    }
+
+    // The name on the document.
+    //
+    // A reviewer cannot check a document against a customer id, and a payout account
+    // cannot be checked against a name nobody wrote down. This is the one piece that
+    // ties the identity document, the bank statement and the bank account together, so
+    // it is asked for at the point the document is sent rather than later.
+    const name = String(idName || '').trim().replace(/\s+/g, ' ');
+    if (name.length < 2) {
+      return NextResponse.json(
+        { error: 'We need the name exactly as it appears on your document.' },
+        { status: 400 },
+      );
+    }
+    if (name.length > 120) {
+      return NextResponse.json({ error: 'That name is too long.' }, { status: 400 });
+    }
+
 
   // Same ownership rule as the ID keys. Without it a reviewer could be handed a document
   // that belongs to somebody else.
@@ -97,25 +116,34 @@ export async function POST(req: Request) {
     bank = bankStatementKey;
   }
 
-  const approval = await prisma.trainerApproval.create({
-    data: {
-      trainerId: userId,
-      idDocUrls: idDocKeys,
-      identityType: type,
-      identityNumber: number,
-      bankStatementKey: bank,
-      expertiseEvidence: (evidence || '').slice(0, 2000) || null,
-      consentAt: new Date(),
-      consentVersion: ID_CONSENT_VERSION,
-      status: 'pending',
-    },
-  });
-  await prisma.trainerProfile.update({
-    where: { userId },
-    data: { approvalState: 'pending', rejectionReason: null },
-  });
-  return NextResponse.json({ approval }, { status: 201 });
-}
+    const approval = await prisma.trainerApproval.create({
+      data: {
+        trainerId: userId,
+        idDocUrls: idDocKeys,
+        identityType: type,
+        identityNumber: number,
+        idName: name,
+        bankStatementKey: bank,
+        expertiseEvidence: (evidence || '').slice(0, 2000) || null,
+        consentAt: new Date(),
+        consentVersion: ID_CONSENT_VERSION,
+        status: 'pending',
+      },
+    });
+    await prisma.trainerProfile.update({
+      where: { userId },
+      data: { approvalState: 'pending', rejectionReason: null },
+    });
+    // If they never gave us a name, the name on their document is their name. The
+    // certificate and the payout check both need one, and a person who has just sent
+    // us their identity document is the best person to say what it is.
+    await prisma.user.updateMany({
+      where: { id: userId, OR: [{ fullName: null }, { fullName: '' }] },
+      data: { fullName: name },
+    });
+    return NextResponse.json({ approval }, { status: 201 });
+  }
+
 
 // GET /api/trainer/approval — my latest request + state
 //

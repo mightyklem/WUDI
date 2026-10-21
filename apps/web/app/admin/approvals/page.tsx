@@ -7,6 +7,7 @@ import AdminNav from '../../components/AdminNav';
 type Item = {
   id: string; trainerId: string; idDocUrls: string[]; expertiseEvidence: string | null;
   identityType?: string | null; identityNumber?: string | null; bankStatementKey?: string | null;
+  idName?: string | null; trainerName?: string | null; trainerEmail?: string | null;
   status: string; createdAt: string;
 };
 
@@ -80,7 +81,24 @@ export default function AdminApprovals() {
         {items.length === 0 && <p className="muted">Queue empty.</p>}
         {items.map((q) => (
           <div key={q.id} style={{ padding: '12px 0', borderTop: '1px solid var(--pill)', fontSize: 'var(--t-sm)' }}>
-            <b>{q.trainerId}</b>
+            {/* The name, not a customer id. A queue of opaque keys is a queue nobody
+                can work through, and the name is what the document is checked
+                against -- so it sits right next to it. */}
+            <b style={{ fontSize: 'var(--t-md)' }}>{q.trainerName || q.trainerId}</b>
+            {q.trainerEmail && <span className="muted"> · {q.trainerEmail}</span>}
+            {q.idName ? (
+              <div style={{ marginTop: 3 }}>
+                Name on the document: <b>{q.idName}</b>
+                {q.trainerName && q.trainerName !== q.idName && (
+                  <span className="muted"> — does not match the name on file</span>
+                )}
+              </div>
+            ) : (
+              <div style={{ marginTop: 3 }} className="muted">
+                No name on the document. It is needed to check a payout account against
+                this person, so ask for it before approving.
+              </div>
+            )}
             <div style={{ marginTop: 3 }}>
               {/* The claim first, then the document to check it against. Showing the
                   number without the document beside it tells a reviewer nothing; the two

@@ -20,6 +20,16 @@ import { compareAccountName, accountChangedSinceApproval } from '@learnovize/sha
  * hands it to a screen.
  */
 
+/**
+ * The smallest amount worth releasing.
+ *
+ * It exists because a ₦10 transfer fee is a real cut of a small payment, and because
+ * an admin queue full of trivial approvals is a queue nobody works through. It is not
+ * a floor on what a trainer earns: earnings below it are held and added to the next
+ * ones, and the whole balance goes when it reaches this.
+ */
+export const MIN_PAYOUT_NGN = Number(process.env.PAYOUT_MIN_NGN || 5000);
+
 export type NameCheck = {
   result: 'match' | 'partial' | 'mismatch' | 'unknown';
   detail: string;
@@ -40,12 +50,17 @@ export type AccountRecord = {
     bankName: string;
     accountName: string;
     accountLast4: string;
+    holderType: string;
     setAt: string;
     changedSinceApproval: boolean;
   } | null;
   nameCheck: NameCheck;
   pendingNgn: number;
   pendingCount: number;
+  /** How much more is needed before the balance can be released. */
+  shortByNgn: number;
+  /** Money still inside a hold period. */
+  waitingNgn: number;
 };
 
 /**
@@ -96,6 +111,7 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
           accountName: true,
           accountNumberLast4: true,
           recipientCode: true,
+          holderType: true,
           verifiedAt: true,
           createdAt: true,
           updatedAt: true,
@@ -137,16 +153,36 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
   const userById = new Map(users.map((u) => [u.id, u]));
   const pendingById = new Map(payouts.map((p) => [p.trainerId, p]));
 
+  // The money that is still inside a hold period, so the admin can see that a balance
+  // is not waiting on them but on the clock.
+  const now = Date.now();
+  const waiting = await prisma.payout.groupBy({
+    by: ['trainerId'],
+    where: {
+      trainerId: { in: trainerIds },
+      status: { in: ['held', 'failed'] },
+      holdUntil: { gt: new Date(now) },
+    },
+    _sum: { amountNet: true },
+  });
+  const waitingById = new Map(waiting.map((p) => [p.trainerId, p]));
+
   return profiles.map((p) => {
     const user = userById.get(p.userId);
     const account = p.payoutAccounts[0] || null;
     const approval = p.approvals[0] || null;
     const pending = pendingById.get(p.userId);
+    const stillWaiting = waitingById.get(p.userId);
 
     // The identity has to be approved for the approval to count, and the date it was
     // approved on is the date the bank statement stopped being about this account.
     const approved = approval?.status === 'approved' ? approval : null;
     const approvedAt = approved?.decidedAt ? approved.decidedAt.toISOString() : null;
+
+    const pendingNgn = pending?._sum.amountNet || 0;
+    const holderType = account?.holderType || 'personal';
+    const business = holderType === 'business';
+    const check = nameCheckFor(account?.accountName, user?.fullName, p.displayName);
 
     return {
       trainerId: p.userId,
@@ -164,13 +200,20 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
             bankName: account.bankName,
             accountName: account.accountName,
             accountLast4: account.accountNumberLast4,
+            holderType,
             setAt: account.createdAt.toISOString(),
             changedSinceApproval: accountChangedSinceApproval(approvedAt, account.updatedAt),
           }
         : null,
-      nameCheck: nameCheckFor(account?.accountName, user?.fullName, p.displayName),
-      pendingNgn: pending?._sum.amountNet || 0,
+      // A business account is registered in the name of the business, so a difference
+      // from the trainer's own name is expected rather than a warning.
+      nameCheck: business && check.result === 'mismatch'
+        ? { result: 'partial' as const, detail: `Business account. Your bank has it as “${account?.accountName}”.` }
+        : check,
+      pendingNgn,
       pendingCount: pending?._count._all || 0,
+      shortByNgn: Math.max(0, MIN_PAYOUT_NGN - pendingNgn),
+      waitingNgn: stillWaiting?._sum.amountNet || 0,
     };
   });
 }

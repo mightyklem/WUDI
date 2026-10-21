@@ -8,12 +8,15 @@ import Tabs from '../../components/Tabs';
 type Blocker = { code: string; message: string };
 type NameResult = 'match' | 'partial' | 'mismatch' | 'unknown';
 type Row = {
-  id: string; amountNet: number; trainerName: string; trainingTitle: string;
+  trainerId: string; trainerName: string; teachingName: string; email: string;
+  dueNgn: number; dueCount: number;
+  dueClasses: { id: string; title: string; amountNet: number }[];
+  waitingNgn: number; waitingUntil: string | null; shortByNgn: number;
   ready: boolean; blockers: Blocker[];
-  account: { bankName: string; accountLast4: string; accountName: string } | null;
+  account: { bankName: string; accountLast4: string; accountName: string; holderType: string } | null;
   accountCheck: {
     nameResult: NameResult; nameDetail: string;
-    changedSinceApproval: boolean; needsAcknowledgement: boolean;
+    changedSinceApproval: boolean; needsAcknowledgement: boolean; holderType: string;
   } | null;
 };
 type Queue = { queue: Row[]; balanceNgn: number | null; balanceKnown: boolean; minPayoutNgn: number };
@@ -24,10 +27,10 @@ type AccountRecord = {
   hasIdentityDocument: boolean; hasBankStatement: boolean;
   account: {
     bankCode: string; bankName: string; accountName: string;
-    accountLast4: string; setAt: string; changedSinceApproval: boolean;
+    accountLast4: string; holderType: string; setAt: string; changedSinceApproval: boolean;
   } | null;
   nameCheck: { result: NameResult; detail: string };
-  pendingNgn: number; pendingCount: number;
+  pendingNgn: number; pendingCount: number; shortByNgn: number; waitingNgn: number;
 };
 
 const naira = (n: number) => `₦${n.toLocaleString('en-NG')}`;
@@ -104,7 +107,7 @@ export default function AdminPayouts() {
       const r = await authFetch('/api/admin/payouts/release', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-        body: JSON.stringify({ payoutId: id, acknowledge: acknowledged }),
+        body: JSON.stringify({ trainerId: id, acknowledge: acknowledged }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -115,12 +118,16 @@ export default function AdminPayouts() {
           return;
         }
         setErr(`${j.error || 'Release failed.'}${j.code ? ` (${j.code})` : ''}`);
-        // Reload regardless: a failed release still changed the row to 'failed'.
+        // Reload regardless: a failed release still changed the rows to 'failed'.
         await load();
         return;
       }
       setAcknowledge(null);
-      setMsg(`Released. Transfer reference ${j.transferRef}.`);
+      const who = data?.queue.find((q) => q.trainerId === id)?.trainerName || 'the trainer';
+      setMsg(
+        `Released ${naira(j.amountNgn)} to ${who} across ${j.payouts} ` +
+        `payout${j.payouts === 1 ? '' : 's'}. Transfer reference ${j.transferRef}.`,
+      );
       await load();
     } finally {
       setBusy(null);
@@ -171,7 +178,7 @@ export default function AdminPayouts() {
               const badge = check ? nameBadge(check.nameResult) : null;
               return (
                 <div
-                  key={row.id}
+                  key={row.trainerId}
                   className="card"
                   style={{
                     display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap',
@@ -179,12 +186,35 @@ export default function AdminPayouts() {
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 220 }}>
-                    <div style={{ fontWeight: 800, fontSize: 'var(--t-md)' }}>{naira(row.amountNet)}</div>
+                    <div style={{ fontWeight: 800, fontSize: 'var(--t-md)' }}>{naira(row.dueNgn)}</div>
                     <div style={{ fontSize: 'var(--t-sm)' }}>{row.trainerName}</div>
-                    <div className="muted" style={{ fontSize: 'var(--t-sm)' }}>{row.trainingTitle}</div>
+                    {row.email && (
+                      <div className="muted" style={{ fontSize: 'var(--t-sm)' }}>{row.email}</div>
+                    )}
+
+                    {/* The classes the money came from, so the admin can see it is a
+                        balance of several things rather than one thing. */}
+                    {row.dueClasses.length > 0 && (
+                      <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
+                        {row.dueClasses.map((c) => (
+                          <span key={c.id} style={{ display: 'block' }}>
+                            {c.title} — {naira(c.amountNet)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {row.waitingNgn > 0 && (
+                      <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
+                        {naira(row.waitingNgn)} is still in its hold period
+                        {row.waitingUntil ? ` until ${row.waitingUntil.slice(0, 10)}` : ''}.
+                      </div>
+                    )}
+
                     {row.account ? (
                       <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
                         {row.account.accountName} · {row.account.bankName} · ending {row.account.accountLast4}
+                        {row.account.holderType === 'business' ? ' · business account' : ''}
                       </div>
                     ) : (
                       <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
@@ -222,13 +252,17 @@ export default function AdminPayouts() {
                   <div style={{ display: 'grid', gap: 8, justifyItems: 'stretch' }}>
                     <button
                       className="btn primary"
-                      disabled={!row.ready || busy === row.id}
-                      onClick={() => release(row.id, acknowledge === row.id)}
+                      disabled={!row.ready || busy === row.trainerId}
+                      onClick={() => release(row.trainerId, acknowledge === row.trainerId)}
                       title={row.ready ? 'Send this money' : 'Resolve the blockers first'}
                     >
-                      {busy === row.id ? 'Sending…' : acknowledge === row.id ? 'Release anyway' : 'Release'}
+                      {busy === row.trainerId
+                        ? 'Sending…'
+                        : acknowledge === row.trainerId
+                          ? 'Release anyway'
+                          : 'Release'}
                     </button>
-                    {acknowledge === row.id && (
+                    {acknowledge === row.trainerId && (
                       <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: 0, maxWidth: 220 }}>
                         Press “Release anyway” to confirm you have looked at the name.
                       </p>
@@ -254,9 +288,12 @@ export default function AdminPayouts() {
 
           {records?.map((r) => {
             const ident = identityBadge(r.identityState);
-            const badge = nameBadge(r.nameCheck.result);
+            const business = r.account?.holderType === 'business';
+            const badge = business
+              ? { text: 'Business account', colour: 'var(--accent-ink)', bg: 'var(--accent-soft)' }
+              : nameBadge(r.nameCheck.result);
             const needsAttention =
-              r.nameCheck.result === 'mismatch' ||
+              (!business && r.nameCheck.result === 'mismatch') ||
               (r.account?.changedSinceApproval ?? false) ||
               (!r.account && r.pendingNgn > 0);
 
@@ -305,7 +342,9 @@ export default function AdminPayouts() {
                         {r.account.accountName} · {r.account.bankName} · ending {r.account.accountLast4}
                       </p>
                       <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '2px 0 0' }}>
-                        {r.nameCheck.detail}
+                        {business
+                          ? 'A business account, so the name on it is the business and not the trainer.'
+                          : r.nameCheck.detail}
                         {r.account.changedSinceApproval
                           ? ' The account was changed after the identity was approved, so it is no longer the one the bank statement was checked against.'
                           : ''}
@@ -321,8 +360,9 @@ export default function AdminPayouts() {
 
                   <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '8px 0 0' }}>
                     {r.pendingNgn > 0
-                      ? `${naira(r.pendingNgn)} waiting · ${r.pendingCount} payout${r.pendingCount === 1 ? '' : 's'}`
+                      ? `${naira(r.pendingNgn)} waiting · ${naira(r.shortByNgn)} more to reach the minimum`
                       : 'Nothing waiting'}
+                    {r.waitingNgn > 0 ? ` · ${naira(r.waitingNgn)} still in a hold period` : ''}
                     {r.approvalId && (
                       <>
                         {' · '}

@@ -13,6 +13,7 @@ export default function Approval() {
   const [bankFile, setBankFile] = useState<File | null>(null);
   const [identityType, setIdentityType] = useState<'nin' | 'passport'>('nin');
   const [identityNumber, setIdentityNumber] = useState('');
+  const [idName, setIdName] = useState('');
   const [evidence, setEvidence] = useState('LinkedIn + past workshops');
   const [msg, setMsg] = useState<string | null>(null);
   // Unticked. See the checkbox note below.
@@ -55,6 +56,9 @@ export default function Approval() {
     const access = getAccess();
     if (!access) return setMsg('Log in first.');
     if (!idFile) return setMsg('Attach your ID document (JPG/PNG/PDF, 5MB max).');
+    if (!idName.trim()) {
+      return setMsg('We need the name exactly as it appears on your document.');
+    }
     if (!identityNumber.trim()) {
       return setMsg(
         identityType === 'nin'
@@ -80,7 +84,7 @@ export default function Approval() {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify({
-        idDocKeys: [id.key], identityType, identityNumber, bankStatementKey: bankKey, evidence, consent,
+        idDocKeys: [id.key], identityType, identityNumber, idName, bankStatementKey: bankKey, evidence, consent,
       }),
     });
     const j = await r.json().catch(() => ({}));
@@ -154,24 +158,43 @@ export default function Approval() {
           <option value="passport">National passport</option>
         </select>
 
-        <label className="fl">
-          {identityType === 'nin'
-            ? 'NIN — the 11-digit number on your document'
-            : 'Passport number'}
-        </label>
-        <input
-          type="text"
-          inputMode={identityType === 'nin' ? 'numeric' : 'text'}
-          value={identityNumber}
-          onChange={(e) => setIdentityNumber(e.target.value)}
-          placeholder={identityType === 'nin' ? '12345678901' : 'A01234567'}
-          maxLength={identityType === 'nin' ? 11 : 12}
-          autoComplete="off"
-        />
-        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 14px' }}>
-          A reviewer checks this against the document you attach. It is stored privately,
-          never shown on any public page, and every staff view of it is logged.
-        </p>
+          <label className="fl">
+            {identityType === 'nin'
+              ? 'NIN — the 11-digit number on your document'
+              : 'Passport number'}
+          </label>
+          <input
+            type="text"
+            inputMode={identityType === 'nin' ? 'numeric' : 'text'}
+            value={identityNumber}
+            onChange={(e) => setIdentityNumber(e.target.value)}
+            placeholder={identityType === 'nin' ? '12345678901' : 'A01234567'}
+            maxLength={identityType === 'nin' ? 11 : 12}
+            autoComplete="off"
+          />
+          <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 14px' }}>
+            A reviewer checks this against the document you attach. It is stored privately,
+            never shown on any public page, and every staff view of it is logged.
+          </p>
+
+          {/* The name on the document. A reviewer cannot check a document against a
+              number, and a payout account cannot be checked against a name nobody
+              wrote down -- so it is asked for here, where the document is. */}
+          <label className="fl">The name on your document</label>
+          <input
+            type="text"
+            value={idName}
+            onChange={(e) => setIdName(e.target.value)}
+            placeholder="Augustine Okafor"
+            maxLength={120}
+            autoComplete="name"
+            required
+          />
+          <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 14px' }}>
+            Exactly as it is written on the document, including any middle name. This is
+            the name we will use to check that the account we pay you into is yours.
+          </p>
+
 
         <label className="fl">ID document (private — approval use only)</label>
         <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)} />

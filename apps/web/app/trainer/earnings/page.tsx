@@ -10,11 +10,19 @@ type Row = {
   gross: number; providerFees: number; commission: number; net: number;
   payouts: { id: string; amountNet: number; status: string; holdUntil: string | null }[];
 };
+type Balance = {
+  dueNgn: number; dueCount: number; waitingNgn: number; waitingCount: number;
+  shortByNgn: number; ready: boolean; nextReleaseAt: string | null;
+};
 
 export default function Earnings() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [totals, setTotals] = useState({ gross: 0, fees: 0, commission: 0, net: 0 });
   const [plan, setPlan] = useState('free');
+  const [balance, setBalance] = useState<Balance | null>(null);
+  // Whether there is somewhere to send the money. Worth saying, because a balance
+  // with no account on file is money that is being kept and not paid.
+  const [accountOnFile, setAccountOnFile] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
   function load() {
@@ -22,7 +30,16 @@ export default function Earnings() {
     if (!access) return;
     authFetch('/api/trainer/earnings', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (j) { setRows(j.rows); setTotals(j.totals); setPlan(j.plan); } });
+      .then((j) => {
+        if (!j) return;
+        setRows(j.rows);
+        setTotals(j.totals);
+        setPlan(j.plan);
+        if (j.balance) setBalance(j.balance);
+      });
+    authFetch('/api/trainer/payout-account', { headers: { authorization: `Bearer ${access}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j) setAccountOnFile(!!j.account); });
   }
   useEffect(load, []);
   if (rows === null) return <div className="wrap"><p className="muted">Log in as a trainer to see earnings.</p></div>;
@@ -42,7 +59,11 @@ export default function Earnings() {
     <div className="wrap">
       <SiteNav />
       <h1>Earnings.</h1>
-      <p className="sub">Plan: <b>{plan}</b> (Free 5% · Pro 3% · Business 1%) — provider fees shown separately.</p>
+      <p className="sub">
+        Plan: <b>{plan}</b> &mdash; Learnovize takes 25% and you keep 75%, with provider
+        fees shown separately. Everything you earn adds up, and the whole balance is
+        released once it reaches the release minimum.
+      </p>
       <div className="btnrow">
         {plan !== 'pro' && <button className="btn" onClick={() => upgrade('pro')}>Upgrade to Pro</button>}
         {plan !== 'business' && <button className="btn" onClick={() => upgrade('business')}>Upgrade to Business</button>}
@@ -54,6 +75,35 @@ export default function Earnings() {
           from classes they actually taught -- and had never been rendered anywhere on the
           trainer's side. */}
       <StandingPanel title="Check your points" />
+
+      {/* The balance. Everything earned across every class, added up, and how far it
+          is from being released. A trainer earning a little at a time should be able
+          to see that the little is being kept rather than lost. */}
+      {balance && balance.dueNgn > 0 && (
+        <div className="card" style={{ marginTop: 18 }}>
+          <p className="eyebrow">Waiting to be paid</p>
+          <p style={{ margin: '6px 0 0', fontSize: 'var(--t-2xl)', fontWeight: 800 }}>
+            ₦{balance.dueNgn.toLocaleString('en-NG')}
+          </p>
+          <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
+            {balance.ready
+              ? 'This is enough to be released. An admin sends it to your payout account.'
+              : `₦${balance.shortByNgn.toLocaleString('en-NG')} more and it is released. ` +
+                'Everything you earn adds up, so it does not have to be one big class.'}
+          </p>
+          {balance.waitingNgn > 0 && (
+            <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
+              ₦{balance.waitingNgn.toLocaleString('en-NG')} is still inside its hold period
+              {balance.nextReleaseAt ? ` until ${balance.nextReleaseAt.slice(0, 10)}` : ''}.
+            </p>
+          )}
+          {!accountOnFile && (
+            <p style={{ margin: '10px 0 0', fontSize: 'var(--t-sm)', color: 'var(--clay-ink)' }}>
+              There is no payout account on file yet, so there is nowhere to send it.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="card" style={{ marginTop: 18 }}>
         <p className="eyebrow">Totals — gross ₦{totals.gross} · fees ₦{totals.fees} · commission ₦{totals.commission} · net ₦{totals.net}</p>

@@ -283,8 +283,16 @@ model TrainerApproval {
   // identityNumber is sensitive personal data under the NDPA. It is never returned by
   // a public API, never included in any verify page, and is audit-logged whenever
   // staff read it, exactly like the document image itself.
-  identityType   String? // nin | passport
-  identityNumber String?
+    identityType   String? // nin | passport
+    identityNumber String?
+    // The name exactly as it appears on the document.
+    //
+    // A reviewer cannot check a document against a customer id, and a payout account
+    // cannot be checked against a name nobody wrote down. This is the name on the
+    // identity document, which is also the name the bank statement will be in, so it
+    // is the one piece that ties the two together.
+    idName         String?
+
 
   // A bank statement, asked for because the payout account otherwise proves nothing
   // about ownership. The account number is resolved against the bank and stored, but
@@ -747,6 +755,13 @@ model PayoutAccount {
   accountNumberEnc   String
   accountNumberLast4 String
   accountName        String
+  // Whose account this is: the trainer's own name, or a business.
+  //
+  // A business account is registered in the name of the business, which is legitimately
+  // not the trainer's name, so the name on the account cannot be compared with the
+  // trainer's own name and should not be treated as a warning when it does not match.
+  // The trainer declares which it is, and the declaration is what the check follows.
+  holderType         String         @default("personal") // personal|business
   // Paystack's reusable handle for this account. Creating it is what makes a later
   // transfer a two-line call rather than re-resolving every time.
   recipientCode      String?

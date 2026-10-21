@@ -14,11 +14,24 @@ export async function GET(req: Request) {
   }
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') || 'pending';
-  const queue = await prisma.trainerApproval.findMany({
+  const approvals = await prisma.trainerApproval.findMany({
     where: { status },
     orderBy: { createdAt: 'asc' },
     take: 100,
+    include: {
+      trainer: { select: { displayName: true, user: { select: { fullName: true, email: true } } } },
+    },
   });
+
+  // The reviewer needs a name, not a customer id. A queue of opaque keys is a queue
+  // nobody can work through, and the name is also the thing the document is checked
+  // against -- so it is put next to the document, not left out of the screen.
+  const queue = approvals.map((a) => ({
+    ...a,
+    trainerName: a.trainer.user.fullName || a.trainer.displayName || 'Unnamed trainer',
+    trainerEmail: a.trainer.user.email,
+  }));
+
   // identityNumber is returned to the reviewer because they have to compare it against
   // the document to judge the application at all -- that comparison is the review. It
   // goes nowhere else: no public route reads it, and staff reading the document itself

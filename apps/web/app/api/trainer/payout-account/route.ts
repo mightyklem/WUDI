@@ -35,9 +35,14 @@ export async function POST(req: Request) {
   const profile = await prisma.trainerProfile.findUnique({ where: { userId }, select: { userId: true } });
   if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
 
-  const { bankCode, bankName, accountNumber } = (await req.json().catch(() => ({}))) as {
-    bankCode?: string; bankName?: string; accountNumber?: string;
+  const { bankCode, bankName, accountNumber, holderType } = (await req.json().catch(() => ({}))) as {
+    bankCode?: string; bankName?: string; accountNumber?: string; holderType?: string;
   };
+
+  // Whose account it is. A business account is registered in the name of the business,
+  // which is legitimately not the trainer's own name, so the two are told apart rather
+  // than one being treated as a warning about the other.
+  const isBusiness = holderType === 'business';
 
   const numberProblem = accountNumberProblem(accountNumber || '');
   if (numberProblem) return NextResponse.json({ error: numberProblem }, { status: 400 });
@@ -59,6 +64,7 @@ export async function POST(req: Request) {
     bankName: bankName || bankCode,
     accountNumber: accountNumber || '',
     accountName: resolved.accountName,
+    holderType: isBusiness ? 'business' : 'personal',
   });
 
   await prisma.auditLog.create({
@@ -66,7 +72,7 @@ export async function POST(req: Request) {
       actorId: userId,
       action: 'payout-account.set',
       target: `user:${userId}`,
-      reason: `bank ${bankCode}`,
+      reason: `bank ${bankCode}${isBusiness ? ' business' : ''}`,
     },
   });
 
