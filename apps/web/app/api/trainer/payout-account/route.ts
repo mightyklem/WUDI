@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { accountNumberProblem } from '@/lib/secretbox';
 import { payoutAccountFor, resolveAccount, savePayoutAccount } from '@/lib/payout-account';
+import { payoutEncryptionReady } from '@/lib/secretbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,14 @@ export async function GET(req: Request) {
 
   // Only the masked view. The account number is never sent to the browser, not even to
   // the trainer who entered it.
-  return NextResponse.json({ account: await payoutAccountFor(userId) });
+  //
+  // `configured` says whether this deployment can seal an account number at all. It is
+  // there so the screen can say so, rather than the trainer filling in a form that was
+  // never going to save.
+  return NextResponse.json({
+    account: await payoutAccountFor(userId),
+    configured: payoutEncryptionReady(),
+  });
 }
 
 /**
@@ -34,6 +42,15 @@ export async function POST(req: Request) {
 
   const profile = await prisma.trainerProfile.findUnique({ where: { userId }, select: { userId: true } });
   if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
+
+  // Before anything is attempted, because a deployment that cannot seal an account
+  // number should say so in words rather than fail with a stack trace at one person.
+  if (!payoutEncryptionReady()) {
+    return NextResponse.json(
+      { error: 'Payouts are not configured on this deployment. Nothing was saved.' },
+      { status: 503 },
+    );
+  }
 
   const { bankCode, bankName, accountNumber, holderType, declaredName, statementKey } = (await req.json().catch(() => ({}))) as {
     bankCode?: string; bankName?: string; accountNumber?: string;

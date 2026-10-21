@@ -10,7 +10,8 @@
     "./room-access": "./src/room-access.js",
     "./cert-signing": "./src/cert-signing.js",
     "./account-name": "./src/account-name.js",
-    "./payout-balance": "./src/payout-balance.js"
+    "./payout-balance": "./src/payout-balance.js",
+    "./banks": "./src/banks.js"
   },
   "scripts": {
     "test": "node --test \"test/*.test.js\""

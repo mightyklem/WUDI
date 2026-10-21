@@ -13,7 +13,11 @@
   base = ""
   # Build first, then sync the schema. The app build runs `prisma generate` itself; running
   # db:push afterwards (with --skip-generate) avoids a second, conflicting generate.
-  command = "pnpm --filter @learnovize/web build && pnpm run db:push"
+  # The configuration is checked first. A required setting that is missing on the site is
+  # otherwise the quietest failure there is: the build succeeds, the site serves, and the
+  # feature that needed the setting throws at one person at one moment. A deploy that
+  # cannot pay a trainer does not go out.
+  command = "node apps/web/scripts/check-env.mjs && pnpm --filter @learnovize/web build && pnpm run db:push"
   publish = "apps/web/.next"
 
 [[plugins]]

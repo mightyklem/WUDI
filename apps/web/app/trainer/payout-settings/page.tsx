@@ -23,6 +23,8 @@ export default function PayoutSettings() {
   const [declaredName, setDeclaredName] = useState('');
   // A statement in the name of the account, for a business account.
   const [statementFile, setStatementFile] = useState<File | null>(null);
+  // Whether this deployment can seal an account number at all.
+  const [configured, setConfigured] = useState(true);
   // Whose account this is. A business account is registered in the name of the
   // business, which is not the trainer's name, and saying which it is keeps that from
   // looking like something is wrong.
@@ -40,6 +42,7 @@ export default function PayoutSettings() {
       .then((j) => {
         if (!j) return;
         setAccount(j.account);
+        setConfigured(j.configured !== false);
         if (j.account) setBankCode(j.account.bankCode);
       });
     authFetch('/api/trainer/payout-account/banks', { headers: { authorization: `Bearer ${access}` } })
@@ -114,6 +117,17 @@ export default function PayoutSettings() {
         the account below. Everything you earn adds up, and the whole balance is sent
         once it is worth sending.
       </p>
+
+      {!configured && (
+        <div className="board board-bad" style={{ marginTop: 14 }}>
+          <p className="board-tag">Not available right now</p>
+          <p style={{ margin: 0, fontSize: 'var(--t-sm)' }}>
+            Payouts are not configured on this deployment, so an account cannot be saved yet.
+            Nothing you have entered has been lost — try again shortly, and let us know
+            if it keeps happening.
+          </p>
+        </div>
+      )}
 
       {account && (
         <div className="card" style={{ marginTop: 14, borderColor: 'var(--line-2)' }}>

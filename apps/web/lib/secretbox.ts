@@ -23,11 +23,29 @@ export function payoutKey(): Buffer {
       'PAYOUT_ENCRYPTION_KEY is not set. Generate one with: [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))',
     );
   }
-  const buf = Buffer.from(raw, 'base64');
+  // Trimmed, because a key that arrived with a trailing newline would otherwise decode
+  // to the right length by accident and fail later, somewhere far away, with an error
+  // that says nothing about a newline.
+  const buf = Buffer.from(raw.trim(), 'base64');
   if (buf.length !== 32) {
     throw new Error(`PAYOUT_ENCRYPTION_KEY must decode to 32 bytes (got ${buf.length}).`);
   }
   return buf;
+}
+
+/**
+ * Whether this deployment can seal a bank account number.
+ *
+ * Checked before the save rather than after, so that a deployment missing the key says
+ * so in words rather than throwing a stack trace at one person on one screen.
+ */
+export function payoutEncryptionReady(): boolean {
+  try {
+    payoutKey();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Seals an account number. Format: iv.tag.ciphertext, all base64url. */

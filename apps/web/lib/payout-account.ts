@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { decryptSecret, encryptSecret, last4 } from '@/lib/secretbox';
 import { paystackGet, paystackPost } from '@/lib/payments';
 import { nameCheckFor } from '@/lib/payout-accounts';
+import { transferableBanks } from '@learnovize/shared/banks';
 
 /**
  * Trainer payout accounts.
@@ -33,13 +34,18 @@ export async function nigeriaBanks(): Promise<Bank[]> {
     }[];
   }>('/bank');
 
-  const banks = (res.data || [])
-    .filter((b) => b.country === 'Nigeria')
-    .filter((b) => b.active !== false)
-    .filter((b) => b.supports_transfer === true)
-    .map((b) => ({ code: b.longcode || b.code, name: b.name }));
-
-  return banks.sort((a, b) => a.name.localeCompare(b.name));
+  // `code` is the real NUBAN bank code -- 033 for UBA, 044 for Access, 104 for
+  // Parallex -- and it is the one the resolve and transferrecipient endpoints want.
+  // `longcode` is Paystack's own internal identifier for the same bank ("033153513"
+  // for UBA), and sending it is refused with "Unknown bank code".
+  //
+  // That was backwards here: the list was sending longcode, so every bank whose
+  // internal id is filled in failed to resolve -- 89 of the 265 offered, including
+  // UBA, Access Bank and First Bank. Only the ones with an empty longcode, which is
+  // a minority, worked at all.
+  //
+  // The rule is in the shared package, where it is tested.
+  return transferableBanks(res.data || []);
 }
 
 /**
