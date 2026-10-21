@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import SiteNav from '../../components/SiteNav';
-import { UxCard, UxCta, UxRule, UxStat, UxStats } from '../../components/ux';
+import { UxCard, UxCta, UxRule } from '../../components/ux';
 
 export const metadata: Metadata = { title: 'Learnovize — UI/UX review' };
 
@@ -22,6 +22,20 @@ function Screen({ title, note, children }: { title: string; note: string; childr
   );
 }
 
+/** A row of figures, the way the standing panel shows them. */
+function Figures({ items }: { items: [string, string][] }) {
+  return (
+    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+      {items.map(([n, l]) => (
+        <span key={l}>
+          <span className="u-num" style={{ fontSize: 22 }}>{n}</span>{' '}
+          <span className="muted" style={{ fontSize: 13 }}>{l}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function UxReview() {
   return (
     <div className="wrap">
@@ -35,26 +49,17 @@ export default function UxReview() {
       <UxRule />
 
       {/* ---------------- 1. the dashboard ---------------- */}
-      <Screen title="Dashboard" note="Clarity — the key numbers come first">
-        <UxStats>
-          <UxStat value="620" label="Points" lead />
-          <UxStat value="3" label="Seats held" />
-          <UxStat value="2" label="Certificates" />
-          <UxStat value="1" label="Class today" />
-        </UxStats>
+      <Screen title="Dashboard" note="Clarity — the thing you must do comes first">
+        <UxCard>
+          <p className="eyebrow" style={{ margin: 0 }}>See what&rsquo;s next</p>
+          <p className="u-h" style={{ marginTop: 4 }}>Reels — Solar Installation</p>
+          <p className="u-sub">Tue 20 Oct, 9am WAT · in 18 hours</p>
+          <div style={{ marginTop: 14 }}>
+            <UxCta>Open the room</UxCta>
+          </div>
+        </UxCard>
 
-        <div style={{ marginTop: 16 }}>
-          <UxCard>
-            <p className="u-h">Reels — Solar Installation</p>
-            <p className="u-sub">Tue 20 Oct, 9am WAT · in 18 hours</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-              <UxCta>Join the room</UxCta>
-              <UxCta quiet>View details</UxCta>
-            </div>
-          </UxCard>
-        </div>
-
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 12 }}>
           <UxCard>
             <p className="u-h">Check your points</p>
             <p className="u-sub">620 points · 380 to Gold</p>
@@ -66,6 +71,9 @@ export default function UxReview() {
             >
               <div style={{ width: '62%', height: '100%', background: 'var(--gold)' }} />
             </div>
+            <div style={{ marginTop: 10 }}>
+              <Figures items={[['2', 'Certificates'], ['3', 'Seats held']]} />
+            </div>
           </UxCard>
         </div>
       </Screen>
@@ -73,14 +81,8 @@ export default function UxReview() {
       <UxRule />
 
       {/* ---------------- 2. manage your classes ---------------- */}
-      <Screen title="Manage your classes" note="Clarity and one best option">
-        <UxStats>
-          <UxStat value="2" label="Upcoming" lead />
-          <UxStat value="5" label="Past" />
-          <UxStat value="14" label="Learners" />
-        </UxStats>
-
-        <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
+      <Screen title="Manage your classes" note="Clarity — one class, marked">
+        <div style={{ display: 'grid', gap: 12 }}>
           <UxCard best bestLabel="Next up">
             <p className="u-h">Reels — Solar Installation</p>
             <p className="u-sub">Tue 20 Oct, 9am WAT · 12 of 50 seats</p>
@@ -94,7 +96,7 @@ export default function UxReview() {
             <p className="u-h">Pricing Your Freelance Work</p>
             <p className="u-sub">Wed 21 Oct, 9am WAT · 3 of 50 seats</p>
             <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-              <UxCta>Join class →</UxCta>
+              <UxCta quiet>Join class →</UxCta>
               <UxCta quiet>Prepare my class</UxCta>
             </div>
           </UxCard>
@@ -106,17 +108,14 @@ export default function UxReview() {
       {/* ---------------- 3. my sessions ---------------- */}
       <Screen title="My sessions" note="Consistency — the same card, the same shape">
         <div style={{ display: 'grid', gap: 12 }}>
-          <UxCard>
+          <UxCard best bestLabel="Next up">
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="u-h" style={{ margin: 0 }}>Reels</p>
                 <p className="u-sub" style={{ color: 'var(--ink)', fontWeight: 600 }}>
-                  Tue 20 Oct · 9am WAT
+                  Tue 20 Oct, 9am WAT
                 </p>
               </div>
-              <span className="ux-best-tag" style={{ background: 'var(--accent)' }}>
-                Upcoming
-              </span>
               <UxCta>Join</UxCta>
             </div>
           </UxCard>
@@ -124,21 +123,12 @@ export default function UxReview() {
           <UxCard>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="u-h" style={{ margin: 0 }}>Solar Basics</p>
+                <p className="u-h" style={{ margin: 0 }}>Pricing Your Freelance Work</p>
                 <p className="u-sub" style={{ color: 'var(--ink)', fontWeight: 600 }}>
-                  Wed 14 Oct · 9am WAT
+                  Wed 21 Oct, 9am WAT
                 </p>
               </div>
-              <span
-                style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 22, height: 22, borderRadius: 6,
-                  background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 800,
-                }}
-                aria-label="Attended"
-              >
-                ✓
-              </span>
+              <UxCta quiet>Join</UxCta>
             </div>
           </UxCard>
         </div>
@@ -152,10 +142,11 @@ export default function UxReview() {
           <UxCard>
             <p className="u-h">Clarity</p>
             <p className="u-sub">
-              The dashboard puts the key numbers first, and whitespace separates everything
-              else. The numbers sit in a row at the top because that is what the reader came
-              for; the labels sit underneath them because a label above a number is read
-              before the number.
+              The dashboard opens with the thing you must do: the class you have to turn up
+              to, when it is, and one button to get there. Where you stand comes after it,
+              not before it — a person opening their dashboard is looking for an action,
+              not for a score. Whitespace separates everything else, because a rule or a
+              box would only add something to read past.
             </p>
           </UxCard>
 
@@ -171,10 +162,11 @@ export default function UxReview() {
           <UxCard>
             <p className="u-h">Wow-factor</p>
             <p className="u-sub">
-              The effect comes from restraint. One call to action per screen, one clearly
-              marked best option, and clean lines. Nothing is decorated for the sake of it —
-              the highlight on &ldquo;Next up&rdquo; is a coloured edge and a small tag, not a
-              fill that would compete with the title.
+              The effect comes from restraint. In a list of things, one filled call to
+              action — the one you should press — and one clearly marked best option. The
+              next class is marked with a coloured edge and a small tag, not a fill that
+              would compete with the title, and the buttons on the other cards stay quiet,
+              so a list of five classes reads as one thing to do rather than five.
             </p>
           </UxCard>
         </div>

@@ -71,7 +71,7 @@ export default function StandingPanel({
   if (!data) return null;
 
   return (
-    <section className="card" style={{ marginTop: 14 }}>
+    <section className="ux-card" style={{ marginTop: 14 }}>
       {/* The whole summary is the control. A small chevron in the corner is a target most
           people will not find, and a heading that looks like a heading but is not clickable
           is the thing that makes a page feel stuck. */}

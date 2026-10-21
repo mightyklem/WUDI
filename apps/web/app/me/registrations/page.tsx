@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import { SkeletonCard } from '../../components/Skeleton';
-import { lagosWhenLabel, lagosDayLabel } from '@/lib/lagos';
+import { lagosWhenLabel } from '@/lib/lagos';
 import SiteNav from '../../components/SiteNav';
+import { UxCard, UxCta } from '../../components/ux';
 
 type Session = {
   id: string;
@@ -78,14 +78,6 @@ export default function MyRegistrations() {
 
   useEffect(load, []);
 
-  function formatDateOnly(startsAtUtc: string) {
-    return lagosDayLabel(startsAtUtc);
-  }
-
-  function formatTimeOnly(startsAtUtc: string) {
-    return lagosWhenLabel(startsAtUtc);
-  }
-
   // Check if all sessions for a training have passed
   const allPast = sessions.length > 0 && sessions.every(s => !s.upcoming);
 
@@ -147,7 +139,7 @@ export default function MyRegistrations() {
 
                 {/* Tab content */}
                 {activeTab === 'join' && (
-                  <div className="card" style={{ padding: 16 }}>
+                  <div className="ux-card" style={{ padding: 16 }}>
                     <p className="muted" style={{ marginBottom: 16, fontSize: 14 }}>
                       By joining, you agree to our <a href="/terms" className="link">Terms of Service</a> and <a href="/privacy" className="link">Privacy Policy</a>.
                     </p>
@@ -166,22 +158,25 @@ export default function MyRegistrations() {
                       {sessions
                         .filter(s => s.upcoming)
                         .sort((a, b) => new Date(a.startsAtUtc).getTime() - new Date(b.startsAtUtc).getTime())
-                        .map((s) => (
-                          <div key={s.id} className="ux-card" style={{ padding: 0, overflow: 'hidden' }}>
-                            <Link className="ux-cta" href={`/classroom/${s.id}`} style={{
-                              width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between',
-                              alignItems: 'center', gap: 12, padding: '14px 16px', border: 0,
-                              borderRadius: 0, textDecoration: 'none',
-                            }}>
-                              <div>
-                                <p style={{ fontWeight: 700, margin: 0, color: '#fff' }}>{s.trainingTitle}</p>
-                                <p style={{ fontSize: 13, margin: '2px 0 0', color: 'rgba(255,255,255,0.92)', fontWeight: 500 }}>
-                                  {lagosDayLabel(s.startsAtUtc)} · {lagosWhenLabel(s.startsAtUtc)}
+                        .map((s, i) => (
+                          /* One card per seat, in the same shape as every other card on the
+                             site. This used to be one wide teal button per session, which
+                             turned a list of five into a wall of colour -- and put the date
+                             on the teal, where it had to be painted white to be readable
+                             at all. The colour now belongs to the one thing to press.
+                             Flat, because it sits inside a card and a second shadow reads
+                             as a smudge. */
+                          <UxCard key={s.id} best={i === 0} bestLabel="Next up" flat>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p className="u-h" style={{ margin: 0 }}>{s.trainingTitle}</p>
+                                <p className="u-sub" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+                                  {lagosWhenLabel(s.startsAtUtc)}
                                 </p>
                               </div>
-                              <span aria-hidden style={{ color: '#fff' }}>→</span>
-                            </Link>
-                          </div>
+                              <UxCta quiet={i !== 0} href={`/classroom/${s.id}`}>Join</UxCta>
+                            </div>
+                          </UxCard>
                         ))}
                     </div>
                   </div>

@@ -1,45 +1,15 @@
+import Link from 'next/link';
+
 /**
  * The three design rules, as components.
  *
  * A rule that lives only in a document gets argued about again in every review. These are
  * the shapes, so a screen uses them rather than re-deciding.
  *
- *   Clarity       the key numbers first, whitespace separating the rest
+ *   Clarity       the thing you must do comes first, the numbers support it
  *   Consistency   one card shape, one spacing rhythm, one accent colour
  *   Wow-factor    restraint, one focused call to action, one marked best option
  */
-
-/** A row of figures. The number is the point; the label is under it. */
-export function UxStats({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <div className="ux-stats">{children}</div>;
-}
-
-/**
- * One figure.
- *
- * `lead` marks the one that matters most on the screen. One per screen, never two -- if
- * everything is the headline, nothing is.
- */
-export function UxStat({
-  value,
-  label,
-  lead,
-}: {
-  value: React.ReactNode;
-  label: string;
-  lead?: boolean;
-}) {
-  return (
-    <div className="ux-stat" data-lead={lead || undefined}>
-      <span className="ux-stat-n">{value}</span>
-      <span className="ux-stat-l">{label}</span>
-    </div>
-  );
-}
 
 /**
  * A card.
@@ -76,7 +46,13 @@ export function UxRule() {
   return <hr className="ux-rule" />;
 }
 
-/** The one call to action on a screen. */
+/**
+ * The one call to action on a screen.
+ *
+ * A link when it goes somewhere, a button when it does something here -- and a Next link
+ * either way, so a screen that uses this does not have to choose between a client-side
+ * navigation and the same-looking anchor.
+ */
 export function UxCta({
   children,
   href,
@@ -96,9 +72,9 @@ export function UxCta({
   const cls = `btn ${quiet ? 'ux-cta-quiet' : 'ux-cta'}`;
   if (href) {
     return (
-      <a className={cls} href={href} style={style}>
+      <Link className={cls} href={href} style={style}>
         {children}
-      </a>
+      </Link>
     );
   }
   return (

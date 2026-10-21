@@ -8,10 +8,10 @@ import StandingPanel from '../components/StandingPanel';
 import UpNext from '../components/UpNext';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
-import { lagosWhenLabel, lagosSpanLabel } from '@/lib/lagos';
-import { Skeleton, SkeletonCard, SkeletonLines } from '../components/Skeleton';
+import { lagosWhenLabel } from '@/lib/lagos';
+import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import Tabs from '../components/Tabs';
-import { UxStat, UxStats } from '../components/ux';
+import { UxCard, UxCta } from '../components/ux';
 
 type Me = {
   user: { id: string; email: string; role: 'admin' | 'trainer' | 'participant'; verified: boolean };
@@ -35,8 +35,6 @@ export default function Dashboard() {
   const [trainings, setTrainings] = useState<MyTraining[] | null>(null);
   const [seats, setSeats] = useState<number | null>(null);
   const [certs, setCerts] = useState<number | null>(null);
-  const [points, setPoints] = useState<number | null>(null);
-  const [live, setLive] = useState<{ id: string; title: string } | null>(null);
   // Which list of classes is open. One at a time: a trainer looking for the class they have
   // to run next should not have to scroll past the ones they already ran.
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -59,7 +57,6 @@ export default function Dashboard() {
     });
     authed('/api/me/registrations').then((r) => r && setSeats((r.registrations || []).length));
     authed('/api/certificates/mine').then((c) => c && setCerts((c.certificates || []).length));
-    authed('/api/me/points').then((p) => p && setPoints(p.points ?? 0));
   }, []);
 
   // Skeletons shaped like the page they are standing in for. "Loading your dashboard..." was
@@ -90,10 +87,13 @@ export default function Dashboard() {
   const tiles = tilesFor(role, { seats, certs });
 
   const pendingTotal = (trainings || []).reduce((n, t) => n + t.pendingApproval, 0);
-  const nextUp = (trainings || []).find((t) => t.nextSession);
-  const upcomingCount = (trainings || []).filter((t) => t.nextSession).length;
 
-  const upcoming = (trainings || []).filter((t) => t.nextSession);
+  // Soonest first. The API hands them over newest-created-first, which is the order a
+  // trainer built them in -- not the order they have to run in, and not the order the
+  // "Next up" tag points at.
+  const upcoming = (trainings || [])
+    .filter((t) => t.nextSession)
+    .sort((a, b) => new Date(a.nextSessionAt || 0).getTime() - new Date(b.nextSessionAt || 0).getTime());
   const past = (trainings || []).filter((t) => !t.nextSession);
 
   return (
@@ -105,17 +105,6 @@ export default function Dashboard() {
         {head.title}
       </h1>
       <p className="sub">{me.user.email}</p>
-
-      {/* Clarity: the key numbers first, before anything that needs reading. A reader
-          opening their dashboard wants to know where they stand, not a story about it. */}
-      <UxStats>
-        <UxStat value={points ?? 0} label="Points" lead />
-        <UxStat value={seats ?? 0} label="Seats held" />
-        <UxStat value={certs ?? 0} label="Certificates" />
-        {role === 'trainer' && (
-          <UxStat value={upcomingCount} label="Classes to run" />
-        )}
-      </UxStats>
 
       {/* Anything unpaid, before anything else on the page. */}
       <PaymentDueBanner />
@@ -137,7 +126,7 @@ export default function Dashboard() {
       {/* Trainer-specific notices. The section heading was removed at the trainer's request;
           the cards carry their own labels, so a heading here was a label for nothing. */}
       {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
-        <div className="card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
+        <div className="ux-card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
           <div className="u-flex">
             <span className="ibadge" style={{ background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 18 }} aria-hidden>⏳</span>
             <div>
@@ -154,31 +143,17 @@ export default function Dashboard() {
       )}
 
       {role === 'trainer' && pendingTotal > 0 && (
-        <div className="card" style={{ marginTop: 12, borderLeft: '4px solid var(--leaf)' }}>
+        <div className="ux-card" style={{ marginTop: 12, borderLeft: '4px solid var(--leaf)' }}>
           <div className="u-flex">
             <span className="ibadge" style={{ background: 'var(--ok-soft)', color: 'var(--leaf)', fontSize: 18 }} aria-hidden>✓</span>
             <div style={{ flex: 1 }}>
               <p className="u-h">{pendingTotal} awaiting your approval</p>
               <p className="muted u-sub">Attendees who met the bar</p>
             </div>
-            <Link className="btn primary" href="/trainings">Review</Link>
-          </div>
-        </div>
-      )}
-
-      {role === 'trainer' && nextUp && (
-        <div className="card" style={{ marginTop: 12, borderLeft: '4px solid var(--accent)' }}>
-          <div className="u-flex">
-            <span className="ibadge" style={{ background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: 18 }} aria-hidden>▶</span>
-            <div className="u-grow">
-              <p className="u-h">{nextUp.title}</p>
-              <p className="muted u-sub">
-                {nextUp.nextSessionAt ? lagosWhenLabel(nextUp.nextSessionAt) : ''}
-              </p>
-            </div>
-            {nextUp.nextSession && (
-              <Link className="btn primary" href={`/classroom/${nextUp.nextSession}`}>Start</Link>
-            )}
+            {/* Quiet, not loud. The teal button on this screen belongs to the class you
+                have to run -- there is one of those per screen, and it is the one a
+                trainer is most likely to open. */}
+            <UxCta quiet href="/trainings">Review</UxCta>
           </div>
         </div>
       )}
@@ -203,38 +178,43 @@ export default function Dashboard() {
           <div style={{ display: 'grid', gap: 12 }}>
             {tab === 'upcoming' && upcoming.map((t) => {
               const sessionId = t.nextSession as string;
+              // One class is marked as the one to do next. It used to have a card of its
+              // own above the list, saying the same thing as the first row underneath it
+              // -- so the screen had two answers to "what do I do next" and two teal
+              // buttons. The tag on the row is the same information, in one place.
+              const isNext = t.id === upcoming[0].id;
               return (
-                <div
-                  key={t.id}
-                  className="card"
-                  style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', borderLeft: '4px solid var(--accent)' }}
-                >
-                  <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
-                  <div className="u-grow" style={{ minWidth: 160 }}>
-                    <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
-                    <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
-                      {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
-                      {t.pendingApproval > 0 ? ` · ${t.pendingApproval} to approve` : ''}
-                    </p>
-                    <p className="muted u-sub-sm" style={{ margin: '4px 0 0', color: 'var(--accent)', fontWeight: 600 }}>
-                      Next: {t.nextSessionAt ? lagosWhenLabel(t.nextSessionAt) : ''}
-                    </p>
+                <UxCard key={t.id} best={isNext} bestLabel="Next up">
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
+                    <div className="u-grow" style={{ minWidth: 160 }}>
+                      <p className="u-h" style={{ margin: 0 }}>{t.title}</p>
+                      <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
+                        {t.seatsTaken}/{t.cap} seats · {t.issuedCount} issued
+                        {t.pendingApproval > 0 ? ` · ${t.pendingApproval} to approve` : ''}
+                      </p>
+                      <p className="muted u-sub-sm" style={{ margin: '4px 0 0', color: 'var(--accent)', fontWeight: 600 }}>
+                        Next: {t.nextSessionAt ? lagosWhenLabel(t.nextSessionAt) : ''}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginLeft: 'auto' }}>
+                      {/* One filled button on the screen. The class you have to run next
+                          is the one that shouts; the rest stay reachable, and quiet. */}
+                      <UxCta quiet={!isNext} href={`/classroom/${sessionId}`}>
+                        Join class <span aria-hidden>→</span>
+                      </UxCta>
+                      <UxCta quiet href={`/trainings/${t.id}#prepare`}>Prepare my class</UxCta>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginLeft: 'auto' }}>
-                    <Link className="btn primary" href={`/classroom/${sessionId}`}>
-                      Join class <span aria-hidden>→</span>
-                    </Link>
-                    <Link className="btn" href={`/trainings/${t.id}#prepare`}>Prepare my class</Link>
-                  </div>
-                </div>
+                </UxCard>
               );
             })}
 
             {tab === 'past' && past.map((t) => (
               <div
                 key={t.id}
-                className="card"
-                style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', opacity: 0.65, borderLeft: '4px solid var(--warn)' }}
+                className="ux-card"
+                style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', opacity: 0.65 }}
               >
                 <span className="ibadge" style={{ background: 'var(--pill)', color: 'var(--ink)' }} aria-hidden>📘</span>
                 <div className="u-grow" style={{ minWidth: 160 }}>
@@ -248,9 +228,9 @@ export default function Dashboard() {
                   <p className="muted u-sub-sm" style={{ margin: '2px 0 0' }}>
                     This class has ended. Registration is closed.
                   </p>
-                  <div style={{ marginLeft: 'auto' }}>
-                    <Link className="btn" href={`/trainings/${t.id}`}>Class details</Link>
-                  </div>
+                </div>
+                <div style={{ marginLeft: 'auto' }}>
+                  <Link className="btn" href={`/trainings/${t.id}`}>Class details</Link>
                 </div>
               </div>
               ))}
