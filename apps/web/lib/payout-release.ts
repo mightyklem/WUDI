@@ -60,6 +60,8 @@ export type QueuedTrainer = {
     /** What the trainer calls it. */
     declaredName: string | null;
     holderType: string;
+    /** A statement in the name of a business account. */
+    hasStatement: boolean;
   } | null;
   accountCheck: {
     nameResult: NameResult;
@@ -209,6 +211,7 @@ export async function payoutQueue(): Promise<QueuedTrainer[]> {
         accountName: account.accountName,
         declaredName: account.declaredName,
         holderType: account.holderType || 'personal',
+        hasStatement: !!account.statementKey,
       }
     : null,
 

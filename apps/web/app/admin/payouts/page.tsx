@@ -13,7 +13,7 @@ type Row = {
   dueClasses: { id: string; title: string; amountNet: number }[];
   waitingNgn: number; waitingUntil: string | null; shortByNgn: number;
   ready: boolean; blockers: Blocker[];
-  account: { bankName: string; accountLast4: string; accountName: string; declaredName: string | null; holderType: string } | null;
+  account: { bankName: string; accountLast4: string; accountName: string; declaredName: string | null; holderType: string; hasStatement: boolean } | null;
   accountCheck: {
     nameResult: NameResult; nameDetail: string;
     changedSinceApproval: boolean; needsAcknowledgement: boolean; holderType: string;
@@ -250,6 +250,25 @@ export default function AdminPayouts() {
                             colour="var(--gold-ink)"
                             bg="var(--gold-soft)"
                           />
+                        )}
+                        {/* The statement belongs with the decision, not on another tab:
+                            it is what shows the account is the trainer's. */}
+                        {row.account?.hasStatement ? (
+                          <button
+                            className="btn"
+                            style={{ padding: '4px 12px', minHeight: 0, fontSize: 'var(--t-xs)' }}
+                            onClick={() => openStatement(row.trainerId)}
+                          >
+                            Open the business statement
+                          </button>
+                        ) : (
+                          row.account?.holderType === 'business' && (
+                            <Chip
+                              text="No business statement on file"
+                              colour="var(--gold-ink)"
+                              bg="var(--gold-soft)"
+                            />
+                          )
                         )}
                       </div>
                     )}
