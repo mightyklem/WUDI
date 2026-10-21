@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
 /**
  * Check the deployment's configuration before it is built.
  *
@@ -73,12 +75,38 @@ if (missing.length || wrong.length) {
       '\n  functions and runtime contexts, then deploy again. Nothing has been published.' +
       '\n',
   );
+  report({ ok: false, missing, wrong });
   // Only a published deployment is stopped. On a developer machine there is no site
   // to configure, and a build that cannot be done locally is a build nobody runs.
-  if (process.env.NETLIFY) {
+  //
+  // --warn is for the deploy that is only there to find out what a build environment
+  // actually has, which cannot be answered by a build that refuses to finish.
+  if (process.env.NETLIFY && !process.argv.includes('--warn')) {
     process.exit(1);
   }
   console.log('  (not a Netlify build, so this is a warning rather than a failure)');
 } else {
   console.log(`  configuration ok — ${REQUIRED.length} required settings are present.`);
+  report({ ok: true, missing: [], wrong: [] });
+}
+
+/**
+ * Leave a note of what the build saw, so that a failed build can be read without a
+ * log. The build log is only ever available to somebody looking at the build screen,
+ * and a check that fails silently is a check nobody trusts.
+ *
+ * The names of the settings are written. No values are, and nothing about a setting
+ * other than whether it was there and whether it was the right shape.
+ */
+function report(result) {
+  try {
+    const dir = path.join(process.cwd(), 'public');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, '_configcheck.json'),
+      JSON.stringify({ ...result, checkedAt: new Date().toISOString() }, null, 2),
+    );
+  } catch {
+    // A report that cannot be written is not a reason to fail a build.
+  }
 }
