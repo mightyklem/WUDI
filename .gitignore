@@ -31,5 +31,3 @@ apps/android/app/build/
 # The private half must never be committed or pasted anywhere -- losing it means nothing
 # new can ever be signed. Back it up offline.
 apps/web/cert-signing-secrets.txt
-
-apps/web/public/_configcheck.json

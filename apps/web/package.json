@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/check-env.mjs --warn && prisma generate --schema prisma/schema.prisma && next build",
+    "build": "node scripts/check-env.mjs && prisma generate --schema prisma/schema.prisma && next build",
     "start": "next start"
   },
   "dependencies": {
