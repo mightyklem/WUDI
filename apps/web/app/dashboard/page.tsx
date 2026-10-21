@@ -11,6 +11,7 @@ import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel, lagosSpanLabel } from '@/lib/lagos';
 import { Skeleton, SkeletonCard, SkeletonLines } from '../components/Skeleton';
 import Tabs from '../components/Tabs';
+import { UxStat, UxStats } from '../components/ux';
 
 type Me = {
   user: { id: string; email: string; role: 'admin' | 'trainer' | 'participant'; verified: boolean };
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [trainings, setTrainings] = useState<MyTraining[] | null>(null);
   const [seats, setSeats] = useState<number | null>(null);
   const [certs, setCerts] = useState<number | null>(null);
+  const [points, setPoints] = useState<number | null>(null);
   const [live, setLive] = useState<{ id: string; title: string } | null>(null);
   // Which list of classes is open. One at a time: a trainer looking for the class they have
   // to run next should not have to scroll past the ones they already ran.
@@ -57,6 +59,7 @@ export default function Dashboard() {
     });
     authed('/api/me/registrations').then((r) => r && setSeats((r.registrations || []).length));
     authed('/api/certificates/mine').then((c) => c && setCerts((c.certificates || []).length));
+    authed('/api/me/points').then((p) => p && setPoints(p.points ?? 0));
   }, []);
 
   // Skeletons shaped like the page they are standing in for. "Loading your dashboard..." was
@@ -88,6 +91,7 @@ export default function Dashboard() {
 
   const pendingTotal = (trainings || []).reduce((n, t) => n + t.pendingApproval, 0);
   const nextUp = (trainings || []).find((t) => t.nextSession);
+  const upcomingCount = (trainings || []).filter((t) => t.nextSession).length;
 
   const upcoming = (trainings || []).filter((t) => t.nextSession);
   const past = (trainings || []).filter((t) => !t.nextSession);
@@ -101,6 +105,17 @@ export default function Dashboard() {
         {head.title}
       </h1>
       <p className="sub">{me.user.email}</p>
+
+      {/* Clarity: the key numbers first, before anything that needs reading. A reader
+          opening their dashboard wants to know where they stand, not a story about it. */}
+      <UxStats>
+        <UxStat value={points ?? 0} label="Points" lead />
+        <UxStat value={seats ?? 0} label="Seats held" />
+        <UxStat value={certs ?? 0} label="Certificates" />
+        {role === 'trainer' && (
+          <UxStat value={upcomingCount} label="Classes to run" />
+        )}
+      </UxStats>
 
       {/* Anything unpaid, before anything else on the page. */}
       <PaymentDueBanner />

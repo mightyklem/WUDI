@@ -71,11 +71,13 @@ export default function ClassWorkspace({
 
       <div style={{ marginTop: 16 }}>
         {tab === 'prepare' && (
-          <CurriculumBuilder trainingId={trainingId} />
+          <div className="ux-card">
+            <CurriculumBuilder trainingId={trainingId} />
+          </div>
         )}
 
         {tab === 'share' && (
-          <div className="card" style={{ padding: 16 }}>
+          <div className="ux-card" style={{ padding: 16 }}>
             <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
             <CopyInviteLink url={inviteUrl} />
             <p className="muted" style={{ fontSize: 13, marginTop: 12, marginBottom: 0 }}>
@@ -86,11 +88,13 @@ export default function ClassWorkspace({
         )}
 
         {tab === 'questions' && (
-          <QuestionBox trainingId={trainingId} readOnly />
+          <div className="ux-card" style={{ padding: 16 }}>
+            <QuestionBox trainingId={trainingId} readOnly />
+          </div>
         )}
 
         {tab === 'post' && (
-          <div className="card" style={{ padding: 16 }}>
+          <div className="ux-card" style={{ padding: 16 }}>
             <PostComposer trainingId={trainingId} />
           </div>
         )}

@@ -167,23 +167,21 @@ export default function MyRegistrations() {
                         .filter(s => s.upcoming)
                         .sort((a, b) => new Date(a.startsAtUtc).getTime() - new Date(b.startsAtUtc).getTime())
                         .map((s) => (
-                          <Link key={s.id} className="btn primary" href={`/classroom/${s.id}`} style={{ width: '100%', textAlign: 'center', padding: '14px 16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div key={s.id} className="ux-card" style={{ padding: 0, overflow: 'hidden' }}>
+                            <Link className="ux-cta" href={`/classroom/${s.id}`} style={{
+                              width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between',
+                              alignItems: 'center', gap: 12, padding: '14px 16px', border: 0,
+                              borderRadius: 0, textDecoration: 'none',
+                            }}>
                               <div>
-                                <p style={{ fontWeight: 600, margin: 0 }}>{s.trainingTitle}</p>
-                                {/* White, not muted. The muted grey (#7A6A5C) on the teal button (#1B7E8D) is
-                                    1.09:1 -- the same luminance as the background, so the
-                                    date and time were rendered and completely unreadable.
-                                    White is 4.76:1, which clears AA. The hierarchy
-                                    between the title and the date comes from size and
-                                    weight instead of from making the date darker. */}
-                                <p style={{ fontSize: 13, margin: '2px 0 0', color: '#fff', fontWeight: 500 }}>
+                                <p style={{ fontWeight: 700, margin: 0, color: '#fff' }}>{s.trainingTitle}</p>
+                                <p style={{ fontSize: 13, margin: '2px 0 0', color: 'rgba(255,255,255,0.92)', fontWeight: 500 }}>
                                   {lagosDayLabel(s.startsAtUtc)} · {lagosWhenLabel(s.startsAtUtc)}
                                 </p>
                               </div>
-                              <span aria-hidden>→</span>
-                            </div>
-                          </Link>
+                              <span aria-hidden style={{ color: '#fff' }}>→</span>
+                            </Link>
+                          </div>
                         ))}
                     </div>
                   </div>

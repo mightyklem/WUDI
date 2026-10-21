@@ -1,0 +1,147 @@
+/* =====================================================================
+   The three design rules, as one shared vocabulary.
+
+   CLARITY -- the key numbers come first, and whitespace does the
+   separating rather than more rules and more boxes.
+
+   CONSISTENCY -- one card shape, one spacing rhythm, one accent
+   colour, on every screen. A card is a card because it is the same
+   shape everywhere, not because every screen remembers to look
+   alike.
+
+   WOW-FACTOR -- restraint. Clean lines, one focused call to action,
+   and one clearly marked best option. The effect comes from what is
+   left out.
+
+   The existing tokens already carry the palette, the radius scale and
+   the spacing rhythm. This file only adds the shapes those tokens
+   are used in.
+   ===================================================================== */
+
+/* ---- Clarity: the numbers first --------------------------------- */
+
+/* A row of figures. The label sits UNDER the number, because the
+   number is what the reader came for and the label is only there to
+   say what it is. */
+.ux-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: var(--s-3);
+}
+
+.ux-stat {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-1);
+  padding: var(--s-4) var(--s-3);
+  text-align: center;
+  min-width: 0;
+}
+
+.ux-stat-n {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.ux-stat-l {
+  display: block;
+  margin-top: 5px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--mut);
+  font-weight: 600;
+}
+
+/* A figure that matters more than the others. One per screen, never
+   two -- if everything is the headline, nothing is. */
+.ux-stat[data-lead] {
+  border-color: var(--accent);
+  box-shadow: var(--sh-tint);
+  background: linear-gradient(160deg, var(--accent-soft) 0%, var(--card) 68%);
+}
+.ux-stat[data-lead] .ux-stat-n { color: var(--accent-ink); }
+
+/* ---- Consistency: one card shape -------------------------------- */
+
+.ux-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-1);
+  padding: var(--s-5);
+}
+
+/* The plain card, no shadow -- for a card inside a card, where a
+   second shadow reads as smudge. */
+.ux-card[data-flat] { box-shadow: none; }
+
+/* A section boundary. Whitespace and a hairline, not a filled bar. */
+.ux-rule {
+  height: 1px;
+  background: var(--line);
+  border: 0;
+  margin: var(--s-6) 0;
+}
+
+/* ---- Wow: one best option --------------------------------------- */
+
+/* The thing you would pick if you only picked one. It is marked, not
+   shouted -- a coloured edge and a small tag, rather than a fill that
+   competes with the content for attention. */
+.ux-best {
+  position: relative;
+  border-color: var(--accent);
+  box-shadow: var(--sh-tint);
+}
+
+.ux-best-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: var(--r-full);
+}
+
+/* The one call to action on a screen. */
+.ux-cta {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  font-weight: 700;
+  box-shadow: var(--sh-tint);
+}
+.ux-cta:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+
+/* A quieter call to action beside the loud one. */
+.ux-cta-quiet {
+  background: transparent;
+  color: var(--accent-ink);
+  border: 1px solid var(--line);
+  font-weight: 700;
+}
+.ux-cta-quiet:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+/* ---- The phone --------------------------------------------------- */
+
+/* On a narrow screen the figures stay a row -- they are the point of
+   the screen -- but they get shorter, and a card loses some of its
+   padding rather than its content. */
+@media (max-width: 560px) {
+  .ux-card { padding: var(--s-4); }
+  .ux-stat { padding: var(--s-3) var(--s-2); }
+  .ux-stat-n { font-size: 24px; }
+  .ux-stat-l { font-size: 11.5px; }
+  .ux-rule { margin: var(--s-5) 0; }
+}

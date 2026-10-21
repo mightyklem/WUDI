@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import './globals.css';
+import './ux.css';
 import ServiceWorkerRegistrar from './components/ServiceWorkerRegistrar';
 
 // Self-hosted by next/font: one variable file, no render-blocking request to Google,
