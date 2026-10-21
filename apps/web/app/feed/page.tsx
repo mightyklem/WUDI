@@ -117,8 +117,8 @@ export default function Feed() {
         // E1/E3 — a brand-new platform looks identical to "your filters hid everything".
         // Never leave a cold feed as a single dead sentence.
         <div className="card" style={{ marginTop: 16, textAlign: 'center', padding: 34 }}>
-          <div style={{ fontSize: 30, marginBottom: 8 }} aria-hidden>{followingEmpty ? '🤝' : '◎'}</div>
-          <p style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>
+          <div style={{ fontSize: 'var(--t-2xl)', marginBottom: 8 }} aria-hidden>{followingEmpty ? '🤝' : '◎'}</div>
+          <p style={{ margin: 0, fontSize: 'var(--t-md)', fontWeight: 800 }}>
             {followingEmpty
               ? 'You are not following anyone yet'
               : filtered ? 'Nothing matches those filters' : 'No sessions announced yet'}
@@ -161,13 +161,13 @@ export default function Feed() {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
                 <span className="badge ok">✓ Verified</span>
                 {p.kind === 'ad' && <span className="badge">Sponsored</span>}
-                {p.organization && <b style={{ fontSize: 14 }}>{p.organization.name}</b>}
+                {p.organization && <b style={{ fontSize: 'var(--t-sm)' }}>{p.organization.name}</b>}
               </div>
             )}
             {p.kind !== 'training' && (
               <>
                 {p.title && <h3 style={{ margin: '0 0 4px', fontSize: 'var(--t-xl)', fontWeight: 800 }}>{p.title}</h3>}
-                {p.body && <p className="muted" style={{ margin: '0 0 12px', fontSize: 14 }}>{p.body}</p>}
+                {p.body && <p className="muted" style={{ margin: '0 0 12px', fontSize: 'var(--t-sm)' }}>{p.body}</p>}
               </>
             )}
             {/* Official and ad posts are content, not classes — no seat or price row. */}
@@ -179,7 +179,7 @@ export default function Feed() {
               {full && <span className="badge rev">Full</span>}
             </div>
             <h3 style={{ margin: '10px 0 4px', fontSize: 'var(--t-xl)', fontWeight: 800 }}>{p.training.title}</h3>
-            <p className="muted" style={{ margin: '0 0 14px', fontSize: 14 }}>
+            <p className="muted" style={{ margin: '0 0 14px', fontSize: 'var(--t-sm)' }}>
               {p.training.firstSession ? lagosWhenLabel(p.training.firstSession) : 'Date to be announced'}
               {' · '}
               {p.training.accessType === 'paid'

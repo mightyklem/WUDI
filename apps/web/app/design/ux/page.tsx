@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import SiteNav from '../../components/SiteNav';
 import { UxCard, UxCta, UxRule } from '../../components/ux';
-import { GreetingStrip, TrainerTabs } from './preview';
+import { GreetingStrip, TrainerTabs, AppearanceChoices, TypeScale } from './preview';
 
 export const metadata: Metadata = { title: 'Learnovize — UI/UX review' };
 
@@ -29,8 +29,8 @@ function Figures({ items }: { items: [string, string][] }) {
     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
       {items.map(([n, l]) => (
         <span key={l}>
-          <span className="u-num" style={{ fontSize: 22 }}>{n}</span>{' '}
-          <span className="muted" style={{ fontSize: 13 }}>{l}</span>
+          <span className="u-num" style={{ fontSize: 'var(--t-lg)' }}>{n}</span>{' '}
+          <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>{l}</span>
         </span>
       ))}
     </div>
@@ -89,6 +89,37 @@ export default function UxReview() {
           came for sits underneath it in a quieter line. The hour is the one in Lagos,
           because Lagos is where the classes are taught and where the people opening the
           app are — a phone set to UTC should not call it the middle of the night.
+        </p>
+      </Screen>
+
+      <UxRule />
+
+      {/* ---------------- 1d. the type ---------------- */}
+      <Screen title="The type" note="Clarity — writing that can be read">
+        <TypeScale />
+        <p className="u-sub" style={{ marginTop: 12 }}>
+          The scale was written for a desk and read on a phone. Every step is about 8%
+          larger than it was, and the smallest is 13 rather than 12, which is the point
+          at which text stops being readable without zooming. The muted colour is
+          darker too, so a secondary line is quieter than a title without being faint:
+          it is 7.4 to 1 on a card in the light theme and 8.5 to 1 in the dark one.
+        </p>
+      </Screen>
+
+      <UxRule />
+
+      {/* ---------------- 1c. the appearance ---------------- */}
+      <Screen title="The appearance" note="Restraint — the same product, in the light you need">
+        <AppearanceChoices />
+        <p className="u-sub" style={{ marginTop: 12 }}>
+          The button that sets this floats above everything, bottom right, clear of the
+          navigation, and it is on every page. It is worth putting it there rather than
+          inside a settings page: the one time somebody wants the screen dimmer is at
+          night, and they should not have to go looking for a page to find it.
+          <br /><br />
+          The choice is read before the first paint, so the page never flashes white on
+          its way to dark. &ldquo;System&rdquo; keeps following the phone, so a screen that
+          turns dark at sunset turns the app dark with it.
         </p>
       </Screen>
 

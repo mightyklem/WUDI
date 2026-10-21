@@ -134,7 +134,7 @@ export default function SiteNav({ right }: { right?: React.ReactNode }) {
                   style={{
                     position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18,
                     padding: '0 5px', borderRadius: 999, background: 'var(--warn)',
-                    color: '#fff', fontSize: 11, fontWeight: 800, lineHeight: '18px',
+                    color: '#fff', fontSize: 12, fontWeight: 800, lineHeight: '18px',
                     textAlign: 'center', border: '2px solid var(--bg)',
                   }}
                 >

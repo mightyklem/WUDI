@@ -66,7 +66,7 @@ export default function ClassWorkspace({
         ]}
         value={tab}
         onChange={(k) => setTab(k as typeof tab)}
-        accent="#FBBF24"
+        variant="gold"
       />
 
       <div style={{ marginTop: 16 }}>
@@ -80,7 +80,7 @@ export default function ClassWorkspace({
           <div className="ux-card" style={{ padding: 16 }}>
             <p className="eyebrow" style={{ marginBottom: 8 }}>Share this class</p>
             <CopyInviteLink url={inviteUrl} />
-            <p className="muted" style={{ fontSize: 13, marginTop: 12, marginBottom: 0 }}>
+            <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 12, marginBottom: 0 }}>
               Anyone who opens this link can register for a seat. It works in a browser — no app
               needed, and no account to create before they can see what the class is.
             </p>

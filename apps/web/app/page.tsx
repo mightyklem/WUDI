@@ -38,11 +38,11 @@ export default async function Home() {
       <div className="surface surface-hero pat-weave rise">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <span className="tile-icon tint-accent" aria-hidden>✨</span>
-          <span style={{ fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
+          <span style={{ fontSize: 'var(--t-xs)', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
             Live classes · no replays
           </span>
         </div>
-        <h1 style={{ fontSize: 32, lineHeight: 1.12, maxWidth: 520 }}>{greet}.</h1>
+        <h1 style={{ fontSize: 'var(--t-2xl)', lineHeight: 1.12, maxWidth: 520 }}>{greet}.</h1>
         {trainerCount === 0 ? (
           <p className="sub" style={{ maxWidth: 460 }}>
             Learnovize is opening its doors. Trainers are being onboarded now.
@@ -67,10 +67,10 @@ export default async function Home() {
               transition: 'transform var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease)',
             }}>
               <span className={`tile-icon ${p.tint}`} aria-hidden
-                style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', fontSize: 19 }}>{p.icon}</span>
+                style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', fontSize: 'var(--t-md)' }}>{p.icon}</span>
               <span style={{ minWidth: 0 }}>
-                <b style={{ display: 'block', fontSize: 15 }}>{p.label}</b>
-                <span className="muted" style={{ fontSize: 12 }}>{p.sub}</span>
+                <b style={{ display: 'block', fontSize: 'var(--t-base)' }}>{p.label}</b>
+                <span className="muted" style={{ fontSize: 'var(--t-xs)' }}>{p.sub}</span>
               </span>
             </Link>
           ))}
@@ -89,15 +89,15 @@ export default async function Home() {
             boxShadow: 'var(--sh-3)',
           }}
         >
-          <p style={{ margin: 0, fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', opacity: .9 }}>
+          <p style={{ margin: 0, fontSize: 'var(--t-xs)', letterSpacing: '.08em', textTransform: 'uppercase', opacity: .9 }}>
             Happening now · {liveNow.length} live
           </p>
           <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
             {liveNow.map((s) => (
               <div key={s.id} style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontWeight: 800, fontSize: 17 }}>{s.training.title}</div>
-                  <div style={{ fontSize: 13, opacity: .88 }}>
+                  <div style={{ fontWeight: 800, fontSize: 'var(--t-md)' }}>{s.training.title}</div>
+                  <div style={{ fontSize: 'var(--t-sm)', opacity: .88 }}>
                     {s.training.trainer.displayName} · ends {lagosWhenLabel(s.endsAtUtc)}
                   </div>
                 </div>
@@ -113,15 +113,15 @@ export default async function Home() {
       {liveNow.length === 0 && upcoming.length > 0 && (
         <div className="card rise-1" style={{ marginTop: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <span className="tile-icon tint-leaf" aria-hidden style={{ width: 38, height: 38, borderRadius: 'var(--r-sm)', fontSize: 18 }}>🗓</span>
-            <b style={{ fontSize: 16 }}>Next sessions</b>
+            <span className="tile-icon tint-leaf" aria-hidden style={{ width: 38, height: 38, borderRadius: 'var(--r-sm)', fontSize: 'var(--t-md)' }}>🗓</span>
+            <b style={{ fontSize: 'var(--t-base)' }}>Next sessions</b>
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
             {upcoming.map((s) => (
               <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontWeight: 700 }}>{s.training.title}</div>
-                  <div className="muted" style={{ fontSize: 13 }}>{lagosWhenLabel(s.startsAtUtc)}</div>
+                  <div className="muted" style={{ fontSize: 'var(--t-sm)' }}>{lagosWhenLabel(s.startsAtUtc)}</div>
                 </div>
                 <Link className="btn primary" href={`/t/${s.training.slug}/register`}>Reserve a seat</Link>
               </div>

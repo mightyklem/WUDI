@@ -3,6 +3,8 @@ import { Manrope } from 'next/font/google';
 import './globals.css';
 import './ux.css';
 import ServiceWorkerRegistrar from './components/ServiceWorkerRegistrar';
+import AppearanceToggle from './components/AppearanceToggle';
+import { THEME_BOOTSTRAP } from '@/lib/theme';
 
 // Self-hosted by next/font: one variable file, no render-blocking request to Google,
 // and no third-party cookie. Works offline and in regions where Google Fonts is blocked.
@@ -38,20 +40,27 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  // Matches the manifest, so the browser chrome and the installed app agree.
-  themeColor: 'var(--accent-deep)',
-};
+  export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    // Matches the manifest, so the browser chrome and the installed app agree.
+    themeColor: 'var(--accent-deep)',
+  };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en" className={manrope.variable}>
-      <body>
-        {children}
-        <ServiceWorkerRegistrar />
-      </body>
-    </html>
-  );
-}
+  export default function RootLayout({ children }: { children: React.ReactNode }) {
+    return (
+      <html lang="en" className={manrope.variable} suppressHydrationWarning>
+        <head>
+          {/* The appearance, decided before the first paint. Without this the page
+              paints light and then changes, which is a flash on every load. */}
+          <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        </head>
+        <body>
+          {children}
+          <AppearanceToggle />
+          <ServiceWorkerRegistrar />
+        </body>
+      </html>
+    );
+  }
+

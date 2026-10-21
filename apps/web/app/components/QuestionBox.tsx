@@ -137,7 +137,7 @@ export default function QuestionBox({
               placeholder="Will this suit me if I am self-taught? What do I need to bring?"
               maxLength={600}
             />
-            <label className="u-flex" style={{ gap: 8, fontSize: 13, margin: '4px 0 12px', cursor: 'pointer' }}>
+            <label className="u-flex" style={{ gap: 8, fontSize: 'var(--t-sm)', margin: '4px 0 12px', cursor: 'pointer' }}>
               <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} style={{ width: 'auto' }} />
               <span className="muted">Ask anonymously — other readers won&rsquo;t see my name. The trainer still can.</span>
             </label>
@@ -151,7 +151,7 @@ export default function QuestionBox({
         </>
       )}
 
-      <h3 style={{ margin: readOnly ? 0 : '20px 0 8px', fontSize: 15 }}>
+      <h3 style={{ margin: readOnly ? 0 : '20px 0 8px', fontSize: 'var(--t-base)' }}>
         {qs?.length ? `${qs.length} question${qs.length === 1 ? '' : 's'}` : 'No questions yet'}
       </h3>
 
@@ -161,7 +161,7 @@ export default function QuestionBox({
         {(qs ?? []).map((q) => (
           <div className="card" key={q.id} style={{ padding: 14 }}>
             <p style={{ margin: 0, fontSize: 14.5 }}>{q.body}</p>
-            <p className="muted" style={{ fontSize: 12, margin: '5px 0 0' }}>
+            <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '5px 0 0' }}>
               {q.authorName} · {ago(q.createdAt)}
               {!q.answer && ' · awaiting an answer'}
             </p>
@@ -169,7 +169,7 @@ export default function QuestionBox({
             {q.answer && (
               <div style={{ marginTop: 10, paddingLeft: 12, borderLeft: '3px solid var(--accent)' }}>
                 <p style={{ margin: 0, fontSize: 14.5 }}>{q.answer}</p>
-                <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '4px 0 0' }}>
                   {q.answeredAt ? `Trainer answered ${ago(q.answeredAt)}` : 'Trainer answered'}
                 </p>
               </div>
@@ -197,7 +197,7 @@ export default function QuestionBox({
             )}
 
             {q.isMine && q.answer && (
-              <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
+              <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 0' }}>
                 You asked this.
               </p>
             )}

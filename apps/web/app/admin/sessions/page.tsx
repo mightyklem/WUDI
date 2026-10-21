@@ -108,13 +108,13 @@ export default function AdminSessions() {
 
       {rows && (
         <>
-          <h2 style={{ fontSize: 17, marginTop: 22 }}>Open now ({live.length})</h2>
+          <h2 style={{ fontSize: 'var(--t-md)', marginTop: 22 }}>Open now ({live.length})</h2>
           {live.length === 0 && <p className="muted">Nothing is running at the moment.</p>}
           {live.map((s) => (
             <SessionCard key={s.id} s={s} onOpen={() => open(s.id)} openId={openId} />
           ))}
 
-          <h2 style={{ fontSize: 17, marginTop: 26 }}>Recent</h2>
+          <h2 style={{ fontSize: 'var(--t-md)', marginTop: 26 }}>Recent</h2>
           {rest.length === 0 && <p className="muted">No other sessions.</p>}
           {rest.map((s) => (
             <SessionCard key={s.id} s={s} onOpen={() => open(s.id)} openId={openId} />
@@ -124,7 +124,7 @@ export default function AdminSessions() {
 
       {openId && (
         <section style={{ marginTop: 26 }}>
-          <h2 style={{ fontSize: 17 }}>Event log</h2>
+          <h2 style={{ fontSize: 'var(--t-md)' }}>Event log</h2>
           {loadingTl && <p className="muted">Loading timeline…</p>}
           {timeline && <Timeline tl={timeline} />}
         </section>
@@ -147,12 +147,12 @@ function SessionCard({
       <div className="u-flex" style={{ gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
           <p style={{ margin: 0, fontWeight: 700 }}>{s.training.title}</p>
-          <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+          <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
             {s.training.trainer.displayName} · {WHEN.format(new Date(s.startsAtUtc))} ·{' '}
             {s.headcount} in attendance log
             {s.endedAtUtc ? ` · ended ${WHEN.format(new Date(s.endedAtUtc))}` : ''}
           </p>
-          <p className="muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
+          <p className="muted" style={{ margin: '2px 0 0', fontSize: 'var(--t-xs)' }}>
             status: <b>{s.status}</b>
             {s.endedAtUtc === null && s.status === 'ended' && ' · end time not recorded'}
           </p>
@@ -180,11 +180,11 @@ function Timeline({ tl }: { tl: Record<string, unknown> }) {
   return (
     <>
       <div className="card" style={{ marginTop: 10, borderLeft: '4px solid var(--accent)' }}>
-        <p style={{ margin: 0, fontSize: 13 }} className="muted">
+        <p style={{ margin: 0, fontSize: 'var(--t-sm)' }} className="muted">
           {session?.training.trainer.displayName} · {events.length} events
         </p>
         {limits && (
-          <p className="muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
+          <p className="muted" style={{ margin: '6px 0 0', fontSize: 'var(--t-xs)' }}>
             <b>No recording exists.</b> {limits.note}
           </p>
         )}
@@ -199,15 +199,15 @@ function Timeline({ tl }: { tl: Record<string, unknown> }) {
               {WHEN.format(new Date(e.at))}
             </span>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <p style={{ margin: 0, fontSize: 14 }}>
+              <p style={{ margin: 0, fontSize: 'var(--t-sm)' }}>
                 <b>{e.actor}</b> — {e.action}
               </p>
               {e.reason && (
-                <p className="muted" style={{ margin: '3px 0 0', fontSize: 13 }}>
+                <p className="muted" style={{ margin: '3px 0 0', fontSize: 'var(--t-sm)' }}>
                   reason: {e.reason}
                 </p>
               )}
-              <p className="muted" style={{ margin: '3px 0 0', fontSize: 12 }}>
+              <p className="muted" style={{ margin: '3px 0 0', fontSize: 'var(--t-xs)' }}>
                 {e.target}
               </p>
             </div>

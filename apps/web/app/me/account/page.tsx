@@ -83,7 +83,7 @@ export default function DeleteAccount() {
     <>
       <div className="card" style={{ marginTop: 12 }}>
         <h2 className="sec">Check your details</h2>
-        <p className="muted" style={{ fontSize: 14 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
           This is the name printed on every certificate you earn. Get it right — it goes
           straight onto a document you may show an employer.
         </p>
@@ -103,7 +103,7 @@ export default function DeleteAccount() {
           </div>
           {nameMsg && <div className="okmsg">{nameMsg}</div>}
           {nameErr && <div className="err">{nameErr}</div>}
-          <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)', marginBottom: 0 }}>
             A certificate already issued keeps the name it was issued with. If yours is
             wrong, ask the trainer to reissue it — the record keeps what happened.
           </p>
@@ -115,7 +115,7 @@ export default function DeleteAccount() {
           certificate issued, a trainer's new class. */}
       <div className="card" style={{ marginTop: 12 }}>
         <h2 className="sec">Notifications</h2>
-        <p className="muted" style={{ fontSize: 14 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
           Get a message on this device when something needs you -- a class is about to start,
           a certificate is ready, or a trainer you follow has opened a new class.
         </p>
@@ -124,13 +124,13 @@ export default function DeleteAccount() {
 
     <div className="card" style={{ marginTop: 12, borderColor: 'var(--bad-line)' }}>
       <h2 className="sec" style={{ color: 'var(--bad)' }}>Delete my account</h2>
-      <p className="muted" style={{ fontSize: 14 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
         Under the NDPA you can ask us to erase your account. Your email, phone, password,
         identity documents and published posts are destroyed, and you are signed out
         everywhere. Payment records are kept in anonymised form because we are required
         to retain them — they can no longer be linked to you.
       </p>
-      <p className="muted" style={{ fontSize: 14 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
         This cannot be undone. Certificates you already earned are revoked with the
         account.
       </p>
@@ -156,7 +156,7 @@ export default function DeleteAccount() {
           {err && <p className="err" style={{ marginTop: 10 }}>{err}</p>}
         </form>
       )}
-<p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
+<p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 12 }}>
           Changed your mind? <Link href="/">Back to Learnovize</Link>
         </p>
       </div>

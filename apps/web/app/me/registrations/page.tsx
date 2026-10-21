@@ -107,7 +107,7 @@ export default function MyRegistrations() {
             {/* All past - show simple message instead of tabs */}
             {sessions.every(s => !s.upcoming) && (
               <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-                <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
+                <p style={{ fontSize: 'var(--t-base)', fontWeight: 600, margin: 0 }}>
                   All your sessions have passed
                 </p>
                 <p className="muted" style={{ marginTop: 8 }}>
@@ -140,7 +140,7 @@ export default function MyRegistrations() {
                 {/* Tab content */}
                 {activeTab === 'join' && (
                   <div className="ux-card" style={{ padding: 16 }}>
-                    <p className="muted" style={{ marginBottom: 16, fontSize: 14 }}>
+                    <p className="muted" style={{ marginBottom: 16, fontSize: 'var(--t-sm)' }}>
                       By joining, you agree to our <a href="/terms" className="link">Terms of Service</a> and <a href="/privacy" className="link">Privacy Policy</a>.
                     </p>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
@@ -150,7 +150,7 @@ export default function MyRegistrations() {
                         onChange={(e) => setConsentChecked(e.target.checked)}
                         style={{ width: 20, height: 20, accentColor: 'var(--accent)' }}
                       />
-                      <span style={{ fontSize: 14 }}>
+                      <span style={{ fontSize: 'var(--t-sm)' }}>
                         I agree to the terms and consent to recording
                       </span>
                     </label>
@@ -184,7 +184,7 @@ export default function MyRegistrations() {
 
                 {activeTab === 'share' && (
                   <div className="card" style={{ padding: 16 }}>
-                    <p className="muted" style={{ marginBottom: 12, fontSize: 14 }}>
+                    <p className="muted" style={{ marginBottom: 12, fontSize: 'var(--t-sm)' }}>
                       Copy the link to share this class with others
                     </p>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -192,7 +192,7 @@ export default function MyRegistrations() {
                         type="text"
                         readOnly
                         value={`${typeof window !== 'undefined' ? window.location.origin : ''}/t/${sessions[0]?.trainingSlug || ''}/register`}
-                        style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14 }}
+                        style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 'var(--t-sm)' }}
                       />
                       <button className="btn" onClick={() => {
                         const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/t/${sessions[0]?.trainingSlug || ''}/register`;

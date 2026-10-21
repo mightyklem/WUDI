@@ -58,7 +58,7 @@ export default function AdminConsole() {
 
       <h2 className="sec">Watch the numbers</h2>
       <div className="card">
-        <p style={{ margin: 0, fontSize: 15 }}>
+        <p style={{ margin: 0, fontSize: 'var(--t-base)' }}>
           {metrics.users} users · {metrics.trainers} trainers · {metrics.trainings} trainings ({metrics.trainingsLive} live) ·
           {' '}{metrics.activeRegistrations} active seats · {metrics.paidSales} paid sales (₦{metrics.grossNgn}, commission ₦{metrics.commissionNgn}) ·
           {' '}{metrics.certsValid} certs valid / {metrics.certsRevoked} revoked ·
@@ -71,7 +71,7 @@ export default function AdminConsole() {
       <div className="card">
         {!analytics && <p className="muted">Loading analytics…</p>}
         {analytics && (
-          <p style={{ margin: 0, fontSize: 15 }}>
+          <p style={{ margin: 0, fontSize: 'var(--t-base)' }}>
             {analytics.activeTrainers30d} active trainers · {analytics.trainings30d} trainings (30d) ·
             {' '}{analytics.regsPerTrainingAvg} regs/training · {analytics.pctTrainingsFull}% full ·
             {' '}show-up {analytics.showUpPct}% · {analytics.certsIssued} certs ({analytics.paidSharePct}% paid) ·
@@ -85,7 +85,7 @@ export default function AdminConsole() {
       <h2 className="sec">Clear the review queue ({reports.length} open)</h2>      <div className="card">
         {reports.length === 0 && <p className="muted">Queue empty. Auto-flags (scam keywords, 3+ reports/hour) float to the top.</p>}
         {reports.map((r) => (
-          <div key={r.id} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>
+          <div key={r.id} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 'var(--t-sm)' }}>
             <b>{r.targetType}:{r.targetId}</b> — “{r.reason || 'no reason'}”
             {r.autoFlags.length > 0 && <> · 🚩 {r.autoFlags.join(', ')}</>}
             <div className="btnrow">
@@ -104,7 +104,7 @@ export default function AdminConsole() {
       <h2 className="sec">Check the audit trail</h2>
       <div className="card">
         {audit.map((a) => (
-          <p key={a.id} style={{ fontSize: 13, margin: '6px 0' }}>
+          <p key={a.id} style={{ fontSize: 'var(--t-sm)', margin: '6px 0' }}>
             {new Date(a.createdAt).toUTCString().slice(0, 22)} · {a.actor.email} · <b>{a.action}</b> · {a.target}{a.reason ? ` · “${a.reason}”` : ''}
           </p>
         ))}

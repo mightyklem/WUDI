@@ -80,7 +80,7 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
 
   return (
     <div>
-      <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 16 }}>
+      <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 'var(--t-base)' }}>
         Choose the days you will attend
       </p>
       <div style={{ display: 'grid', gap: 10 }}>
@@ -102,10 +102,10 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
                 {d.dayIndex}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 700, fontSize: 15 }}>
+                <span style={{ display: 'block', fontWeight: 700, fontSize: 'var(--t-base)' }}>
                   {d.topic || `Day ${d.dayIndex}`}
                 </span>
-                <span className="muted" style={{ fontSize: 13 }}>{d.dateUtc}</span>
+                <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>{d.dateUtc}</span>
               </span>
               <span style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
                 {free ? 'Free' : formatNgn(d.priceNgn)}
@@ -129,7 +129,7 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
         <p style={{ margin: 0, fontWeight: 800 }}>
           {isFree ? 'Free class' : `${formatNgn(total)} total`}
         </p>
-        <span className="muted" style={{ fontSize: 13 }}>
+        <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>
           {picked.length} of {totalDays} day{picked.length === 1 ? '' : 's'}
         </span>
         <button className="btn primary" disabled={full || busy || !picked.length} onClick={submit}>
@@ -138,13 +138,13 @@ export default function DayPicker({ trainingId, days, full, certMode, minPct, to
       </div>
 
       {certMode !== 'none' && (
-        <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 10 }}>
           Your certificate covers the {picked.length || 'chosen'} day{picked.length === 1 ? '' : 's'} you attend.
           Meet at least {minPct}% of them.
         </p>
       )}
       {isFree && (
-        <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 10 }}>
           Free classes issue no certificate — attendees still earn points.
         </p>
       )}

@@ -71,7 +71,7 @@ export default function AdminApprovals() {
       <AdminNav />
       <h1>Approval queue.</h1>
       <p className="sub">{items.length} pending · oldest first.</p>
-      <p className="muted" style={{ fontSize: 13 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
         Opening an identity document is recorded against your account, and the trainer can
         see who has looked at theirs.
       </p>
@@ -79,7 +79,7 @@ export default function AdminApprovals() {
       <div className="card" style={{ marginTop: 12 }}>
         {items.length === 0 && <p className="muted">Queue empty.</p>}
         {items.map((q) => (
-          <div key={q.id} style={{ padding: '12px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>
+          <div key={q.id} style={{ padding: '12px 0', borderTop: '1px solid var(--pill)', fontSize: 'var(--t-sm)' }}>
             <b>{q.trainerId}</b>
             <div style={{ marginTop: 3 }}>
               {/* The claim first, then the document to check it against. Showing the
@@ -88,7 +88,7 @@ export default function AdminApprovals() {
               {q.identityType ? (
                 <span>
                   Claims: <b>{q.identityType === 'nin' ? 'NIN' : 'Passport'}</b>{' '}
-                  <code style={{ fontSize: 13 }}>{q.identityNumber || '—'}</code>
+                  <code style={{ fontSize: 'var(--t-sm)' }}>{q.identityNumber || '—'}</code>
                 </span>
               ) : (
                 <span className="muted">
@@ -96,7 +96,7 @@ export default function AdminApprovals() {
                 </span>
               )}
             </div>
-            <div className="muted" style={{ marginTop: 2, fontSize: 13 }}>
+            <div className="muted" style={{ marginTop: 2, fontSize: 'var(--t-sm)' }}>
               evidence: {q.expertiseEvidence || '—'}
             </div>
             <div className="btnrow">

@@ -129,7 +129,7 @@ export default function PushButton() {
     <div style={{ marginTop: 14 }}>
       {state === 'on' ? (
         <>
-          <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: 0 }}>
             ✓ Notifications are on for this device.
           </p>
           {/* A button that sends yourself one, because the alternative is every person
@@ -141,7 +141,7 @@ export default function PushButton() {
           </button>
         </>
       ) : state === 'denied' ? (
-        <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: 0 }}>
           Notifications are blocked for this site. Allow them in your browser&rsquo;s site settings to
           get reminders about your classes.
         </p>
@@ -150,7 +150,7 @@ export default function PushButton() {
           {state === 'busy' ? 'Turning on…' : 'Turn on notifications'}
         </button>
       )}
-      {msg && <p className="muted" style={{ fontSize: 12.5, margin: '6px 0 0' }}>{msg}</p>}
+      {msg && <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '6px 0 0' }}>{msg}</p>}
     </div>
   );
 }

@@ -124,9 +124,9 @@ export default async function ClassesPage({ searchParams }: { searchParams: Prom
 
       {rows.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-          <div style={{ fontSize: 28 }} aria-hidden>◎</div>
-          <p style={{ margin: '10px 0 0', fontWeight: 800, fontSize: 18 }}>Nothing matches yet</p>
-          <p className="muted" style={{ margin: '6px 0 0', fontSize: 14 }}>
+          <div style={{ fontSize: 'var(--t-xl)' }} aria-hidden>◎</div>
+          <p style={{ margin: '10px 0 0', fontWeight: 800, fontSize: 'var(--t-md)' }}>Nothing matches yet</p>
+          <p className="muted" style={{ margin: '6px 0 0', fontSize: 'var(--t-sm)' }}>
             Try a wider search, or follow a trainer to hear when they open a class.
           </p>
           <div className="btnrow u-center">
@@ -149,14 +149,14 @@ export default async function ClassesPage({ searchParams }: { searchParams: Prom
                     {full && <span className="badge rev">Full</span>}
                     {t.topic && <span className="badge">{t.topic}</span>}
                   </div>
-                  <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                  <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
                     {t.trainer.displayName}
                     {' · '}
                     {next ? lagosRangeLabel(next.startsAtUtc.toISOString(), next.endsAtUtc.toISOString()) : 'Live now'}
                     {' · '}
                     {dayCount} day{dayCount === 1 ? '' : 's'}
                   </p>
-                  <p className="muted" style={{ margin: '2px 0 0', fontSize: 13 }}>
+                  <p className="muted" style={{ margin: '2px 0 0', fontSize: 'var(--t-sm)' }}>
                     {t.accessType === 'paid'
                       ? `${tierLabel(t.tier)} · ${formatNgn(perDay)} per day · certificate included`
                       : 'Free · no certificate, points earned'}

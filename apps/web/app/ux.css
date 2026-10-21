@@ -48,7 +48,7 @@
    competes with the content for attention. */
 .ux-best {
   position: relative;
-  border-color: var(--accent);
+  border-color: var(--accent-mark);
   box-shadow: var(--sh-tint);
 }
 
@@ -58,11 +58,11 @@
   gap: 5px;
   background: var(--accent);
   color: #fff;
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 4px 9px;
+  padding: 4px 10px;
   border-radius: var(--r-full);
 }
 
@@ -74,7 +74,7 @@
   font-weight: 700;
   box-shadow: var(--sh-tint);
 }
-.ux-cta:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.ux-cta:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 /* A quieter call to action beside the loud one. */
 .ux-cta-quiet {
@@ -83,7 +83,53 @@
   border: 1px solid var(--line);
   font-weight: 700;
 }
-.ux-cta-quiet:hover { background: var(--accent-soft); border-color: var(--accent); }
+.ux-cta-quiet:hover { background: var(--accent-soft); border-color: var(--accent-mark); }
+
+/* ---- Consistency: one strip, whichever accent it carries ---------
+
+   The tab strip is a class rather than a set of inline colours, so the
+   same words in the same places produce the same strip, and a theme
+   change moves it without anybody editing a component.
+
+   A dark accent is filled, because a filled dark teal still carries
+   white writing. A light accent -- the trainer's gold -- cannot be
+   filled without shouting louder than the one action on the page, so
+   it tints the track instead and the chosen tab is a white pill on
+   top of it, drawn with a deepened gold line. */
+.tabs {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.tabs-btn {
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  background: var(--pill);
+  color: var(--ink);
+  border: 1px solid transparent;
+}
+.tabs-btn[aria-selected='true'] {
+  font-weight: 800;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* The trainer's gold: a track to sit on, not a block to stare at. */
+.tabs-gold { background: var(--gold-track); border-color: var(--line); }
+.tabs-gold .tabs-btn { background: transparent; }
+.tabs-gold .tabs-btn[aria-selected='true'] {
+  background: var(--card);
+  color: var(--gold-ink);
+  border-color: var(--gold-edge);
+}
 
 /* ---- The phone --------------------------------------------------- */
 

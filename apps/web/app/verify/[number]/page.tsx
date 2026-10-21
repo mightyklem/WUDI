@@ -70,7 +70,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ number:
             {/* What was actually earned. A bare title and a trainer name read as a
                 qualification; the claim here is attendance and completion, and saying so
                 is what makes the rest of the page credible. */}
-            <p className="muted" style={{ fontSize: 13 }}>
+            <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
               {v.scope} · {v.pctAttended}% attendance · issued{' '}
               {new Date(v.issuedAt).toLocaleDateString('en-NG', { dateStyle: 'medium' })}
             </p>
@@ -84,7 +84,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ number:
           <div><p><span className="badge">NOT FOUND</span></p><p className="muted">No certificate with this number.</p></div>
         )}
       </div>
-      <p className="muted" style={{ fontSize: 13 }}>Learnovize certificates confirm attendance and completion only — not government accreditation.</p>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>Learnovize certificates confirm attendance and completion only — not government accreditation.</p>
     </div>
   );
 }

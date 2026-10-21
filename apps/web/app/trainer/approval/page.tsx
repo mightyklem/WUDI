@@ -108,13 +108,13 @@ export default function Approval() {
       {state && state.idAccessLog.length > 0 && (
         <div className="card" style={{ marginTop: 12 }}>
           <b>Who has opened your ID document</b>
-          <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
             We said staff access is recorded, so here it is. If something here looks wrong,
             contact support and ask for it to be deleted.
           </p>
           <div style={{ display: 'grid', gap: 4, marginTop: 8 }}>
             {state.idAccessLog.map((entry, i) => (
-              <div key={i} style={{ fontSize: 14 }}>
+              <div key={i} style={{ fontSize: 'var(--t-sm)' }}>
                 <b>{entry.by}</b>{' '}
                 <span className="muted">· {new Date(entry.at).toLocaleString()}</span>
               </div>
@@ -132,7 +132,7 @@ export default function Approval() {
             display: 'flex', gap: 9, alignItems: 'flex-start', marginBottom: 14,
             padding: '12px', border: '1px solid var(--line-2)',
             borderRadius: 'var(--r-sm)', background: 'var(--surface-2)',
-            cursor: 'pointer', fontSize: 13, lineHeight: 1.55,
+            cursor: 'pointer', fontSize: 'var(--t-sm)', lineHeight: 1.55,
           }}
         >
           <input
@@ -142,7 +142,7 @@ export default function Approval() {
             onChange={(e) => setConsent(e.target.checked)}
             style={{ marginTop: 3, flexShrink: 0 }}
           />
-          <span>{ID_CONSENT_TEXT}{' '}<Link href="/privacy" target="_blank" className="btn link" style={{ fontSize: 13 }}>Privacy policy</Link></span>
+          <span>{ID_CONSENT_TEXT}{' '}<Link href="/privacy" target="_blank" className="btn link" style={{ fontSize: 'var(--t-sm)' }}>Privacy policy</Link></span>
         </label>
 
         <label className="fl">Which document are you sending?</label>
@@ -168,7 +168,7 @@ export default function Approval() {
           maxLength={identityType === 'nin' ? 11 : 12}
           autoComplete="off"
         />
-        <p className="muted" style={{ fontSize: 12, margin: '8px 0 14px' }}>
+        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 14px' }}>
           A reviewer checks this against the document you attach. It is stored privately,
           never shown on any public page, and every staff view of it is logged.
         </p>
@@ -182,7 +182,7 @@ export default function Approval() {
           accept=".jpg,.jpeg,.png,.pdf"
           onChange={(e) => setBankFile(e.target.files?.[0] || null)}
         />
-        <p className="muted" style={{ fontSize: 12, margin: '8px 0 14px' }}>
+        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 14px' }}>
           In your own name, from the account you want to be paid into. A verified account
           proves the account exists — not that it is yours, which is the part we cannot
           check without this. 10MB max.

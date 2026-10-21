@@ -59,7 +59,7 @@ export default function Earnings() {
         <p className="eyebrow">Totals — gross ₦{totals.gross} · fees ₦{totals.fees} · commission ₦{totals.commission} · net ₦{totals.net}</p>
         {rows.length === 0 && <p className="muted">No paid sales yet.</p>}
         {rows.map((r) => (
-          <div key={r.trainingId} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>
+          <div key={r.trainingId} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 'var(--t-sm)' }}>
             <b>{r.title}</b> [{r.plan}] — {r.sales} sale(s): gross ₦{r.gross}, fees ₦{r.providerFees}, commission ₦{r.commission}, <b>net ₦{r.net}</b>
             {r.payouts.map((p) => (
               <span key={p.id} className="muted"> · payout ₦{p.amountNet} ({p.status}{p.holdUntil ? ` until ${new Date(p.holdUntil).toUTCString().slice(0, 16)}` : ''})</span>

@@ -56,15 +56,15 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
         {reviews.count > 0 ? (
           <>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ fontSize: 34, fontWeight: 800 }}>{reviews.average}</span>
-              <span className="badge ok" style={{ fontSize: 15 }}>
+              <span style={{ fontSize: 'var(--t-2xl)', fontWeight: 800 }}>{reviews.average}</span>
+              <span className="badge ok" style={{ fontSize: 'var(--t-base)' }}>
                 {'★'.repeat(Math.round(reviews.average!))}
               </span>
               <span className="muted">
                 from {reviews.count} review{reviews.count === 1 ? '' : 's'}
               </span>
             </div>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+            <p className="muted" style={{ fontSize: 'var(--t-sm)', marginBottom: 0 }}>
               Only people who attended the class can leave a review, and one person can rate
               each class once.
             </p>
@@ -91,7 +91,7 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
               <div className="card" key={i} style={{ padding: 14 }}>
                 <span className="badge ok">{'★'.repeat(r.rating)}</span>
                 {r.body && <p style={{ margin: '8px 0 0' }}>{r.body}</p>}
-                <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                <div className="muted" style={{ fontSize: 'var(--t-xs)', marginTop: 6 }}>
                   {new Date(r.createdAt).toLocaleDateString()}
                 </div>
               </div>

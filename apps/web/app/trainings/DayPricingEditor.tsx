@@ -70,7 +70,7 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType }:
   if (accessType !== 'paid') {
     return (
       <div>
-        <p className="muted" style={{ margin: '0 0 10px', fontSize: 14 }}>
+        <p className="muted" style={{ margin: '0 0 10px', fontSize: 'var(--t-sm)' }}>
           This is a free class, so every day is free. It issues no certificate —
           attendees still earn points.
         </p>
@@ -83,10 +83,10 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType }:
 
   return (
     <div>
-      <p className="muted" style={{ margin: '0 0 4px', fontSize: 14 }}>
+      <p className="muted" style={{ margin: '0 0 4px', fontSize: 'var(--t-sm)' }}>
         {band ? `${band.label} · ${tierRangeText(tier)}` : 'Set a category first'}
       </p>
-      <p className="muted" style={{ margin: '0 0 12px', fontSize: 13 }}>
+      <p className="muted" style={{ margin: '0 0 12px', fontSize: 'var(--t-sm)' }}>
         Price each day, or open one for free. A learner pays only for the days they pick.
         Once a day has been bought its topic and price are locked.
       </p>
@@ -113,7 +113,7 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType }:
                   disabled={priceLocked}
                   style={{ flex: 1, minWidth: 160 }}
                 />
-                <span className="muted" style={{ fontSize: 13 }}>{d.dateUtc}</span>
+                <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>{d.dateUtc}</span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
@@ -132,7 +132,7 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType }:
                 </button>
                 {!free && (
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className="muted" style={{ fontSize: 13 }}>per day</span>
+                    <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>per day</span>
                     <span aria-hidden>₦</span>
                     <input
                       type="text"
@@ -144,10 +144,10 @@ export default function DayPricingEditor({ trainingId, days, tier, accessType }:
                     />
                   </label>
                 )}
-                <span className="muted" style={{ fontSize: 13 }}>
+                <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>
                   {free ? 'Free' : formatNgn(d.priceNgn)}
                 </span>
-                <span className="muted" style={{ fontSize: 13, marginLeft: 'auto' }}>
+                <span className="muted" style={{ fontSize: 'var(--t-sm)', marginLeft: 'auto' }}>
                   {priceLocked ? '🔒 locked' : `${d.sessionCount} session${d.sessionCount === 1 ? '' : 's'}`}
                   {d.enrolled > 0 ? ` · ${d.enrolled} bought` : ''}
                 </span>
@@ -186,8 +186,8 @@ function DayList({ rows, onTopic }: { rows: EditableDay[]; onTopic?: (id: string
           ) : (
             <span style={{ flex: 1, minWidth: 140, fontWeight: 700 }}>{d.topic || `Day ${d.dayIndex}`}</span>
           )}
-          <span className="muted" style={{ fontSize: 13 }}>{d.dateUtc}</span>
-          <span className="muted" style={{ fontSize: 13 }}>
+          <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>{d.dateUtc}</span>
+          <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>
             {d.sessionCount} session{d.sessionCount === 1 ? '' : 's'} ·{' '}
             {d.enrolled > 0 ? `${d.enrolled} bought` : 'not booked'}
           </span>

@@ -79,11 +79,11 @@ export default function PayoutSettings() {
       {account && (
         <div className="card" style={{ marginTop: 14, borderColor: 'var(--line-2)' }}>
           <p className="eyebrow" style={{ marginBottom: 6 }}>On file</p>
-          <p style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{account.accountName}</p>
-          <p className="muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+          <p style={{ margin: 0, fontSize: 'var(--t-md)', fontWeight: 700 }}>{account.accountName}</p>
+          <p className="muted" style={{ margin: '2px 0 0', fontSize: 'var(--t-sm)' }}>
             {account.bankName} · ending {account.accountLast4}
           </p>
-          <p className="muted" style={{ margin: '8px 0 0', fontSize: 13 }}>
+          <p className="muted" style={{ margin: '8px 0 0', fontSize: 'var(--t-sm)' }}>
             {account.verified
               ? '✓ Verified with your bank'
               : 'Not yet verified — payouts are held until this is confirmed.'}
@@ -102,7 +102,7 @@ export default function PayoutSettings() {
           ))}
         </select>
         {banks.length === 0 && (
-          <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
             Loading banks…
           </p>
         )}
@@ -118,7 +118,7 @@ export default function PayoutSettings() {
           required
           maxLength={13}
         />
-        <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
           We check this against your bank and show you the name it belongs to before
           saving. Your number is stored encrypted.
         </p>

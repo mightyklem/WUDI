@@ -79,7 +79,7 @@ export default function MyReviews() {
             {outstanding.map((r) => (
               <div className="card" key={r.sessionId}>
                 <b>{r.trainerName}</b>
-                <div className="muted" style={{ fontSize: 13 }}>
+                <div className="muted" style={{ fontSize: 'var(--t-sm)' }}>
                   {r.trainingTitle} · {new Date(r.when).toLocaleString()}
                 </div>
 
@@ -91,7 +91,7 @@ export default function MyReviews() {
                       aria-pressed={picks[r.sessionId] === n}
                       aria-label={`${n} star${n === 1 ? '' : 's'}`}
                       style={{
-                        fontSize: 18, padding: '4px 10px',
+                        fontSize: 'var(--t-md)', padding: '4px 10px',
                         background: picks[r.sessionId] === n ? 'var(--gold-soft)' : undefined,
                       }}
                       onClick={() => setPicks((p) => ({ ...p, [r.sessionId]: n }))}
@@ -128,7 +128,7 @@ export default function MyReviews() {
               <div className="card" key={r.sessionId} style={{ padding: 14 }}>
                 <b>{r.trainerName}</b>
                 <span className="badge ok" style={{ marginLeft: 8 }}>{'★'.repeat(r.myRating!)}</span>
-                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{r.trainingTitle}</div>
+                <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>{r.trainingTitle}</div>
               </div>
             ))}
           </div>

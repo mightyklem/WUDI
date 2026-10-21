@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: 'Design system — Learnovize' };
 const PALETTE = [
   { group: 'Warm base', items: [
     { name: 'Canvas', token: '--bg', hex: 'var(--n-50)', use: 'Page background' },
-    { name: 'Card', token: '--card', hex: '#FFFFFF', use: 'Raised surfaces' },
+    { name: 'Card', token: '--card', hex: 'var(--card)', use: 'Raised surfaces' },
     { name: 'Ink', token: '--ink', hex: 'var(--ink)', use: 'Headings, body' },
     { name: 'Muted', token: '--mut', hex: 'var(--mut)', use: 'Secondary text' },
     { name: 'Line', token: '--line', hex: 'var(--line)', use: 'Hairlines' },
@@ -62,7 +62,7 @@ export default function DesignSystem() {
       <SiteNav />
 
       <h1>Design system</h1>
-      <p className="sub">Phase 1 · warm base, shape, space, elevation, pattern. Review surface.</p>
+      <p className="sub">Warm base, shape, space, elevation, pattern — and the two appearances. Review surface.</p>
 
       {/* ---- Palette ---- */}
       <h2 className="sec">Colour</h2>
@@ -101,16 +101,16 @@ export default function DesignSystem() {
           <div key={p.k} className={`surface ${p.k.replace('--pat-', 'pat-')}`}
             style={{ borderRadius: 'var(--r-md)', border: '1px solid var(--line)', minHeight: 150, padding: 16 }}>
             <span className={`tile-icon ${p.tint}`} aria-hidden>◆</span>
-            <b style={{ display: 'block', marginTop: 10, fontSize: 15 }}>{p.label}</b>
+            <b style={{ display: 'block', marginTop: 10, fontSize: 'var(--t-base)' }}>{p.label}</b>
             <code className="u-note">{p.k}</code>
-            <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{p.note}</p>
+            <p className="muted" style={{ margin: '6px 0 0', fontSize: 'var(--t-sm)' }}>{p.note}</p>
           </div>
         ))}
       </div>
 
       <div className="surface surface-hero pat-dots" style={{ marginTop: 16 }}>
-        <p style={{ margin: 0, fontWeight: 800, fontSize: 18 }}>How a hero would sit on a pattern</p>
-        <p className="muted" style={{ margin: '4px 0 0', fontSize: 14, maxWidth: 520 }}>
+        <p style={{ margin: 0, fontWeight: 800, fontSize: 'var(--t-md)' }}>How a hero would sit on a pattern</p>
+        <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)', maxWidth: 520 }}>
           The wash keeps text at full contrast while the pattern stays visible behind it.
           Patterns belong on a surface like this, not behind a paragraph of copy.
         </p>
@@ -135,7 +135,7 @@ export default function DesignSystem() {
         {SPACE.map((s) => (
           <div key={s.k} className="u-center-t">
             <div style={{ width: 22, height: parseInt(s.v), background: 'var(--accent-ink)', opacity: .7, borderRadius: 3 }} />
-            <code style={{ display: 'block', fontSize: 11, color: 'var(--mut)', marginTop: 6 }}>{s.k}</code>
+            <code style={{ display: 'block', fontSize: 12, color: 'var(--mut)', marginTop: 6 }}>{s.k}</code>
           </div>
         ))}
       </div>
@@ -147,11 +147,11 @@ export default function DesignSystem() {
           <div key={s.k} style={{ background: '#fff', borderRadius: 'var(--r-md)', padding: 18,
             boxShadow: s.style, border: '1px solid var(--line)' }}>
             <b className="u-block14">{s.v}</b>
-            <code style={{ fontSize: 11, color: 'var(--mut)' }}>{s.k}</code>
+            <code style={{ fontSize: 12, color: 'var(--mut)' }}>{s.k}</code>
           </div>
         ))}
       </div>
-      <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 10 }}>
         Shadows are tinted with the warm base rather than grey, so depth reads as light
         on paper. The two glows belong to teal and amber actions only.
       </p>
@@ -162,12 +162,12 @@ export default function DesignSystem() {
         {(['tint-accent', 'tint-gold', 'tint-leaf', 'tint-clay', 'tint-neutral'] as const).map((t) => (
           <div key={t} className="u-center-t">
             <span className={`tile-icon ${t}`} aria-hidden>◎</span>
-            <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 6 }}>{t.replace('tint-', '')}</div>
+            <div style={{ fontSize: 12, color: 'var(--mut)', marginTop: 6 }}>{t.replace('tint-', '')}</div>
           </div>
         ))}
       </div>
 
-      <p className="muted" style={{ marginTop: 40, fontSize: 13 }}>
+      <p className="muted" style={{ marginTop: 40, fontSize: 'var(--t-sm)' }}>
         Phase 2 replaces buttons and cards to consume these tokens. Nothing in this page
         is wired into the product yet.
       </p>

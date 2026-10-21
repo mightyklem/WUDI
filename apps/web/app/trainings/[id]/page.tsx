@@ -55,15 +55,15 @@ if (!t) return notFound();
       <h1 style={{ color: 'var(--ink)' }}>{t.title}</h1>
 
       {/* The trainer's own words, in their words. Nothing wrapped around it. */}
-      {t.description && <p style={{ fontSize: 16, lineHeight: 1.55, marginTop: 8 }}>{t.description}</p>}
+      {t.description && <p style={{ fontSize: 'var(--t-base)', lineHeight: 1.55, marginTop: 8 }}>{t.description}</p>}
 
       {/* The price as a figure. It was a sentence of prose explaining what a number already
           says, which is what pushed the actual answer below the fold on a phone. */}
-      <p style={{ fontSize: 19, fontWeight: 800, marginTop: 14 }}>
+      <p style={{ fontSize: 'var(--t-md)', fontWeight: 800, marginTop: 14 }}>
         {t.accessType === 'paid' ? (
           <>
             {formatNgn(price.totalNgn)}
-            <span className="muted" style={{ fontSize: 15, fontWeight: 600 }}>
+            <span className="muted" style={{ fontSize: 'var(--t-base)', fontWeight: 600 }}>
               {' '}total · {formatNgn(price.pricePerDayNgn ?? 0)} × {price.days} day{price.days === 1 ? '' : 's'}
             </span>
           </>
@@ -71,7 +71,7 @@ if (!t) return notFound();
           <>Free</>
         )}
       </p>
-      <p className="muted" style={{ fontSize: 14, marginTop: 4 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
         {t.accessType === 'paid' && t.certMode === 'paid' ? 'Certificate included' : 'No certificate'} ·{' '}
         {t.minPct}% attendance needed
       </p>
@@ -79,7 +79,7 @@ if (!t) return notFound();
       {/* When the class runs, as information. The Join button that used to sit here is gone
           -- a trainer gets into their room from Manage your classes or My sessions, and
           putting a second one here meant two ways to do the same thing on one screen. */}
-      <p className="muted" style={{ fontSize: 14, marginTop: 6 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
         {t.sessions.length} session{t.sessions.length === 1 ? '' : 's'} · {seatsLeft} of {t.cap} seats left
         {t.sessions.length > 0 && (
           <> · {t.sessions.map((s) => lagosSpanLabel(s.startsAtUtc, s.endsAtUtc)).join('  ·  ')}</>

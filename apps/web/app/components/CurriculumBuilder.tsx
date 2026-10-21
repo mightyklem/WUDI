@@ -127,7 +127,7 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
   if (!open) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Write it once, then teach from it.</p>
+        <p style={{ margin: 0, fontSize: 'var(--t-base)', fontWeight: 700 }}>Write it once, then teach from it.</p>
         <button className="btn primary" onClick={() => setOpen(true)}>Prepare your class</button>
       </div>
     );
@@ -145,14 +145,14 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
 
   return (
     <div>
-      <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 0 }}>
         This is yours to write. The document at the end is only as good as what is in here —
         nobody else can answer any of these for you.
       </p>
       <button
         className="btn link"
         onClick={() => setOpen(false)}
-        style={{ marginBottom: 10, fontSize: 13 }}
+        style={{ marginBottom: 10, fontSize: 'var(--t-sm)' }}
       >
         ▾ Close and keep this page short
       </button>
@@ -199,7 +199,7 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
                   aria-label="Minutes"
                   style={{ width: 76 }}
                 />
-                <span className="muted" style={{ fontSize: 12 }}>min</span>
+                <span className="muted" style={{ fontSize: 'var(--t-xs)' }}>min</span>
                 <button
                   className="btn link"
                   onClick={() => setDraft((d) => d && { ...d, modules: d.modules.filter((_, j) => j !== i) })}
@@ -232,7 +232,7 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
               {sessions.length > 0 && <> · <b>{scheduled}</b> min scheduled across {sessions.length} session{sessions.length === 1 ? '' : 's'}</>}
             </p>
             {over > 0 && sessions.length > 0 && (
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--warn)' }}>
+              <p style={{ margin: '6px 0 0', fontSize: 'var(--t-sm)', color: 'var(--warn)' }}>
                 ⚠ This is <b>{over} minutes longer</b> than the time you have scheduled. Trim it or add a session — this is the kind of thing you should find now, not on the day.
               </p>
             )}
@@ -247,7 +247,7 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
               order. The structured prompts that used to sit here asked for the same material
               in a fixed order, and the fixed order was the problem: asked as separate fields,
               people answer the easiest one and leave the rest. */}
-          <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 0 }}>
             Anything you want in front of the room — how you started, what went wrong, what
             finally worked. Write it however you like.
           </p>
@@ -272,7 +272,7 @@ export default function CurriculumBuilder({ trainingId }: { trainingId: string }
         <button className="btn" onClick={() => download('md')} disabled={busy}>Download Markdown</button>
       </div>
       {msg && <p className={msg === 'Saved.' ? 'okmsg' : 'err'} style={{ marginTop: 10 }}>{msg}</p>}
-      <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-xs)', marginTop: 8 }}>
         Save before you download — the file is built from what is stored, not from what is on screen.
       </p>
     </div>

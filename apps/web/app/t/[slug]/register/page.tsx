@@ -105,7 +105,7 @@ export default async function InvitePage({ params }: { params: Promise<{ slug: s
             // Classes created before per-day pricing have no day rows. Rather than
             // block them, fall back to the old single-price flow.
             <>
-              <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 16 }}>
+              <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 'var(--t-base)' }}>
                 {paid ? `${formatNgn(t.pricePerDayNgn ?? 0)} per day` : 'Free to attend'}
               </p>
               <div className="btnrow">

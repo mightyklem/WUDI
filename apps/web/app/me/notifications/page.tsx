@@ -113,7 +113,7 @@ export default function Notifications() {
           </button>
         )}
       </div>
-      {msg && <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{msg}</p>}
+      {msg && <p className="muted" style={{ margin: '6px 0 0', fontSize: 'var(--t-sm)' }}>{msg}</p>}
 
       {notes.length === 0 ? (
         <div className="surface surface-hero pat-dots" style={{ marginTop: 16, textAlign: 'center' }}>
@@ -134,14 +134,14 @@ export default function Notifications() {
             const inner = (
               <div style={{ display: 'flex', gap: 13, alignItems: 'center' }}>
                 <span className={`tile-icon ${meta.tint}`} aria-hidden
-                  style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', fontSize: 19 }}>{meta.icon}</span>
+                  style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', fontSize: 'var(--t-md)' }}>{meta.icon}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <b style={{ display: 'block', fontSize: 15, fontWeight: n.readAt ? 600 : 800 }}>{meta.label}</b>
+                  <b style={{ display: 'block', fontSize: 'var(--t-base)', fontWeight: n.readAt ? 600 : 800 }}>{meta.label}</b>
                   {typeof n.payload?.title === 'string' && (
-                    <span className="muted" style={{ fontSize: 13 }}>{n.payload.title}</span>
+                    <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>{n.payload.title}</span>
                   )}
                 </span>
-                <span className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{when(n.createdAt)}</span>
+                <span className="muted" style={{ fontSize: 'var(--t-xs)', whiteSpace: 'nowrap' }}>{when(n.createdAt)}</span>
               </div>
             );
             return (

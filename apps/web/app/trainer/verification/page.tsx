@@ -51,14 +51,14 @@ export default function VerificationRetired() {
 
       <div className="card" style={{ marginTop: 14 }}>
         <b>What you can do right now</b>
-        <ul style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 0 }}>
+        <ul style={{ fontSize: 'var(--t-sm)', lineHeight: 1.7, marginBottom: 0 }}>
           <li><b>Teach free classes immediately.</b> No application, no fee, no review.</li>
           <li><b>Sell paid classes too.</b> Class size comes from your plan, not from an approval.</li>
           <li><b>Get paid</b> once your identity is verified.</li>
         </ul>
       </div>
 
-      <p className="muted" style={{ fontSize: 13 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
         Paid someone and were not refunded? Contact support with your reference and it
         will be returned.
       </p>

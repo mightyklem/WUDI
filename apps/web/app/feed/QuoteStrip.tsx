@@ -45,12 +45,12 @@ export function QuoteStrip() {
       }}
     >
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <span aria-hidden style={{ fontSize: 30, lineHeight: 1, color: 'var(--accent)' }}>&ldquo;</span>
+        <span aria-hidden style={{ fontSize: 'var(--t-2xl)', lineHeight: 1, color: 'var(--accent)' }}>&ldquo;</span>
         <div style={{ flex: 1 }}>
           <p
             style={{
               margin: 0,
-              fontSize: 19,
+              fontSize: 'var(--t-md)',
               lineHeight: 1.45,
               fontWeight: 600,
               color: 'var(--ink)',
@@ -58,7 +58,7 @@ export function QuoteStrip() {
           >
             {q.text}
           </p>
-          <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--mut)', letterSpacing: '.02em' }}>
+          <p style={{ margin: '10px 0 0', fontSize: 'var(--t-sm)', color: 'var(--mut)', letterSpacing: '.02em' }}>
             &mdash; {q.author}
           </p>
         </div>

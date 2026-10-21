@@ -144,7 +144,7 @@ export default function Onboarding() {
 
       <div className="card" style={{ marginTop: 14 }}>
         <b>Where this leads</b>
-        <ul style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 0 }}>
+        <ul style={{ fontSize: 'var(--t-sm)', lineHeight: 1.6, marginBottom: 0 }}>
           {WHY.map((w) => (
             <li key={w.title}><b>{w.title}.</b> {w.body}</li>
           ))}
@@ -154,7 +154,7 @@ export default function Onboarding() {
       {me.trainer && (
         <div className="card" style={{ marginTop: 14 }}>
           <b>Identity verification</b>
-          <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
             {verified
               ? 'Approved. You can be paid.'
               : state === 'pending'

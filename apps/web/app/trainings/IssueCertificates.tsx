@@ -214,7 +214,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
               Learners disputing their attendance ({corrections.length})
             </p>
             {corrections.map((c) => (
-              <p key={c.id} style={{ fontSize: 14, margin: '4px 0' }}>
+              <p key={c.id} style={{ fontSize: 'var(--t-sm)', margin: '4px 0' }}>
                 <b>{emailFor(c.fromUserId)}</b> says they attended {sessionLabel(c.sessionId)}
                 {' — '}
                 <span className="muted">“{c.note || 'no note given'}”</span>
@@ -239,7 +239,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
         {rows.length === 0 && <p className="muted">No active registrations yet.</p>}
 
         {pendingSweep.length > 0 && (
-          <p className="muted" style={{ fontSize: 13 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
             {pendingSweep.length} eligible learner{pendingSweep.length === 1 ? '' : 's'} not
             yet issued — the session has probably not ended, or the sweep has not run.
             Nothing is needed from you unless it has ended and this persists.
@@ -247,7 +247,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
         )}
 
         {rows.map((r) => (
-          <div key={r.userId} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 14 }}>
+          <div key={r.userId} style={{ padding: '10px 0', borderTop: '1px solid var(--pill)', fontSize: 'var(--t-sm)' }}>
             <div className="u-flex" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
               <b style={{ flex: '1 1 200px' }}>{r.email}</b>
               <span className="muted">
@@ -265,7 +265,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
             </div>
 
             {r.eligible && (
-              <p className="muted" style={{ fontSize: 13, margin: '3px 0 0' }}>
+              <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '3px 0 0' }}>
                 Covers {r.dayCount} paid day{r.dayCount === 1 ? '' : 's'}
                 {r.scopeLabel && r.scopeLabel !== 'Full program' ? ` · ${r.scopeLabel}` : ''}
                 {r.excludedFreeDays?.length ? ` · excludes ${r.excludedFreeDays.join(', ')} (free)` : ''}
@@ -317,12 +317,12 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
 
             {openRow === r.userId && (
               <div style={{ marginTop: 8, borderLeft: '3px solid var(--pill)', paddingLeft: 10 }}>
-                <p className="muted" style={{ fontSize: 12, margin: '0 0 6px' }}>
+                <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '0 0 6px' }}>
                   Measured by the attendance webhook. Anything changed here is recorded as
                   an override, not as a measurement.
                 </p>
                 {r.attendance.map((c) => (
-                  <div key={c.sessionId} className="u-flex" style={{ gap: 8, alignItems: 'center', fontSize: 13 }}>
+                  <div key={c.sessionId} className="u-flex" style={{ gap: 8, alignItems: 'center', fontSize: 'var(--t-sm)' }}>
                     <span style={{ minWidth: 62 }}>
                       Session {c.index}
                     </span>
@@ -335,7 +335,7 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
                       {c.present ? '✓ present' : '✗ absent'}
                     </span>
                     {c.corrected && (
-                      <span className="muted" style={{ fontSize: 12 }}>
+                      <span className="muted" style={{ fontSize: 'var(--t-xs)' }}>
                         corrected{c.correctionReason ? `: ${c.correctionReason}` : ''}
                       </span>
                     )}
@@ -356,12 +356,12 @@ export default function IssueCertificates({ trainingId }: { trainingId: string }
         ))}
 
         {withCert.length > 0 && (
-          <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-xs)', marginTop: 10 }}>
             {withCert.length} of {rows.length} hold a certificate.
           </p>
         )}
         {needsAttention.length > 0 && (
-          <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-xs)', marginTop: 4 }}>
             {needsAttention.length} did not meet the bar. Correcting a session above will
             re-derive eligibility automatically — attest only when that would be untrue.
           </p>

@@ -48,14 +48,14 @@ export default function Collapsible({
         <span
           aria-hidden
           style={{
-            marginLeft: 'auto', color: 'var(--mut, #6b7378)', fontSize: 14,
+            marginLeft: 'auto', color: 'var(--mut)', fontSize: 'var(--t-sm)',
             transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease',
           }}
         >
           ▾
         </span>
       </button>
-      {hint && <p className="muted" style={{ fontSize: 13, margin: '4px 0 0' }}>{hint}</p>}
+      {hint && <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '4px 0 0' }}>{hint}</p>}
 
       {open && (
         <div id="class-settings" style={{ marginTop: 14 }}>

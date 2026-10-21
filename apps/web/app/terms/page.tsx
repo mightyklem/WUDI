@@ -9,7 +9,7 @@ export default function Terms() {
       <SiteNav />
       <h1>Terms (draft).</h1>
       <p className="sub">Plain-words summary — final wording confirmed with a Nigerian lawyer before launch (§12.10).</p>
-      <div className="card" style={{ marginTop: 18, fontSize: 15 }}>
+      <div className="card" style={{ marginTop: 18, fontSize: 'var(--t-base)' }}>
         <p><b>1. Attendance is free.</b> Trainers cannot charge for entry. Only optional certification carries a price.</p>
         <p><b>2. Certificates confirm attendance and completion.</b> They are not government-accredited qualifications. Each carries a unique verifiable number that stays checkable even if revoked or if the trainer leaves.</p>
         <p><b>3. Refunds.</b> Full refund if the trainer cancels or never holds the class. Full refund (minus provider fee) if you cancel at least 24 hours before the start. No refund after that, or for missing the attendance minimum.</p>

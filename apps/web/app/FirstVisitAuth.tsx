@@ -65,10 +65,10 @@ export default function FirstVisitAuth() {
         style={{
           position: 'fixed', right: 18, bottom: 86, zIndex: 41, padding: '10px 16px',
           display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
-          color: 'var(--ink)', fontWeight: 700, fontSize: 14, borderRadius: 'var(--r-full)',
+          color: 'var(--ink)', fontWeight: 700, fontSize: 'var(--t-sm)', borderRadius: 'var(--r-full)',
         }}
       >
-        <span className="tile-icon tint-accent" aria-hidden style={{ width: 32, height: 32, borderRadius: 'var(--r-xs)', fontSize: 15 }}>🙂</span>
+        <span className="tile-icon tint-accent" aria-hidden style={{ width: 32, height: 32, borderRadius: 'var(--r-xs)', fontSize: 'var(--t-base)' }}>🙂</span>
         Your dashboard
       </Link>
     );
@@ -87,7 +87,7 @@ export default function FirstVisitAuth() {
           position: 'fixed', right: 18, bottom: 86, zIndex: 40, cursor: 'pointer',
           padding: '12px 20px', borderRadius: 'var(--r-full)', border: 'none',
           background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', color: '#fff',
-          fontWeight: 800, fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8,
+          fontWeight: 800, fontSize: 'var(--t-base)', display: 'inline-flex', alignItems: 'center', gap: 8,
           boxShadow: 'var(--sh-tint)', fontFamily: 'inherit',
         }}
       >
@@ -109,8 +109,8 @@ export default function FirstVisitAuth() {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <span className="tile-icon tint-accent" aria-hidden>✨</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <b style={{ fontSize: 18, display: 'block', lineHeight: 1.2 }}>Learn live. Earn while you do.</b>
-          <p className="muted" style={{ margin: '4px 0 0', fontSize: 14 }}>
+          <b style={{ fontSize: 'var(--t-md)', display: 'block', lineHeight: 1.2 }}>Learn live. Earn while you do.</b>
+          <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
             Free account. Takes a minute with your email.
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function FirstVisitAuth() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20,
+          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 'var(--t-lg)',
             color: 'var(--mut)', lineHeight: 1, padding: '0 2px' }}
         >
           ×
@@ -133,10 +133,10 @@ export default function FirstVisitAuth() {
         ].map((r, i) => (
           <div key={r.title} className={`rise rise-${i + 1}`} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <span className={`tile-icon ${r.tint}`} aria-hidden
-              style={{ width: 38, height: 38, borderRadius: 'var(--r-xs)', fontSize: 18 }}>{r.icon}</span>
+              style={{ width: 38, height: 38, borderRadius: 'var(--r-xs)', fontSize: 'var(--t-md)' }}>{r.icon}</span>
             <span>
-              <b style={{ display: 'block', fontSize: 14 }}>{r.title}</b>
-              <span className="muted" style={{ fontSize: 13 }}>{r.body}</span>
+              <b style={{ display: 'block', fontSize: 'var(--t-sm)' }}>{r.title}</b>
+              <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>{r.body}</span>
             </span>
           </div>
         ))}
@@ -150,7 +150,7 @@ export default function FirstVisitAuth() {
           I already have one
         </Link>
       </div>
-      <button className="btn link" onClick={dismiss} style={{ width: '100%', marginTop: 4, fontSize: 14 }}>
+      <button className="btn link" onClick={dismiss} style={{ width: '100%', marginTop: 4, fontSize: 'var(--t-sm)' }}>
         Maybe later
       </button>
     </div>

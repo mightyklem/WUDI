@@ -50,7 +50,7 @@ export default function Login() {
         <Link className="btn link" href="/signup">New here? Sign up</Link></div>
         {msg && <div className={msg.ok ? 'okmsg' : 'err'}>{msg.text}{msg.ok && msg.text === 'Logged in.' && <> <Link href="/">Go home →</Link></>}</div>}
         {needsVerify && (
-          <p style={{ marginTop: 10, fontSize: 14 }}>
+          <p style={{ marginTop: 10, fontSize: 'var(--t-sm)' }}>
             <button className="btn link" type="button" onClick={resend}>Resend the code</button>{' '}
             <Link className="btn link" href="/signup">Enter it here</Link>
           </p>

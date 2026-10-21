@@ -18,7 +18,7 @@ export type IconName =
   | 'shield' | 'wallet' | 'badge' | 'search' | 'close' | 'chevron-right'
   | 'chevron-left' | 'arrow-right' | 'play' | 'sparkles' | 'alert'
   | 'info' | 'link' | 'download' | 'book' | 'grid' | 'expand' | 'home' | 'logout' | 'flip'
-  | 'bell' | 'sunrise' | 'sun' | 'sunset' | 'moon';
+  | 'bell' | 'sunrise' | 'sun' | 'sunset' | 'moon' | 'monitor';
 
 const P: Record<IconName, string> = {
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
@@ -73,6 +73,9 @@ const P: Record<IconName, string> = {
   sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 3v2M12 19v2M4.9 4.9 6.3 6.3M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1 6.3 17.7M17.7 6.3l1.4-1.4',
   sunset: 'M3 17h18M7 17a5 5 0 0 0 10 0M12 3v3M5.6 7.6 7 9M18.4 7.6 17 9',
   moon: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z',
+    // The screen of a computer, for "whatever my system says". It is the same mark as
+    // the sun and the moon in the appearance picker, so the three read as one family.
+  monitor: 'M3 4h18v12H3zM8 20h8M12 16v4',
 };
 
 /** Icons whose meaning changes with state, paired here so callers stay honest. */

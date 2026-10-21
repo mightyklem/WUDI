@@ -90,7 +90,7 @@ export default function MyCertificates() {
         )}
         {certs !== null && certs.length === 0 && <p className="muted">None yet — finish a training past its minimum attendance.</p>}
         {dlError && (
-          <p className="muted" role="alert" style={{ color: '#b42318', margin: '10px 0 0' }}>
+          <p className="muted" role="alert" style={{ color: 'var(--bad)', margin: '10px 0 0' }}>
             {dlError}
           </p>
         )}
@@ -105,9 +105,9 @@ export default function MyCertificates() {
               key={c.id}
               style={{ borderRadius: 16, marginBottom: 12, opacity: revoked ? 0.72 : 1 }}
             >
-              <div style={{ fontSize: 26 }}>{revoked ? '🚫' : '🏅'}</div>
+              <div style={{ fontSize: 'var(--t-xl)' }}>{revoked ? '🚫' : '🏅'}</div>
               <div>
-                <p className="rtitle" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{c.training.title}</p>
+                <p className="rtitle" style={{ fontSize: 'var(--t-md)', fontWeight: 700, margin: 0 }}>{c.training.title}</p>
                 <p className="muted" style={{ margin: '2px 0 0' }}>
                   {c.number} · {c.training.trainer.displayName}
                   {c.pctAttended !== undefined && ` · ${c.pctAttended}% attendance`}
@@ -123,14 +123,14 @@ export default function MyCertificates() {
                   </span>
                 </p>
                 {revoked && (
-                  <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                  <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
                     {c.revokedReason
                       ? `Reason given: ${c.revokedReason}`
                       : 'No reason was recorded. Contact support if you think this is wrong.'}
                   </p>
                 )}
 
-                <p style={{ margin: '8px 0 0', fontSize: 14 }}>
+                <p style={{ margin: '8px 0 0', fontSize: 'var(--t-sm)' }}>
                   {/* No download on a revoked one: the file is withheld, so offering a
                       link that cannot work is worse than not offering it. The verify link
                       stays, because a revoked certificate is still resolvable and should

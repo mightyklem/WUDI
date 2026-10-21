@@ -31,7 +31,7 @@ export function Skeleton({
         width,
         height,
         borderRadius: radius,
-        background: 'linear-gradient(90deg, var(--line) 25%, var(--bg-soft, #f2f5f6) 50%, var(--line) 75%)',
+        background: 'linear-gradient(90deg, var(--line) 25%, var(--surface-2) 50%, var(--line) 75%)',
         backgroundSize: '200% 100%',
         animation: 'skeleton-sweep 1.4s ease-in-out infinite',
         ...style,

@@ -55,56 +55,56 @@ body{margin:0;background:var(--bg);color:var(--ink);
 /* Fallbacks keep line-height sane if the variable font fails to load. */
 h1,h2,h3,.btn,.chip,.bigtitle,.ctitle{font-family:var(--font-manrope),-apple-system,"Segoe UI",Inter,Roboto,sans-serif}
 .wrap{max-width:960px;margin:0 auto;padding:28px 22px 0}
-h1{font-size:30px;margin:0;color:var(--ink);font-weight:800;letter-spacing:-.01em}
-.sub{margin:6px 0 0;font-size:16px;color:var(--mut)}
-h2.sec{font-size:20px;color:var(--ink);margin:34px 0 12px;font-weight:800}
+h1{font-size: var(--t-2xl);margin:0;color:var(--ink);font-weight:800;letter-spacing:-.01em}
+.sub{margin:6px 0 0;font-size: var(--t-base);color:var(--mut)}
+h2.sec{font-size: var(--t-lg);color:var(--ink);margin:34px 0 12px;font-weight:800}
 .card{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);
   padding:22px;box-shadow:var(--sh-2)}
-.eyebrow{font-size:13px;color:var(--mut);margin:0 0 8px}
-.bigtitle{font-size:26px;font-weight:800;margin:0 0 8px}
-.meta{font-size:15px;margin:0 0 18px}
+.eyebrow{font-size: var(--t-sm);color:var(--mut);margin:0 0 8px}
+.bigtitle{font-size: var(--t-xl);font-weight:800;margin:0 0 8px}
+.meta{font-size: var(--t-base);margin:0 0 18px}
 .btnrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
 /* .btn and its variants are defined once, in the Phase 2 block further down. */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media(max-width:640px){.grid2{grid-template-columns:1fr}}
 .course{border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-height:150px;
-  display:flex;flex-direction:column;gap:8px;background:#fff;text-align:left;font:inherit;color:inherit;
+  display:flex;flex-direction:column;gap:8px;background:var(--card);text-align:left;font:inherit;color:inherit;
   width:100%;box-shadow:var(--sh-1);cursor:pointer}
-.status{font-size:13px;color:var(--mut)}
-.ctitle{font-size:20px;font-weight:800;margin:0}
-.cmeta{font-size:15px;margin:0}
-.cfoot{font-size:15px;margin:auto 0 0;padding-top:14px}
-.rowitem{border:1px solid var(--line);background:#fff;padding:18px 20px;display:flex;gap:18px;align-items:center}
+.status{font-size: var(--t-sm);color:var(--mut)}
+.ctitle{font-size: var(--t-lg);font-weight:800;margin:0}
+.cmeta{font-size: var(--t-base);margin:0}
+.cfoot{font-size: var(--t-base);margin:auto 0 0;padding-top:14px}
+.rowitem{border:1px solid var(--line);background:var(--card);padding:18px 20px;display:flex;gap:18px;align-items:center}
 .rowitem:first-child{border-radius:var(--radius) var(--radius) 0 0}
 .rowitem:last-child{border-radius:0 0 var(--radius) var(--radius)}
 .rowitem:only-child{border-radius:var(--radius)}
 .rowitem + .rowitem{border-top:0}
 input[type=text],input[type=email],input[type=password]{width:100%;max-width:360px;padding:13px 16px;
-  border:1px solid var(--line);border-radius:14px;font-size:15px;min-height:48px;background:#fff;box-shadow:var(--sh-1)}
-label.fl{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
+  border:1px solid var(--line);border-radius:14px;font-size: var(--t-base);min-height:48px;background:var(--card);box-shadow:var(--sh-1)}
+label.fl{display:block;font-weight:600;font-size: var(--t-sm);margin:12px 0 4px}
 textarea{width:100%;max-width:480px;padding:13px 16px;border:1px solid var(--line);border-radius:14px;
-  font-size:15px;font:inherit;background:#fff;box-shadow:var(--sh-1)}
-select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15px;background:#fff;box-shadow:var(--sh-1)}
+  font-size: var(--t-base);font:inherit;background:var(--card);box-shadow:var(--sh-1)}
+select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size: var(--t-base);background:var(--card);box-shadow:var(--sh-1)}
 
 /* Pill chips — the selected chip fills, matching the reference category row. */
 .chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{border:1px solid var(--line);background:#fff;color:var(--mut);border-radius:999px;
-  padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:var(--sh-1);
+.chip{border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:999px;
+  padding:9px 16px;font-size: var(--t-sm);font-weight:600;cursor:pointer;box-shadow:var(--sh-1);
   min-height:0;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.chip.on{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;border-color:transparent;box-shadow:var(--sh-tint)}
+.chip.on{background:linear-gradient(135deg,var(--cta-1),var(--cta-2));color:var(--cta-ink);border-color:transparent;box-shadow:var(--sh-tint)}
 
 /* Circular icon badge used on cards and stat tiles. */
 .ibadge{width:44px;height:44px;border-radius:14px;display:inline-flex;align-items:center;
-  justify-content:center;font-size:20px;flex:0 0 auto}
+  justify-content:center;font-size: var(--t-lg);flex:0 0 auto}
 
-.bottomnav{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);
+.bottomnav{position:fixed;left:0;right:0;bottom:0;background:var(--nav-bg);
   backdrop-filter:blur(8px);border-top:1px solid var(--line);z-index:30}
 .bottomnav .in{max-width:960px;margin:0 auto;display:flex;padding:10px 0 14px}
-.bottomnav a{flex:1;text-align:center;text-decoration:none;color:var(--mut);font-size:12px;font-weight:600}
+.bottomnav a{flex:1;text-align:center;text-decoration:none;color:var(--mut);font-size:var(--t-xs);font-weight:600}
 .bottomnav a.on{color:var(--accent-ink);font-weight:800}
-.err{background:var(--clay-soft);border:1px solid #F0D3C5;border-radius:var(--r-sm);padding:12px 16px;margin-top:12px;color:var(--clay-ink)}
-.okmsg{background:var(--leaf-soft);border:1px solid #C6E0CF;border-radius:var(--r-sm);padding:12px 16px;margin-top:12px;color:var(--leaf-ink)}
-.badge{display:inline-block;background:var(--pill);border-radius:var(--r-full);padding:6px 14px;font-size:13px;font-weight:800}
+.err{background:var(--clay-soft);border:1px solid var(--bad-line);border-radius:var(--r-sm);padding:12px 16px;margin-top:12px;color:var(--clay-ink)}
+.okmsg{background:var(--leaf-soft);border:1px solid var(--ok-line);border-radius:var(--r-sm);padding:12px 16px;margin-top:12px;color:var(--leaf-ink)}
+.badge{display:inline-block;background:var(--pill);border-radius:var(--r-full);padding:6px 14px;font-size: var(--t-sm);font-weight:800}
 .badge.ok{background:var(--leaf-soft);color:var(--leaf-ink)}
 .badge.rev{background:var(--clay-soft);color:var(--clay-ink)}
 /* Paid is amber everywhere, so price and payment read the same wherever they appear. */
@@ -112,14 +112,14 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 .badge.free{background:var(--pill);color:var(--mut)}
   /* Staff tools live one level down from the main bar, so learners never see them. */
   .subnav{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0 0}
-  .subnav a{padding:6px 12px;border-radius:var(--r-full);font-size:13px;font-weight:700;text-decoration:none;color:var(--mut);background:var(--pill)}
-  .subnav a.on{background:var(--accent-soft,#E7F2F3);color:var(--accent,#0F5C68)}
+  .subnav a{padding:6px 12px;border-radius:var(--r-full);font-size: var(--t-sm);font-weight:700;text-decoration:none;color:var(--mut);background:var(--pill)}
+  .subnav a.on{background:var(--accent-soft);color:var(--accent-ink)}
 .muted{color:var(--mut)}
 /* Visible to screen readers only. Rank is shown as an icon alone, so the name
    still has to reach assistive tech. */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .topbar{display:flex;align-items:center;gap:12px;padding:14px 0}
-.topbar .logo{font-weight:900;font-size:20px}
+.topbar .logo{font-weight:900;font-size: var(--t-lg)}
 .topbar nav{margin-left:auto;display:flex;gap:8px}
 
 /* ---- Motion -----------------------------------------------------------
@@ -140,38 +140,38 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 /* ---- Buttons (Phase 2) -----------------------------------------------
    Fills carry a glow of their own colour so an action looks like itself.
    Amber is reserved for anything involving money. */
-.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:var(--r-sm);
-  padding:12px 22px;font-weight:700;font-size:15px;cursor:pointer;min-height:48px;text-decoration:none;
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:var(--r-sm);
+  padding:12px 22px;font-weight:700;font-size: var(--t-base);cursor:pointer;min-height:48px;text-decoration:none;
   display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:var(--sh-1);
   transition:transform var(--dur-1) var(--ease),box-shadow var(--dur-2) var(--ease),
     background-color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease)}
 
 .btn:active{transform:translateY(0)}
-.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn:focus-visible{outline:3px solid var(--accent-mark);outline-offset:2px}
 .btn[disabled],.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
 /* Teal lead: a gradient rather than a flat fill, so it has some depth. */
-.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-deep));
-  color:#fff;border-color:transparent;box-shadow:var(--sh-tint)}
+.btn.primary{background:linear-gradient(135deg,var(--cta-1),var(--cta-2));
+  color:var(--cta-ink);border-color:transparent;box-shadow:var(--sh-tint)}
 
 /* Money actions are amber. Nothing else may use this. */
-.btn.paid{background:linear-gradient(135deg,#B5741A,var(--gold-ink));color:#fff;
+.btn.paid{background:linear-gradient(135deg,var(--paid-1),var(--paid-2));color:var(--paid-ink);
   border-color:transparent;box-shadow:var(--sh-gold)}
 
 /* Ghost is for anything that floats over content. */
-.btn.ghost{background:rgba(255,255,255,.72);backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);border-color:rgba(255,255,255,.6);box-shadow:var(--sh-2)}
+.btn.ghost{background:var(--glass);backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);border-color:var(--glass-line);box-shadow:var(--sh-2)}
 
 .btn.link{border:0;background:transparent;box-shadow:none;color:var(--accent-ink);
   padding:12px 4px;min-height:0;font-weight:700}
 
-.btn.lg{font-size:17px;padding:15px 28px;min-height:56px;border-radius:var(--r-md)}
+.btn.lg{font-size: var(--t-md);padding:15px 28px;min-height:56px;border-radius:var(--r-md)}
 
 /* ---- Surfaces (Phase 2) ----------------------------------------------
    Glass is reserved for things that sit above content. A card in the page flow
    should be a card, not a pane of frosted glass. */
-.glass{background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);border:1px solid rgba(255,255,255,.7);
+.glass{background:var(--glass);backdrop-filter:blur(16px) saturate(1.2);
+  -webkit-backdrop-filter:blur(16px) saturate(1.2);border:1px solid var(--glass-line);
   border-radius:var(--r-lg);box-shadow:var(--sh-3)}
 
 /* ---- Entrance (Phase 2) ----------------------------------------------
@@ -204,7 +204,7 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 .surface{position:relative;overflow:hidden;background-repeat:repeat}
 .surface::before{content:'';position:absolute;inset:0;pointer-events:none}
 .surface::after{content:'';position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(180deg,rgba(251,246,238,.72),rgba(251,246,238,.94))}
+  background:linear-gradient(180deg,var(--veil-1),var(--veil-2))}
 .surface>*{position:relative;z-index:1}
 
 /* Hero: the warm canvas, a pattern behind it, and a hairline to sit it on. */
@@ -213,9 +213,9 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 
 /* Tinted icon tile — the coloured-shadow version of the old grey badge. */
 .tile-icon{width:52px;height:52px;border-radius:var(--r-sm);display:inline-flex;
-  align-items:center;justify-content:center;font-size:24px;flex:0 0 auto;
+  align-items:center;justify-content:center;font-size: var(--t-lg);flex:0 0 auto;
   box-shadow:0 6px 16px rgba(58,40,25,.10)}
-.tile-icon.tint-accent{background:#E4F1F3;box-shadow:0 6px 16px rgba(20,97,110,.20)}
+.tile-icon.tint-accent{background:var(--accent-soft);box-shadow:0 6px 16px rgba(20,97,110,.20)}
 .tile-icon.tint-gold{background:var(--gold-soft);box-shadow:0 6px 16px rgba(154,98,18,.20)}
 .tile-icon.tint-leaf{background:var(--leaf-soft);box-shadow:0 6px 16px rgba(47,107,65,.20)}
 .tile-icon.tint-clay{background:var(--clay-soft);box-shadow:0 6px 16px rgba(180,85,47,.20)}
@@ -271,7 +271,7 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
   --bg: var(--n-50);
   --card: var(--n-0);
   --ink: var(--n-900);
-  --mut: var(--n-600);
+  --mut: #44595A;   /* 7.6:1 on a card -- muted, but never faint */
   --line: var(--n-200);
   --pill: var(--n-100);
   --accent: var(--teal-500);
@@ -282,6 +282,34 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
   --leaf: var(--ok);    --leaf-ink: #235334;  --leaf-soft: var(--ok-soft);
   --clay: var(--bad);   --clay-ink: #93421F;  --clay-soft: var(--bad-soft);
 
+  /* ---- The accent, split by what it is for ---------------------------
+     A single accent colour cannot be both the fill under white writing
+     and the mark on a coloured page, because those two need opposite
+     lightness. So the accent is four tokens:
+       --accent       a fill, always carries white writing on it
+       --accent-ink   accent-coloured writing, on whatever is behind it
+       --accent-mark  strokes, edges, icons, focus rings
+       --accent-soft  a tinted surface
+     The same four exist for gold, and each has a dark-mode value, so a
+     theme change is one block of overrides rather than a hunt through
+     the components. */
+  --accent-mark: var(--teal-500);
+  --gold-track: #FEF3D8;   /* the trainer's tab strip */
+  --gold-edge:  #715008;   /* the line on the chosen tab */
+  --gold-mark:  var(--warn);
+
+  /* The two gradients that carry writing, and the writing on them.
+     Both were white on a mid tone and both are about 4.8 to 1 now. */
+  --cta-1: var(--teal-500);  --cta-2: var(--teal-700);  --cta-ink: #FFFFFF;
+  --paid-1: #A2680F;         --paid-2: #6B4309;        --paid-ink: #FFFFFF;
+
+  /* Surfaces that are not a card, and the glass that floats over one. */
+  --glass: rgba(255,255,255,.82);
+  --glass-line: rgba(255,255,255,.70);
+  --veil-1: rgba(251,246,238,.72);
+  --veil-2: rgba(251,246,238,.94);
+  --nav-bg: rgba(255,255,255,.92);
+
   /* These two were being invented at every call site as var(--line-2, #E7E0D5)
      and var(--surface-2, #F7F4EF) because they had never been declared. Nine
      different components were carrying their own copy of the same fallback, so
@@ -291,22 +319,137 @@ select{padding:13px;border:1px solid var(--line);border-radius:14px;font-size:15
 
   --radius: var(--r-md);
 
-  /* type scale ------------------------------------------------------ */
-  --t-xs:   12px;
-  --t-sm:   13.5px;
-  --t-base: 15px;
-  --t-md:   17px;
-  --t-lg:   21px;
-  --t-xl:   26px;
-  --t-2xl:  32px;
-  --t-3xl:  40px;
+  /* type scale ------------------------------------------------------
+     Bigger than the first pass, because the first pass was written for a
+     desk and read on a phone. The smallest step is 13 rather than 12,
+     which is the point at which text stops being legible without
+     zooming, and the muted colour is dark enough to pass on its own.
+     The scale grows about 8% at every step, so the rhythm is the same
+     as it was -- only the reading size is different. */
+  --t-xs:   13px;
+  --t-sm:   15px;
+  --t-base: 16.5px;
+  --t-md:   19px;
+  --t-lg:   23px;
+  --t-xl:   27px;
+  --t-2xl:  34px;
+  --t-3xl:  42px;
+
 
   /* elevation: teal-tinted, so shadows belong to the same family ------ */
   --sh-1: 0 1px 2px rgba(18, 32, 31, 0.06);
   --sh-2: 0 2px 10px rgba(18, 32, 31, 0.07);
   --sh-3: 0 12px 30px rgba(18, 32, 31, 0.10);
   --sh-tint: 0 8px 24px rgba(27, 126, 141, 0.26);
+  --sh-gold: 0 8px 24px rgba(154, 98, 18, .24);
+
+  /* the fill a button darkens towards when it is pressed, and the
+     glass when it is hovered */
+  --accent-hover: #0A343C;
+  --glass-strong: rgba(255, 255, 255, .92);
 }
+
+/* =====================================================================
+   Dark theme.
+
+   The same token names with darker values, so a component that reads
+   --card or --ink follows along without knowing a theme exists. The
+   neutrals are teal-tinted black rather than grey, so the dark surface
+   belongs to the same family as the accent.
+
+   The one thing that does not flip is the teal a button is filled with.
+   White writing on it has to stay above 4.5 to 1, and that means the
+   fill stays a mid teal in both themes. What changes is the accent used
+   for writing and for marks, which get lighter so they can be read on a
+   dark page.
+   ===================================================================== */
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* teal-tinted neutrals, inverted */
+  --n-0:   #102225;   /* a card */
+  --n-25:  #12272A;
+  --n-50:  #0B1618;   /* the page */
+  --n-100: #172B2E;   /* a pill */
+  --n-200: #22383B;   /* a line */
+  --n-300: #2C4549;   /* a stronger line, an input border */
+  --n-400: #6E8789;
+  --n-500: #8FA5A7;
+  --n-600: #A9BEC0;   /* muted writing: 8.4 to 1 on a card */
+  --n-700: #CBDADB;
+  --n-800: #E1ECEC;
+  --n-900: #F0F6F6;   /* the ink */
+
+  /* the teal ramp: the pale steps become the dark tints, and the deep
+     steps become the pale writing */
+  --teal-50:  #122C30;
+  --teal-100: #163A3F;
+  --teal-200: #1E4A50;
+  --teal-300: #2A646B;
+  --teal-400: #35838D;
+  --teal-500: #1B7E8D;
+  --teal-600: #2E8A96;
+  --teal-700: #14616E;
+  --teal-800: #4FA3AC;
+  --teal-900: #8FD6DE;
+
+  /* core */
+  --bg: var(--n-50);
+  --card: var(--n-0);
+  --ink: var(--n-900);
+  --mut: #A9BEC0;
+  --line: var(--n-200);
+  --line-2: var(--n-300);
+  --surface-2: #0E1D20;
+  --pill: var(--n-100);
+
+  /* the accent: the fill stays put so white writing still reads, and
+     the writing and the marks get lighter */
+  --accent: #1B7E8D;
+  --accent-ink: #8FD6DE;
+  --accent-mark: #4FA3AC;
+  --accent-deep: #14616E;
+  --accent-soft: #143034;
+  --accent-hover: #175E69;
+
+  /* gold */
+  --gold: #E3AC44;
+  --gold-ink: #EFC172;
+  --gold-soft: #2C2313;
+  --gold-track: #241C0B;
+  --gold-edge: #9A7A28;
+  --gold-mark: #E3AC44;
+
+  /* leaf and clay */
+  --leaf: #74C993;  --leaf-ink: #93DAAA;  --leaf-soft: #152A1D;
+  --clay: #E4936F;  --clay-ink: #EDA684;  --clay-soft: #2D1E17;
+
+  /* semantic */
+  --ok: #74C993;   --ok-soft: #152A1D;   --ok-line: #2C4C36;
+  --warn: #E3AC44; --warn-soft: #2C2313; --warn-line: #4B3C1A;
+  --bad: #E4936F;  --bad-soft: #2D1E17;  --bad-line: #553327;
+
+  /* the two gradients that carry writing */
+  --cta-1: #1B7E8D;  --cta-2: #14616E;  --cta-ink: #FFFFFF;
+  --paid-1: #A2680F; --paid-2: #6B4309; --paid-ink: #FFFFFF;
+
+  /* glass and veils */
+  --glass: rgba(16, 34, 37, .86);
+  --glass-line: rgba(143, 214, 222, .20);
+  --glass-strong: rgba(28, 52, 56, .96);
+  --veil-1: rgba(11, 22, 24, .72);
+  --veil-2: rgba(11, 22, 24, .94);
+  --nav-bg: rgba(11, 22, 24, .94);
+
+  /* a shadow on a dark page is a shadow and a hairline, not a smudge */
+  --sh-1: 0 1px 2px rgba(0, 0, 0, .45);
+  --sh-2: 0 2px 10px rgba(0, 0, 0, .50);
+  --sh-3: 0 12px 30px rgba(0, 0, 0, .55);
+  --sh-tint: 0 8px 24px rgba(27, 126, 141, .34);
+  --sh-gold: 0 8px 24px rgba(227, 172, 68, .26);
+}
+
 
 /* ---------------------------------------------------------------------
    Boards -- the filled panels. One component, four tones.
@@ -397,7 +540,7 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
    Motion and focus
    --------------------------------------------------------------------- */
 
-:focus-visible { outline: 3px solid var(--teal-400); outline-offset: 2px; border-radius: var(--r-xs); }
+:focus-visible { outline: 3px solid var(--accent-mark); outline-offset: 2px; border-radius: var(--r-xs); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -503,7 +646,7 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   gap: 9px;
   font-family: var(--font-manrope), -apple-system, 'Segoe UI', Inter, Roboto, sans-serif;
   font-weight: 800;
-  font-size: 19px;
+  font-size: var(--t-md);
   line-height: 1;
   letter-spacing: -0.022em;
   color: var(--ink);
@@ -519,7 +662,7 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   text-overflow: ellipsis;
 }
 
-.logo:focus-visible { outline: 3px solid var(--teal-400); outline-offset: 4px; border-radius: var(--r-xs); }
+.logo:focus-visible { outline: 3px solid var(--accent-mark); outline-offset: 4px; border-radius: var(--r-xs); }
 .logo img { display: block; flex: 0 0 auto; border-radius: 8px; }
 .logo-text { overflow: hidden; text-overflow: ellipsis; }
 /* The wordmark is an image, so it needs the vertical centring and shrink-to-fit that the
@@ -679,12 +822,98 @@ button *,
 
 @media (max-width: 560px) {
   .topbar { gap: 6px; }
-  .topbar .logo { font-size: 16px; gap: 7px; }
+  .topbar .logo { font-size: var(--t-base); gap: 7px; }
   .topbar .logo img { width: 22px; height: 22px; }
   .topbar-action-label { display: none; }
   .topbar-action-icon { display: block; }
   .topbar-action { padding: 0 10px; min-height: 36px; }
 }
+
+/* ---------------------------------------------------------------------
+   The appearance control.
+
+   A floating button, bottom right, clear of the bottom navigation, and
+   on every page. It is above the navigation rather than beside it,
+   because the navigation is the one thing on the screen that must
+   stay where it is.
+
+   It is a button and not a link, it has a name for screen readers, and
+   the menu it opens is a menu -- so it behaves the way a screen reader
+   says it does.
+   --------------------------------------------------------------------- */
+
+.appearance {
+  position: fixed;
+  right: 16px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+}
+
+.appearance-fab {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  color: var(--accent-mark);
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-2);
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--dur-1) var(--ease), background-color var(--dur-2) var(--ease);
+}
+.appearance-fab:hover { transform: translateY(var(--lift)); }
+.appearance-fab[aria-expanded='true'] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* The three marks are all in the page and the stylesheet picks one, so the button is
+   right in the very first paint. The script in the head has already put the choice on
+   the document, so the mark never appears and then changes. */
+.appearance-marks { position: relative; display: inline-flex; }
+.appearance-mark { display: none; }
+html[data-theme-choice='system'] .appearance-mark[data-mark='system'] { display: inline-flex; }
+html[data-theme-choice='light'] .appearance-mark[data-mark='light'] { display: inline-flex; }
+html[data-theme-choice='dark'] .appearance-mark[data-mark='dark'] { display: inline-flex; }
+
+.appearance-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  min-width: 186px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-3);
+  padding: 6px;
+}
+.appearance-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.appearance-menu button:hover { background: var(--pill); }
+.appearance-menu button[aria-checked='true'] { color: var(--accent-ink); }
+
+@media (min-width: 900px) {
+  .appearance { right: 24px; }
+}
+
 
 /* ---------------------------------------------------------------------
    Netlify's injected HUD badge
@@ -727,8 +956,8 @@ iframe[src*="/.netlify/scripts/hud"] {
   .btn:hover { transform: translateY(var(--lift)); box-shadow: var(--sh-2); }
   .btn.primary:hover { box-shadow: 0 12px 30px rgba(20, 97, 110, 0.30); }
   .btn.paid:hover { box-shadow: 0 12px 30px rgba(154, 98, 18, .32); }
-  .btn.ghost:hover { background: rgba(255, 255, 255, .9); }
-  .btn.link:hover { box-shadow: none; transform: none; color: var(--accent-deep); text-decoration: underline; }
+  .btn.ghost:hover { background: var(--glass-strong); }
+  .btn.link:hover { box-shadow: none; transform: none; color: var(--accent-ink); text-decoration: underline; }
   .logo:hover { color: var(--accent-ink); }
   .navicon:hover { background: var(--accent-soft); color: var(--accent-ink); }
   .navicon[aria-current='page']:hover { background: var(--accent-deep); color: #fff; }

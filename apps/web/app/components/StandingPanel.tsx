@@ -92,7 +92,7 @@ export default function StandingPanel({
             style={{
               background: 'var(--warn-soft)',
               color: 'var(--warn)',
-              fontSize: 24,
+              fontSize: 'var(--t-lg)',
               width: 52,
               height: 52,
               display: 'inline-flex',
@@ -108,7 +108,7 @@ export default function StandingPanel({
               <span className="sr-only">{data.rank.label}</span>
               {title}
             </span>
-            <span className="muted" style={{ display: 'block', fontSize: 13, marginTop: 2 }}>
+            <span className="muted" style={{ display: 'block', fontSize: 'var(--t-sm)', marginTop: 2 }}>
               {data.points.toLocaleString()} points ·{' '}
               {data.next
                 ? `${data.next.needed.toLocaleString()} to ${data.next.icon} ${data.next.label}`
@@ -131,9 +131,9 @@ export default function StandingPanel({
           <span
             aria-hidden
             style={{
-              flexShrink: 0, marginLeft: 'auto', color: 'var(--mut, #6b7378)',
+              flexShrink: 0, marginLeft: 'auto', color: 'var(--mut)',
               transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease',
-              fontSize: 14,
+              fontSize: 'var(--t-sm)',
             }}
           >
             ▾
@@ -155,16 +155,16 @@ export default function StandingPanel({
                 key={e.id}
                 style={{
                   display: 'flex', justifyContent: 'space-between', gap: 12,
-                  padding: '7px 0', borderTop: '1px solid var(--line)', fontSize: 14,
+                  padding: '7px 0', borderTop: '1px solid var(--line)', fontSize: 'var(--t-sm)',
                 }}
               >
                 <span>
                   {REASON_COPY[e.reason] ?? e.reason.replace(/_/g, ' ')}
-                  <span className="muted" style={{ marginLeft: 8, fontSize: 12.5 }}>
+                  <span className="muted" style={{ marginLeft: 8, fontSize: 'var(--t-xs)' }}>
                     {new Date(e.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                   </span>
                 </span>
-                <span style={{ fontWeight: 700, color: e.points >= 0 ? 'var(--warn)' : 'var(--danger, #b42318)' }}>
+                <span style={{ fontWeight: 700, color: e.points >= 0 ? 'var(--warn)' : 'var(--bad)' }}>
                   {e.points >= 0 ? '+' : ''}{e.points}
                 </span>
               </li>
@@ -187,17 +187,17 @@ export default function StandingPanel({
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '11px 13px', borderRadius: 'var(--r-sm)',
                   border: '1px solid var(--line)', textDecoration: 'none', color: 'inherit',
-                  background: 'var(--bg-soft, #fff)',
+                  background: 'var(--surface-2)',
                 }}
               >
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="u-h-sm" style={{ display: 'block' }}>{r.label}</span>
-                  <span className="muted" style={{ fontSize: 12.5 }}>{r.hint}</span>
+                  <span className="muted" style={{ fontSize: 'var(--t-xs)' }}>{r.hint}</span>
                 </span>
                 {r.value !== null && (
-                  <span style={{ fontWeight: 800, fontSize: 17 }}>{r.value}</span>
+                  <span style={{ fontWeight: 800, fontSize: 'var(--t-md)' }}>{r.value}</span>
                 )}
-                <span className="muted" aria-hidden style={{ fontSize: 18 }}>›</span>
+                <span className="muted" aria-hidden style={{ fontSize: 'var(--t-md)' }}>›</span>
               </a>
             ))}
           </div>

@@ -66,7 +66,7 @@ export default function AdminPayouts() {
       </p>
 
       {data && (
-        <p className="muted" style={{ fontSize: 14 }}>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
           Available balance:{' '}
           {data.balanceKnown && data.balanceNgn !== null ? naira(data.balanceNgn) : 'could not be read'}
           {' · '}minimum release {naira(data.minPayoutNgn)}
@@ -84,18 +84,18 @@ export default function AdminPayouts() {
         {data?.queue.map((row) => (
           <div key={row.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontWeight: 800, fontSize: 17 }}>{naira(row.amountNet)}</div>
-              <div style={{ fontSize: 14 }}>{row.trainerName}</div>
-              <div className="muted" style={{ fontSize: 13 }}>{row.trainingTitle}</div>
+              <div style={{ fontWeight: 800, fontSize: 'var(--t-md)' }}>{naira(row.amountNet)}</div>
+              <div style={{ fontSize: 'var(--t-sm)' }}>{row.trainerName}</div>
+              <div className="muted" style={{ fontSize: 'var(--t-sm)' }}>{row.trainingTitle}</div>
               {row.account ? (
-                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
                   {row.account.accountName} · {row.account.bankName} · ending {row.account.accountLast4}
                 </div>
               ) : (
-                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>No payout account on file</div>
+                <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>No payout account on file</div>
               )}
               {row.blockers.length > 0 && (
-                <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13 }}>
+                <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 'var(--t-sm)' }}>
                   {row.blockers.map((b) => (
                     <li key={b.code} style={{ color: 'var(--warn)' }}>{b.message}</li>
                   ))}

@@ -82,14 +82,14 @@ export default function PaymentDueBanner() {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span aria-hidden style={{ fontSize: 24 }}>💳</span>
+        <span aria-hidden style={{ fontSize: 'var(--t-lg)' }}>💳</span>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <b style={{ fontSize: 15 }}>
+          <b style={{ fontSize: 'var(--t-base)' }}>
             {due.length === 1
               ? `You have a seat waiting for payment`
               : `${due.length} seats are waiting for payment`}
           </b>
-          <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+          <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 2 }}>
             {due.map((d) => d.title).join(', ')} — {naira(total)} outstanding
           </div>
         </div>
@@ -102,7 +102,7 @@ export default function PaymentDueBanner() {
       </div>
 
       {due.some((d) => d.reference) && (
-        <p className="muted" style={{ fontSize: 12, margin: '10px 0 0' }}>
+        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '10px 0 0' }}>
           Payment reference{due.length > 1 ? 's' : ''}:{' '}
           {due.map((d) => d.reference).filter(Boolean).join(', ')} — quote this if you paid
           by bank transfer.

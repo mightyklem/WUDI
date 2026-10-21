@@ -47,7 +47,7 @@ export default function CertConsent({
           htmlFor={id}
           style={{
             display: 'flex', gap: 9, alignItems: 'center',
-            flex: 1, cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '6px 0',
+            flex: 1, cursor: 'pointer', fontSize: 'var(--t-sm)', fontWeight: 700, padding: '6px 0',
           }}
         >
           <input
@@ -68,7 +68,7 @@ export default function CertConsent({
           aria-controls={`${id}-detail`}
           aria-label={open ? 'Hide what this means' : 'Show what this means'}
           style={{
-            padding: '8px 10px', fontSize: 12, color: 'var(--mut, #6b7378)',
+            padding: '8px 10px', fontSize: 'var(--t-xs)', color: 'var(--mut)',
             minWidth: 34, textAlign: 'center',
           }}
         >
@@ -82,13 +82,13 @@ export default function CertConsent({
         <div
           id={`${id}-detail`}
           style={{
-            padding: '0 12px 12px', fontSize: 13, lineHeight: 1.55,
-            color: 'var(--ink-2, #454b4e)', borderTop: '1px solid var(--line-2)', paddingTop: 10, marginTop: 4,
+            padding: '0 12px 12px', fontSize: 'var(--t-sm)', lineHeight: 1.55,
+            color: 'var(--mut)', borderTop: '1px solid var(--line-2)', paddingTop: 10, marginTop: 4,
           }}
         >
           Your name and certificate number become viewable by anyone with the link. Leave
           this unticked and you still get your certificate — it just is not published.{' '}
-          <Link href="/privacy" target="_blank" className="btn link" style={{ fontSize: 13 }}>
+          <Link href="/privacy" target="_blank" className="btn link" style={{ fontSize: 'var(--t-sm)' }}>
             Privacy policy
           </Link>
         </div>

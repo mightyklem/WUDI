@@ -56,7 +56,7 @@ function ResetForm() {
         value={pw}
         onChange={(e) => setPw(e.target.value)}
       />
-      <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+      <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
         At least 8 characters, mixing letters and numbers.
       </p>
       <label className="fl">Type it again</label>

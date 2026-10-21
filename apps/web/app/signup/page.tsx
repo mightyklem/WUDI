@@ -129,7 +129,7 @@ export default function Signup() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
             placeholder="••••••"
-            style={{ letterSpacing: 10, fontSize: 24, fontWeight: 700, maxWidth: 260 }}
+            style={{ letterSpacing: 10, fontSize: 'var(--t-lg)', fontWeight: 700, maxWidth: 260 }}
           />
           <div className="btnrow">
             <button className="btn primary lg" type="submit" disabled={busy || code.length !== 6}>
@@ -158,19 +158,19 @@ export default function Signup() {
         <div className="surface surface-hero pat-weave rise" style={{ marginTop: 18, padding: 'var(--s-6) var(--s-5)' }}>
           <div className="u-flex">
             <span className={`tile-icon ${s.tint}`} aria-hidden>{s.icon}</span>
-            <span style={{ fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
+            <span style={{ fontSize: 'var(--t-xs)', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
               Step {step + 1} of {STEPS.length}
             </span>
           </div>
 
-          <h1 key={s.title} className="rise" style={{ marginTop: 16, fontSize: 30, lineHeight: 1.15, maxWidth: 480 }}>{s.title}</h1>
-          <p className="sub" style={{ fontSize: 17, maxWidth: 460 }}>{s.body}</p>
+          <h1 key={s.title} className="rise" style={{ marginTop: 16, fontSize: 'var(--t-2xl)', lineHeight: 1.15, maxWidth: 480 }}>{s.title}</h1>
+          <p className="sub" style={{ fontSize: 'var(--t-md)', maxWidth: 460 }}>{s.body}</p>
 
           <div style={{ display: 'grid', gap: 9, marginTop: 20 }}>
             {s.points.map((pt, i) => (
               <div key={pt} className={`rise rise-${i + 1}`} style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
                 <span className="tile-icon tint-neutral" aria-hidden
-                  style={{ width: 28, height: 28, borderRadius: 'var(--r-xs)', fontSize: 14 }}>✓</span>
+                  style={{ width: 28, height: 28, borderRadius: 'var(--r-xs)', fontSize: 'var(--t-sm)' }}>✓</span>
                 <span style={{ fontSize: 'var(--t-base)' }}>{pt}</span>
               </div>
             ))}

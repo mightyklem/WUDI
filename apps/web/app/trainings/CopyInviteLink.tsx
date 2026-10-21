@@ -49,9 +49,9 @@ export default function CopyInviteLink({ url, label = 'Invite link' }: { url: st
           value={url}
           aria-label={`${label} to copy`}
           onFocus={(e) => e.currentTarget.select()}
-          style={{ maxWidth: 320, fontSize: 13, padding: '6px 10px' }}
+          style={{ maxWidth: 320, fontSize: 'var(--t-sm)', padding: '6px 10px' }}
         />
-        <button className="btn primary" style={{ minHeight: 0, padding: '7px 14px', fontSize: 13 }} onClick={copy}>
+        <button className="btn primary" style={{ minHeight: 0, padding: '7px 14px', fontSize: 'var(--t-sm)' }} onClick={copy}>
           {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
@@ -65,7 +65,7 @@ export default function CopyInviteLink({ url, label = 'Invite link' }: { url: st
       )}
 
       {failed && (
-        <span className="muted" style={{ fontSize: 13 }}>
+        <span className="muted" style={{ fontSize: 'var(--t-sm)' }}>
           Copy was blocked — select the link above and copy it manually.
         </span>
       )}

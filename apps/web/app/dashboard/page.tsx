@@ -7,7 +7,7 @@ import SiteNav from '../components/SiteNav';
 import StandingPanel from '../components/StandingPanel';
 import UpNext from '../components/UpNext';
 import { authFetch, getAccess } from '@/lib/client-auth';
-import { greetingFor, headlineFor, tilesFor } from '@/lib/dashboard-roles';
+import { greetingFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel } from '@/lib/lagos';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import Tabs from '../components/Tabs';
@@ -96,7 +96,6 @@ export default function Dashboard() {
   }
 
   const { role } = me.user;
-  const head = headlineFor(role);
   const tiles = tilesFor(role, { seats, certs });
   const greeting = greetingFor(now ?? new Date());
   // The name they gave us, if they gave us one. The API sends it precisely so a surface
@@ -121,14 +120,13 @@ export default function Dashboard() {
           mark changes with the hour, so the top of the screen says something about now
           instead of only about the job. */}
       <h1 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span aria-hidden style={{ display: 'inline-flex', color: 'var(--accent)' }}>
+        <span aria-hidden style={{ display: 'inline-flex', color: 'var(--accent-mark)' }}>
           <Icon name={greeting.icon} size={30} strokeWidth={2} />
         </span>
         {greeting.text}{name ? `, ${name}` : ''}
       </h1>
-      <p className="sub">{head.title}</p>
       {/* The address was how we said who was here, back when the heading named a job
-          rather than a person. Once the greeting carries the name it is a third line
+          rather than a person. Once the greeting carries the name it is a second line
           saying the same thing, so it only stays for somebody who has not given us a
           name to use. */}
       {!name && <p className="u-sub-sm" style={{ marginTop: 4 }}>{me.user.email}</p>}
@@ -155,7 +153,7 @@ export default function Dashboard() {
       {role === 'trainer' && me.trainer && !me.trainer.canOfferPaidCert && (
         <div className="ux-card" style={{ marginTop: 16, borderLeft: '4px solid var(--warn)' }}>
           <div className="u-flex">
-            <span className="ibadge" style={{ background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 18 }} aria-hidden>⏳</span>
+            <span className="ibadge" style={{ background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 'var(--t-md)' }} aria-hidden>⏳</span>
             <div>
               <p className="u-h">
                 Teaching verification: {String(me.trainer.approvalState || 'none').toLowerCase()}
@@ -172,7 +170,7 @@ export default function Dashboard() {
       {role === 'trainer' && pendingTotal > 0 && (
         <div className="ux-card" style={{ marginTop: 12, borderLeft: '4px solid var(--leaf)' }}>
           <div className="u-flex">
-            <span className="ibadge" style={{ background: 'var(--ok-soft)', color: 'var(--leaf)', fontSize: 18 }} aria-hidden>✓</span>
+            <span className="ibadge" style={{ background: 'var(--ok-soft)', color: 'var(--leaf)', fontSize: 'var(--t-md)' }} aria-hidden>✓</span>
             <div style={{ flex: 1 }}>
               <p className="u-h">{pendingTotal} awaiting your approval</p>
               <p className="muted u-sub">Attendees who met the bar</p>
@@ -199,7 +197,7 @@ export default function Dashboard() {
             ]}
             value={tab}
             onChange={(k) => setTab(k as 'upcoming' | 'past')}
-            accent="#FBBF24"
+            variant="gold"
           />
 
           {/* Space between the strip and the first card. Without it the selected tab
@@ -296,7 +294,7 @@ export default function Dashboard() {
           >
             <span
               className="ibadge"
-              style={{ background: t.bg, color: t.fg, width: 46, height: 46, borderRadius: 15, fontSize: 22 }}
+              style={{ background: t.bg, color: t.fg, width: 46, height: 46, borderRadius: 15, fontSize: 'var(--t-lg)' }}
               aria-hidden
             >
               {t.icon}

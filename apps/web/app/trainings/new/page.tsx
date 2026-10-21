@@ -153,7 +153,7 @@ export default function NewTraining() {
               {band.label} accepts {formatNgn(band.min)}{band.max !== null ? ` to ${formatNgn(band.max)}` : ' and above'} per day.
             </p>
 
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, fontSize: 14 }}>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, fontSize: 'var(--t-sm)' }}>
               <input type="checkbox" checked={wantsCertificate} onChange={(e) => setWantsCertificate(e.target.checked)} />
               Issue a certificate to participants who meet the attendance rule
             </label>
@@ -204,7 +204,7 @@ export default function NewTraining() {
         </div>
         {badRow && <p className="err u-mt-half">{badRow.error}</p>}
         {!badRow && sessions.length > 0 && (
-          <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+          <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 8 }}>
             {sessions.map((s, i) => `${i + 1}. ${lagosRangeLabel(s.startsAtUtc, s.endsAtUtc)}`).join('  ·  ')}
           </p>
         )}
