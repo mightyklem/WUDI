@@ -1,6 +1,9 @@
 // Role -> what this person sees on their home. Kept pure and separate from the
 // component so the mapping itself can be tested without a browser.
 
+import type { IconName } from '@/components/Icon';
+import { lagosHour } from './lagos';
+
 export type Role = 'admin' | 'trainer' | 'participant';
 
 export type Tile = {
@@ -24,10 +27,36 @@ export function roleOf(user: { isAdmin: boolean; isTrainer: boolean }): Role {
   return 'participant';
 }
 
+/**
+ * What this person's home is for, in one line.
+ *
+ * It is a label for the page, not a welcome -- the greeting at the top of the screen
+ * says hello, and this says what they are looking at when they get there.
+ */
 export function headlineFor(role: Role) {
-  if (role === 'admin') return { icon: '🛡', title: 'Run the platform' };
-  if (role === 'trainer') return { icon: '🎥', title: 'Run your classes' };
-  return { icon: '🙂', title: 'Welcome back' };
+  if (role === 'admin') return { title: 'Run the platform' };
+  if (role === 'trainer') return { title: 'Run your classes' };
+  return { title: 'Your seats and certificates' };
+}
+
+/**
+ * The greeting at the top of the home page, and the mark that goes with it.
+ *
+ * The old heading named the job -- "Run your classes" -- which is a label for the page
+ * rather than a welcome, and it is the same words for every hour of the day. Somebody
+ * opening the app at six in the morning and again at eight in the evening gets the same
+ * two words, so the page never acknowledges that they are there at all.
+ *
+ * The hour is the one in Lagos, not the one in the browser, because Lagos is where the
+ * classes are taught and where the people opening this app are.
+ */
+export function greetingFor(now: Date = new Date()): { icon: IconName; text: string } {
+  const hour = lagosHour(now);
+  if (hour < 5) return { icon: 'moon', text: 'Good night' };
+  if (hour < 12) return { icon: 'sunrise', text: 'Good morning' };
+  if (hour < 17) return { icon: 'sun', text: 'Good afternoon' };
+  if (hour < 21) return { icon: 'sunset', text: 'Good evening' };
+  return { icon: 'moon', text: 'Good night' };
 }
 
 export function tilesFor(role: Role, badges: Badges = {}): Tile[] {

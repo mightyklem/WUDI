@@ -95,6 +95,20 @@ export function lagosToday(): string {
 }
 
 /**
+ * The hour of the day in Lagos, 0-23.
+ *
+ * The clock that matters here is the one the person is living in, not the one their
+ * browser is set to. A trainer in Lagos opening the app on a phone that is on UTC --
+ * which is the default on a lot of phones bought for use abroad -- would otherwise be
+ * told it is the middle of the night.
+ */
+export function lagosHour(now: Date = new Date()): number {
+  const { time } = utcToLagosParts(now);
+  if (!time) return now.getUTCHours();
+  return Number(time.slice(0, 2));
+}
+
+/**
  * Learner-facing time, in West Africa Time.
  *
  * Times used to be shown in UTC, which nobody scheduling a 9pm class thinks in. A

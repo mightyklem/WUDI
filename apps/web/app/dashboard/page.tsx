@@ -7,14 +7,18 @@ import SiteNav from '../components/SiteNav';
 import StandingPanel from '../components/StandingPanel';
 import UpNext from '../components/UpNext';
 import { authFetch, getAccess } from '@/lib/client-auth';
-import { headlineFor, tilesFor } from '@/lib/dashboard-roles';
+import { greetingFor, headlineFor, tilesFor } from '@/lib/dashboard-roles';
 import { lagosWhenLabel } from '@/lib/lagos';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import Tabs from '../components/Tabs';
 import { UxCard, UxCta } from '../components/ux';
+import Icon from '@/components/Icon';
 
 type Me = {
-  user: { id: string; email: string; role: 'admin' | 'trainer' | 'participant'; verified: boolean };
+  user: {
+    id: string; email: string; role: 'admin' | 'trainer' | 'participant'; verified: boolean;
+    fullName: string | null;
+  };
   trainer: { displayName: string; approvalState: string; canOfferPaidCert: boolean; plan: string } | null;
 };
 
@@ -38,6 +42,15 @@ export default function Dashboard() {
   // Which list of classes is open. One at a time: a trainer looking for the class they have
   // to run next should not have to scroll past the ones they already ran.
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  // The clock, read again every minute. A greeting that says good morning at noon
+  // because the tab was opened at nine is worse than no greeting at all.
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Through authFetch, so an expired token renews itself instead of every one of these
   // four calls failing with a 401 and dumping the person at the login page.
@@ -85,6 +98,10 @@ export default function Dashboard() {
   const { role } = me.user;
   const head = headlineFor(role);
   const tiles = tilesFor(role, { seats, certs });
+  const greeting = greetingFor(now ?? new Date());
+  // The name they gave us, if they gave us one. The API sends it precisely so a surface
+  // can say hello to a person rather than to an address.
+  const name = (me.user.fullName || '').trim();
 
   const pendingTotal = (trainings || []).reduce((n, t) => n + t.pendingApproval, 0);
 
@@ -100,11 +117,17 @@ export default function Dashboard() {
     <div className="wrap">
       <SiteNav />
 
+      {/* A welcome that knows what time it is, rather than a label for the page. The
+          mark changes with the hour, so the top of the screen says something about now
+          instead of only about the job. */}
       <h1 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span aria-hidden className="u-num">{head.icon}</span>
-        {head.title}
+        <span aria-hidden style={{ display: 'inline-flex', color: 'var(--accent)' }}>
+          <Icon name={greeting.icon} size={30} strokeWidth={2} />
+        </span>
+        {greeting.text}{name ? `, ${name}` : ''}
       </h1>
-      <p className="sub">{me.user.email}</p>
+      <p className="sub">{head.title}</p>
+      <p className="u-sub-sm" style={{ marginTop: 4 }}>{me.user.email}</p>
 
       {/* Anything unpaid, before anything else on the page. */}
       <PaymentDueBanner />
@@ -175,7 +198,9 @@ export default function Dashboard() {
             accent="#FBBF24"
           />
 
-          <div style={{ display: 'grid', gap: 12 }}>
+          {/* Space between the strip and the first card. Without it the selected tab
+              sat directly on the card, and the two read as one object. */}
+          <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
             {tab === 'upcoming' && upcoming.map((t) => {
               const sessionId = t.nextSession as string;
               // One class is marked as the one to do next. It used to have a card of its

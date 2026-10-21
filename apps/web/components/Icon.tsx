@@ -18,7 +18,7 @@ export type IconName =
   | 'shield' | 'wallet' | 'badge' | 'search' | 'close' | 'chevron-right'
   | 'chevron-left' | 'arrow-right' | 'play' | 'sparkles' | 'alert'
   | 'info' | 'link' | 'download' | 'book' | 'grid' | 'expand' | 'home' | 'logout' | 'flip'
-  | 'bell';
+  | 'bell' | 'sunrise' | 'sun' | 'sunset' | 'moon';
 
 const P: Record<IconName, string> = {
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
@@ -67,6 +67,12 @@ const P: Record<IconName, string> = {
     // and reusing it for "you have unread mail" would make the two indistinguishable.
     bell: 'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
   logout: 'M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l-5-5 5-5M5 12h11',
+    // The hour of the day, drawn rather than borrowed from the emoji set. A sun that is
+    // half up is a morning; one that is half down is an evening.
+  sunrise: 'M3 18h18M7 18a5 5 0 0 1 10 0M12 3v3M5.6 7.6 7 9M18.4 7.6 17 9',
+  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 3v2M12 19v2M4.9 4.9 6.3 6.3M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1 6.3 17.7M17.7 6.3l1.4-1.4',
+  sunset: 'M3 17h18M7 17a5 5 0 0 0 10 0M12 3v3M5.6 7.6 7 9M18.4 7.6 17 9',
+  moon: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z',
 };
 
 /** Icons whose meaning changes with state, paired here so callers stay honest. */
