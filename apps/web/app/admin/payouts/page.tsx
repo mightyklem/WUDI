@@ -33,6 +33,12 @@ type AccountRecord = {
   pendingNgn: number; pendingCount: number; shortByNgn: number; waitingNgn: number;
 };
 
+type ConfigReport = {
+  ok: boolean;
+  payoutsReady: boolean;
+  settings: { name: string; why: string; present: boolean; problem?: string }[];
+};
+
 const naira = (n: number) => `₦${n.toLocaleString('en-NG')}`;
 
 /** How a name check is said on screen. The colour is the message. */
@@ -67,6 +73,7 @@ export default function AdminPayouts() {
   const [tab, setTab] = useState<'queue' | 'accounts'>('queue');
   const [data, setData] = useState<Queue | null>(null);
   const [records, setRecords] = useState<AccountRecord[] | null>(null);
+  const [config, setConfig] = useState<ConfigReport | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -90,6 +97,7 @@ export default function AdminPayouts() {
     if (r.ok) {
       const j = await r.json();
       setRecords(j.records || []);
+      if (j.config) setConfig(j.config);
     } else {
       setErr('Could not load payout accounts.');
     }
@@ -315,6 +323,27 @@ export default function AdminPayouts() {
 
       {tab === 'accounts' && (
         <div style={{ display: 'grid', gap: 12 }}>
+          {/* What this deployment is set up for. A missing setting shows up here,
+              rather than as a trainer's save failing with nothing to go on. */}
+          {config && !config.ok && (
+            <div className="board board-bad">
+              <p className="board-tag">This deployment is not fully configured</p>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 'var(--t-sm)' }}>
+                {config.settings.filter((s) => !s.present || s.problem).map((s) => (
+                  <li key={s.name}>
+                    <b>{s.name}</b> — needed for {s.why}. {s.problem ? `It ${s.problem}.` : 'Not set.'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {config && config.ok && (
+            <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
+              This deployment is fully configured — payouts, email, uploads and live
+              classes are all set up.
+            </p>
+          )}
+
           <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>
             Every trainer who is verified or has an account on file. The account number
             is never shown — it is encrypted, and it is only used at the moment a

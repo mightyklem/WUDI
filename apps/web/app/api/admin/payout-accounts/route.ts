@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
 import { isAdmin } from '@/lib/admin';
 import { payoutAccountRecords } from '@/lib/payout-accounts';
+import { configReport } from '@/lib/config-check';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,9 @@ export const dynamic = 'force-dynamic';
  *
  * The account number is not here and never will be. It is encrypted at rest and is
  * only used at the moment a transfer is made.
+ *
+ * `config` says what this deployment is set up for, so that a missing setting shows
+ * up on a screen instead of showing up as a failed save.
  */
 export async function GET(req: Request) {
   const token = getBearer(req);
@@ -24,5 +28,5 @@ export async function GET(req: Request) {
 
   const records = await payoutAccountRecords();
 
-  return NextResponse.json({ records });
+  return NextResponse.json({ records, config: configReport() });
 }
