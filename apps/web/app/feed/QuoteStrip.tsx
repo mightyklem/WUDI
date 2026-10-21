@@ -38,8 +38,8 @@ export function QuoteStrip() {
       style={{
         marginTop: 16,
         padding: '22px 24px',
-        background: '#fff',
-        border: '1px solid var(--n-200)',
+        background: 'var(--card)',
+        border: '1px solid var(--line)',
         borderRadius: 14,
         borderLeft: '4px solid var(--accent)',
       }}

@@ -63,7 +63,7 @@ export default function Trainers() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name, topic or bio"
           aria-label="Search trainers"
-          style={{ width: '100%', padding: '13px 44px 13px 14px', borderRadius: 12, border: '1px solid var(--line)', background: '#fff', fontSize: 'var(--t-base)' }}
+          style={{ width: '100%', padding: '13px 44px 13px 14px', borderRadius: 12, border: '1px solid var(--line)', background: 'var(--card)', fontSize: 'var(--t-base)' }}
         />
         {q && (
           <button

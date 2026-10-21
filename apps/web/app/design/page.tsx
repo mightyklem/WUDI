@@ -144,7 +144,7 @@ export default function DesignSystem() {
       <h2 className="sec">Elevation</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 14 }}>
         {SHADOWS.map((s) => (
-          <div key={s.k} style={{ background: '#fff', borderRadius: 'var(--r-md)', padding: 18,
+          <div key={s.k} style={{ background: 'var(--card)', borderRadius: 'var(--r-md)', padding: 18,
             boxShadow: s.style, border: '1px solid var(--line)' }}>
             <b className="u-block14">{s.v}</b>
             <code style={{ fontSize: 12, color: 'var(--mut)' }}>{s.k}</code>

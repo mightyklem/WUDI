@@ -62,7 +62,7 @@ export default async function Home() {
           ].map((p, i) => (
             <Link key={p.href} href={p.href} className={`rise rise-${i + 1}`} style={{
               display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none',
-              color: 'var(--ink)', background: 'rgba(255,255,255,.72)', border: '1px solid var(--line)',
+              color: 'var(--ink)', background: 'var(--glass)', border: '1px solid var(--line)',
               borderRadius: 'var(--r-md)', padding: '13px 14px', boxShadow: 'var(--sh-1)',
               transition: 'transform var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease)',
             }}>
@@ -101,7 +101,7 @@ export default async function Home() {
                     {s.training.trainer.displayName} · ends {lagosWhenLabel(s.endsAtUtc)}
                   </div>
                 </div>
-                <Link className="btn" href={`/classroom/${s.id}`} style={{ background: '#fff', color: 'var(--accent-ink)', borderColor: '#fff' }}>
+                <Link className="btn" href={`/classroom/${s.id}`} style={{ background: 'var(--card)', color: 'var(--accent-ink)', borderColor: 'var(--card)' }}>
                   Join now
                 </Link>
               </div>

@@ -689,6 +689,15 @@ label { font-size: var(--t-sm); color: var(--mut); font-weight: 600; }
   border-radius: 0;
 }
 
+/* The wordmark is a picture, and the picture is a dark teal -- #0C343C, which is
+   about 1.4 to 1 on the dark page. So it was there and could not be read. The
+   picture is turned inside out and spun back to the same teal, which lands on a
+   pale teal that holds 12 to 1 on the dark page, and it only happens in the
+   dark theme, so the printed wordmark and the certificates are untouched. */
+[data-theme='dark'] .topbar .logo .logo-word {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 @media (max-width: 560px) {
   /* Scaled down, ratio intact: 13 tall, which is 60% of the 22px mark. */
   .topbar .logo .logo-word { width: 86px; height: 13px; }

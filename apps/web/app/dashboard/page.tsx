@@ -282,7 +282,9 @@ export default function Dashboard() {
             key={t.href + t.label}
             href={t.href}
             style={{
-              background: '#fff',
+              // The card layer, not a white one. A white tile in a dark theme is a
+              // white tile with light writing on it, which is nothing at all.
+              background: 'var(--card)',
               border: '1px solid var(--line)',
               borderRadius: 18,
               padding: '18px 16px',
