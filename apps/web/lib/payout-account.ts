@@ -80,6 +80,8 @@ export async function savePayoutAccount(
     /** The name the trainer gives the account. */
     declaredName?: string;
     holderType?: string;
+    /** A statement in the name of a business account. */
+    statementKey?: string | null;
   },
 ) {
   const tail = last4(input.accountNumber);
@@ -88,6 +90,11 @@ export async function savePayoutAccount(
 
   const existing = await prisma.payoutAccount.findFirst({ where: { trainerId } });
   const encrypted = encryptSecret(input.accountNumber.replace(/\s/g, ''));
+
+  // A statement that is not replaced is kept. A trainer changing their account number
+  // should not lose the statement they uploaded for the last one, and a trainer
+  // changing nothing should not have to upload it again.
+  const statementKey = input.statementKey ?? existing?.statementKey ?? null;
 
   const saved = existing
     ? await prisma.payoutAccount.update({
@@ -100,6 +107,7 @@ export async function savePayoutAccount(
           accountName: input.accountName,
           declaredName: declared,
           holderType,
+          statementKey,
           // Re-resolved above, so this is cleared until a fresh transferrecipient is made.
           recipientCode: null,
           verifiedAt: new Date(),
@@ -115,6 +123,7 @@ export async function savePayoutAccount(
           accountName: input.accountName,
           declaredName: declared,
           holderType,
+          statementKey,
           verifiedAt: new Date(),
         },
       });
@@ -150,6 +159,9 @@ export async function payoutAccountFor(trainerId: string) {
     // Whose account it is. A business account is registered in the name of the
     // business, so its name is not the trainer's name and is not compared with it.
     holderType: a.holderType || 'personal',
+    // Whether a statement in the name of a business account is on file. The key itself
+    // never leaves the server.
+    hasStatement: !!a.statementKey,
     // The name we hold for this trainer, shown so they can see it beside the account.
     nameOnFile: user?.fullName || profile?.displayName || null,
     nameCheck: check,

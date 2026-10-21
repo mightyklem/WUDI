@@ -45,6 +45,8 @@ export type AccountRecord = {
   approvalId: string | null;
   hasIdentityDocument: boolean;
   hasBankStatement: boolean;
+  /** A statement in the name of a business payout account. */
+  hasAccountStatement: boolean;
   account: {
     bankCode: string;
     bankName: string;
@@ -139,6 +141,7 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
           accountNumberLast4: true,
           recipientCode: true,
           holderType: true,
+          statementKey: true,
           verifiedAt: true,
           createdAt: true,
           updatedAt: true,
@@ -219,6 +222,7 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
       approvalId: approval?.id || null,
       hasIdentityDocument: !!approval?.idDocUrls?.length,
       hasBankStatement: !!approval?.bankStatementKey,
+      hasAccountStatement: !!account?.statementKey,
       account: account
         ? {
             bankCode: account.bankCode,

@@ -9,7 +9,7 @@ type NameCheck = { result: 'match' | 'partial' | 'mismatch' | 'unknown'; detail:
 type Account = {
   bankCode: string; bankName: string; accountName: string;
   declaredName: string | null; accountLast4: string;
-  verified: boolean; hasRecipient: boolean;
+  verified: boolean; hasRecipient: boolean; hasStatement: boolean;
   holderType: string; nameOnFile: string | null; nameCheck: NameCheck;
 } | null;
 
@@ -21,6 +21,8 @@ export default function PayoutSettings() {
   // The name the trainer gives the account. They are the one who knows it: a business
   // account is in the name of the business, and a bank writes a name its own way.
   const [declaredName, setDeclaredName] = useState('');
+  // A statement in the name of the account, for a business account.
+  const [statementFile, setStatementFile] = useState<File | null>(null);
   // Whose account this is. A business account is registered in the name of the
   // business, which is not the trainer's name, and saying which it is keeps that from
   // looking like something is wrong.
@@ -54,6 +56,28 @@ export default function PayoutSettings() {
     setMsg(null);
     setErr(null);
     try {
+      // The statement is uploaded first, and the account is saved with it. A business
+      // account is in the name of the business, so the statement that shows the account
+      // is the trainer's has to be in that name too, and an admin can only confirm it
+      // if it is there.
+      let statementKey: string | undefined;
+      if (statementFile) {
+        const form = new FormData();
+        form.append('file', statementFile);
+        form.append('kind', 'accountstatement');
+        const up = await authFetch('/api/uploads', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${access}` },
+          body: form,
+        });
+        const uj = await up.json().catch(() => ({}));
+        if (!up.ok) {
+          setErr(uj.error || 'That statement could not be uploaded.');
+          return;
+        }
+        statementKey = uj.key;
+      }
+
       const r = await authFetch('/api/trainer/payout-account', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
@@ -63,6 +87,7 @@ export default function PayoutSettings() {
           accountNumber: number,
           holderType,
           declaredName,
+          statementKey,
         }),
       });
       const j = await r.json().catch(() => ({}));
@@ -72,6 +97,7 @@ export default function PayoutSettings() {
       }
       setAccount(j.account);
       setNumber('');
+      setStatementFile(null);
       setMsg('Saved. An admin reviews payouts, and yours is now on file.');
     } finally {
       setBusy(false);
@@ -109,6 +135,13 @@ export default function PayoutSettings() {
               ? '✓ Verified with your bank'
               : 'Not yet verified — payouts are held until this is confirmed.'}
           </p>
+          {account.holderType === 'business' && (
+            <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
+              {account.hasStatement
+                ? '✓ A statement in the business name is on file.'
+                : 'No statement in the business name yet. An admin reads one to confirm the account is yours, so it is worth adding it below.'}
+            </p>
+          )}
 
           {/* The name they gave, against the name the bank has. This is a check of
               their own claim and not a demand that the account be in the name they
@@ -207,7 +240,6 @@ export default function PayoutSettings() {
         <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
           We check the number against your bank and show you the name it belongs to before
           saving. Your number is stored encrypted.
-          {holderType === 'business' && ' We will ask for a bank statement in the business name, so an admin can confirm the account is yours.'}
         </p>
 
         {/* The name the account is in. The trainer is the one who knows it: a business
@@ -229,6 +261,26 @@ export default function PayoutSettings() {
           against your bank, so if the two do not agree we will tell you before anything
           is sent.
         </p>
+
+        {/* A business account is in the name of the business, so the statement that
+            shows the account is the trainer's has to be in that name. It is asked for
+            here, where the account is, because the account may not exist yet at the
+            point they are approved. */}
+        {holderType === 'business' && (
+          <>
+            <label className="fl">A bank statement in the business name</label>
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(e) => setStatementFile(e.target.files?.[0] || null)}
+            />
+            <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
+              {account?.hasStatement
+                ? 'You have already supplied one. A new one will replace it.'
+                : 'A statement from the account you want to be paid into, in the name of the business. An admin reads it to confirm the account is yours. It is stored privately, and every staff view of it is recorded.'}
+            </p>
+          </>
+        )}
 
         <div className="btnrow" style={{ marginTop: 14 }}>
           <button className="btn primary" type="submit" disabled={busy || !bankCode || !number || !declaredName.trim()}>

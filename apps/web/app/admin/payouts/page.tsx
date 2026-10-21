@@ -24,7 +24,7 @@ type Queue = { queue: Row[]; balanceNgn: number | null; balanceKnown: boolean; m
 type AccountRecord = {
   trainerId: string; trainerName: string; trainerEmail: string; teachingName: string;
   identityState: string; identityApprovedAt: string | null; approvalId: string | null;
-  hasIdentityDocument: boolean; hasBankStatement: boolean;
+  hasIdentityDocument: boolean; hasBankStatement: boolean; hasAccountStatement: boolean;
   account: {
     bankCode: string; bankName: string; accountName: string; declaredName: string | null;
     accountLast4: string; holderType: string; setAt: string; changedSinceApproval: boolean;
@@ -132,6 +132,20 @@ export default function AdminPayouts() {
     } finally {
       setBusy(null);
     }
+  }
+
+  async function openStatement(trainerId: string) {
+    const access = getAccess();
+    if (!access) return;
+    const r = await authFetch(`/api/admin/payout-accounts/${trainerId}/statement`, {
+      headers: { authorization: `Bearer ${access}` },
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      setErr(j.error || 'Could not open that statement.');
+      return;
+    }
+    if (j.url) window.open(j.url, '_blank', 'noopener');
   }
 
   return (
@@ -335,6 +349,23 @@ export default function AdminPayouts() {
                         colour="var(--mut)"
                         bg="var(--pill)"
                       />
+                    )}
+                    {r.hasAccountStatement ? (
+                      <button
+                        className="btn"
+                        style={{ padding: '4px 12px', minHeight: 0, fontSize: 'var(--t-xs)' }}
+                        onClick={() => openStatement(r.trainerId)}
+                      >
+                        Open the business statement
+                      </button>
+                    ) : (
+                      r.account?.holderType === 'business' && (
+                        <Chip
+                          text="No business statement on file"
+                          colour="var(--gold-ink)"
+                          bg="var(--gold-soft)"
+                        />
+                      )
                     )}
                   </div>
 

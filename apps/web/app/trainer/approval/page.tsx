@@ -205,11 +205,12 @@ export default function Approval() {
           accept=".jpg,.jpeg,.png,.pdf"
           onChange={(e) => setBankFile(e.target.files?.[0] || null)}
         />
-        <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 14px' }}>
-          In your own name, from the account you want to be paid into. A verified account
-          proves the account exists — not that it is yours, which is the part we cannot
-          check without this. 10MB max.
-        </p>
+          <p className="muted" style={{ fontSize: 'var(--t-xs)', margin: '8px 0 14px' }}>
+            In the name of the account you want to be paid into — your own name, or the
+            name of your business. A verified account proves the account exists - not
+            that it is yours, which is the part we cannot check without this. 10MB max.
+          </p>
+
 
         <label className="fl">Proof of expertise</label>
         <textarea rows={3} value={evidence} onChange={(e) => setEvidence(e.target.value)} />

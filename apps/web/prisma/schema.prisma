@@ -771,6 +771,13 @@ model PayoutAccount {
   // trainer's own name and should not be treated as a warning when it does not match.
   // The trainer declares which it is, and the declaration is what the check follows.
   holderType         String         @default("personal") // personal|business
+  // A statement in the name of a business account.
+  //
+  // A business account is in the name of the business, so the statement that proves
+  // the account belongs to the trainer has to be in the business name too, and it is
+  // asked for at the point the account is set up rather than at identity approval
+  // because the account may not exist yet when they are approved.
+  statementKey       String?
   // Paystack's reusable handle for this account. Creating it is what makes a later
   // transfer a two-line call rather than re-resolving every time.
   recipientCode      String?

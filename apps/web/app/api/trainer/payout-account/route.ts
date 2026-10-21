@@ -35,9 +35,9 @@ export async function POST(req: Request) {
   const profile = await prisma.trainerProfile.findUnique({ where: { userId }, select: { userId: true } });
   if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
 
-  const { bankCode, bankName, accountNumber, holderType, declaredName } = (await req.json().catch(() => ({}))) as {
+  const { bankCode, bankName, accountNumber, holderType, declaredName, statementKey } = (await req.json().catch(() => ({}))) as {
     bankCode?: string; bankName?: string; accountNumber?: string;
-    holderType?: string; declaredName?: string;
+    holderType?: string; declaredName?: string; statementKey?: string;
   };
 
   // Whose account it is. A business account is registered in the name of the business,
@@ -77,6 +77,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: resolved.error }, { status: 422 });
   }
 
+  // A statement in the name of a business account.
+  //
+  // Same ownership rule as the ID keys: it has to be the trainer's own upload, or one
+  // trainer could put up somebody else's statement and have it read as theirs.
+  let statement: string | null = null;
+  if (statementKey) {
+    if (typeof statementKey !== 'string' || !statementKey.startsWith(`accountstatement/${userId}/`)) {
+      return NextResponse.json({ error: 'That statement is not your upload' }, { status: 400 });
+    }
+    statement = statementKey;
+  }
+
   await savePayoutAccount(userId, {
     bankCode,
     bankName: bankName || bankCode,
@@ -84,6 +96,7 @@ export async function POST(req: Request) {
     accountName: resolved.accountName,
     declaredName: declared,
     holderType: isBusiness ? 'business' : 'personal',
+    statementKey: statement,
   });
 
   await prisma.auditLog.create({
