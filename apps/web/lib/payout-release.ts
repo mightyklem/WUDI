@@ -55,7 +55,10 @@ export type QueuedTrainer = {
   account: {
     bankName: string;
     accountLast4: string;
+    /** What the bank calls the account. */
     accountName: string;
+    /** What the trainer calls it. */
+    declaredName: string | null;
     holderType: string;
   } | null;
   accountCheck: {
@@ -169,26 +172,20 @@ export async function payoutQueue(): Promise<QueuedTrainer[]> {
 
     let accountCheck: QueuedTrainer['accountCheck'] = null;
     if (account) {
-      const check = nameCheckFor(account.accountName, user?.fullName, profile?.displayName);
+      const check = nameCheckFor(account.declaredName, account.accountName);
       const approval = profile?.approvals?.find((a) => a.status === 'approved');
       const changedSinceApproval = accountChangedSinceApproval(
         approval?.decidedAt ? approval.decidedAt.toISOString() : null,
         account.updatedAt.toISOString(),
       );
-      const holderType = account.holderType || 'personal';
-      // A business account is registered in the name of the business, which is
-      // legitimately not the trainer's name, so a difference there is expected and is
-      // not a warning. A personal account in somebody else's name is a different thing
-      // entirely, and that one has to be looked at.
-      const business = holderType === 'business';
       accountCheck = {
-        nameResult: business && check.result === 'mismatch' ? 'partial' : check.result,
-        nameDetail: business
-          ? `Business account. Your bank has it as “${account.accountName}”.`
-          : check.detail,
+        nameResult: check.result,
+        nameDetail: check.detail,
         changedSinceApproval,
-        needsAcknowledgement: !business && check.result === 'mismatch',
-        holderType,
+        // Only a name that plainly is not the one the account is in has to be looked
+        // at by a person before the money moves.
+        needsAcknowledgement: check.result === 'mismatch',
+        holderType: account.holderType || 'personal',
       };
     }
 
@@ -205,14 +202,16 @@ export async function payoutQueue(): Promise<QueuedTrainer[]> {
       shortByNgn,
       ready: blockers.length === 0,
       blockers,
-      account: account
-        ? {
-            bankName: account.bankName,
-            accountLast4: account.accountNumberLast4,
-            accountName: account.accountName,
-            holderType: account.holderType || 'personal',
-          }
-        : null,
+  account: account
+    ? {
+        bankName: account.bankName,
+        accountLast4: account.accountNumberLast4,
+        accountName: account.accountName,
+        declaredName: account.declaredName,
+        holderType: account.holderType || 'personal',
+      }
+    : null,
+
       accountCheck,
     };
   });
@@ -299,28 +298,21 @@ export async function releaseTrainerBalance(
     return { ok: false, code: 'no-account', message: 'Trainer has no verified payout account' };
   }
 
-  // The name on the account against the name on the trainer. A business account is
-  // registered in the name of the business, so a difference there is expected and is
-  // not something to stop for. A personal account in somebody else's name is, and that
-  // one has to be acknowledged by a person before the money moves.
-  const trainer = await prisma.user.findUnique({
-    where: { id: trainerId },
-    select: { fullName: true },
-  });
-  const holderType = account.holderType || 'personal';
-  const business = holderType === 'business';
-  const nameCheck = nameCheckFor(
-    account.accountName,
-    trainer?.fullName,
-    profile?.displayName,
-  );
-  if (!business && nameCheck.result === 'mismatch' && !options.acknowledge) {
+  // The name the trainer gave the account, against the name the bank gave it.
+  //
+  // This is not a check that the account is in the trainer's own name -- a business
+  // account is in the name of the business, and a bank writes a name its own way. It
+  // is a check that the name given is the name the account is actually in, which is
+  // what stops a trainer naming somebody else's account as their own.
+  const nameCheck = nameCheckFor(account.declaredName, account.accountName);
+  if (nameCheck.result === 'mismatch' && !options.acknowledge) {
     return {
       ok: false,
       code: 'needs-acknowledgement',
       message:
-        `The name on this account (${account.accountName}) is not the trainer's name. ` +
-        'Look at it, then release it again with the warning acknowledged.',
+        `The name given for this account (${account.declaredName}) is not the name the ` +
+        `bank has it under (${account.accountName}). Look at it, then release it again ` +
+        'with the warning acknowledged.',
     };
   }
 

@@ -35,14 +35,32 @@ export async function POST(req: Request) {
   const profile = await prisma.trainerProfile.findUnique({ where: { userId }, select: { userId: true } });
   if (!profile) return NextResponse.json({ error: 'Trainer profile required' }, { status: 403 });
 
-  const { bankCode, bankName, accountNumber, holderType } = (await req.json().catch(() => ({}))) as {
-    bankCode?: string; bankName?: string; accountNumber?: string; holderType?: string;
+  const { bankCode, bankName, accountNumber, holderType, declaredName } = (await req.json().catch(() => ({}))) as {
+    bankCode?: string; bankName?: string; accountNumber?: string;
+    holderType?: string; declaredName?: string;
   };
 
   // Whose account it is. A business account is registered in the name of the business,
   // which is legitimately not the trainer's own name, so the two are told apart rather
   // than one being treated as a warning about the other.
   const isBusiness = holderType === 'business';
+
+  // The name the trainer gives the account.
+  //
+  // They are the one who knows it: a business account is in the name of the business,
+  // and a bank writes a name its own way. So they state it, and it is checked against
+  // what the bank says the account is in -- which is a check of their claim, and not a
+  // demand that their account be in the name they signed up with.
+  const declared = String(declaredName || '').trim().replace(/\s+/g, ' ');
+  if (declared.length < 2) {
+    return NextResponse.json(
+      { error: 'Give the name your bank has this account under.' },
+      { status: 400 },
+    );
+  }
+  if (declared.length > 120) {
+    return NextResponse.json({ error: 'That name is too long.' }, { status: 400 });
+  }
 
   const numberProblem = accountNumberProblem(accountNumber || '');
   if (numberProblem) return NextResponse.json({ error: numberProblem }, { status: 400 });
@@ -64,6 +82,7 @@ export async function POST(req: Request) {
     bankName: bankName || bankCode,
     accountNumber: accountNumber || '',
     accountName: resolved.accountName,
+    declaredName: declared,
     holderType: isBusiness ? 'business' : 'personal',
   });
 

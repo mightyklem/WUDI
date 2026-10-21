@@ -13,7 +13,7 @@ type Row = {
   dueClasses: { id: string; title: string; amountNet: number }[];
   waitingNgn: number; waitingUntil: string | null; shortByNgn: number;
   ready: boolean; blockers: Blocker[];
-  account: { bankName: string; accountLast4: string; accountName: string; holderType: string } | null;
+  account: { bankName: string; accountLast4: string; accountName: string; declaredName: string | null; holderType: string } | null;
   accountCheck: {
     nameResult: NameResult; nameDetail: string;
     changedSinceApproval: boolean; needsAcknowledgement: boolean; holderType: string;
@@ -26,7 +26,7 @@ type AccountRecord = {
   identityState: string; identityApprovedAt: string | null; approvalId: string | null;
   hasIdentityDocument: boolean; hasBankStatement: boolean;
   account: {
-    bankCode: string; bankName: string; accountName: string;
+    bankCode: string; bankName: string; accountName: string; declaredName: string | null;
     accountLast4: string; holderType: string; setAt: string; changedSinceApproval: boolean;
   } | null;
   nameCheck: { result: NameResult; detail: string };
@@ -37,10 +37,10 @@ const naira = (n: number) => `₦${n.toLocaleString('en-NG')}`;
 
 /** How a name check is said on screen. The colour is the message. */
 function nameBadge(r: NameResult) {
-  if (r === 'match') return { text: 'Name matches', colour: 'var(--leaf-ink)', bg: 'var(--leaf-soft)' };
+  if (r === 'match') return { text: 'Name agrees with the bank', colour: 'var(--leaf-ink)', bg: 'var(--leaf-soft)' };
   if (r === 'partial') return { text: 'Name is close', colour: 'var(--gold-ink)', bg: 'var(--gold-soft)' };
-  if (r === 'mismatch') return { text: 'Name does not match', colour: 'var(--clay-ink)', bg: 'var(--clay-soft)' };
-  return { text: 'No name to check', colour: 'var(--mut)', bg: 'var(--pill)' };
+  if (r === 'mismatch') return { text: 'Name does not agree with the bank', colour: 'var(--clay-ink)', bg: 'var(--clay-soft)' };
+  return { text: 'No name given', colour: 'var(--mut)', bg: 'var(--pill)' };
 }
 
 function identityBadge(state: string) {
@@ -213,8 +213,11 @@ export default function AdminPayouts() {
 
                     {row.account ? (
                       <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
-                        {row.account.accountName} · {row.account.bankName} · ending {row.account.accountLast4}
+                        {row.account.declaredName || row.account.accountName} · {row.account.bankName} · ending {row.account.accountLast4}
                         {row.account.holderType === 'business' ? ' · business account' : ''}
+                        {row.account.declaredName && row.account.declaredName !== row.account.accountName && (
+                          <span> — the bank has it as {row.account.accountName}</span>
+                        )}
                       </div>
                     ) : (
                       <div className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 4 }}>
@@ -224,7 +227,9 @@ export default function AdminPayouts() {
 
                     {check && badge && (
                       <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <Chip text={badge.text} colour={badge.colour} bg={badge.bg} />
+                        {check.nameResult !== 'unknown' && (
+                          <Chip text={badge.text} colour={badge.colour} bg={badge.bg} />
+                        )}
                         {check.changedSinceApproval && (
                           <Chip
                             text="Account changed after approval"
@@ -234,8 +239,8 @@ export default function AdminPayouts() {
                         )}
                       </div>
                     )}
-                    {check && check.nameResult !== 'match' && (
-                      <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '6px 0 0' }}>
+                    {check && check.nameResult === 'mismatch' && (
+                      <p style={{ fontSize: 'var(--t-sm)', margin: '6px 0 0', color: 'var(--clay-ink)' }}>
                         {check.nameDetail}
                       </p>
                     )}
@@ -288,12 +293,9 @@ export default function AdminPayouts() {
 
           {records?.map((r) => {
             const ident = identityBadge(r.identityState);
-            const business = r.account?.holderType === 'business';
-            const badge = business
-              ? { text: 'Business account', colour: 'var(--accent-ink)', bg: 'var(--accent-soft)' }
-              : nameBadge(r.nameCheck.result);
+            const badge = nameBadge(r.nameCheck.result);
             const needsAttention =
-              (!business && r.nameCheck.result === 'mismatch') ||
+              r.nameCheck.result === 'mismatch' ||
               (r.account?.changedSinceApproval ?? false) ||
               (!r.account && r.pendingNgn > 0);
 
@@ -339,12 +341,16 @@ export default function AdminPayouts() {
                   {r.account ? (
                     <>
                       <p style={{ margin: '10px 0 0', fontSize: 'var(--t-sm)' }}>
-                        {r.account.accountName} · {r.account.bankName} · ending {r.account.accountLast4}
+                        {r.account.declaredName || r.account.accountName} · {r.account.bankName} · ending {r.account.accountLast4}
                       </p>
+                      {r.account.declaredName && r.account.declaredName !== r.account.accountName && (
+                        <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '2px 0 0' }}>
+                          The trainer gave it as <b>{r.account.declaredName}</b>; the bank
+                          has it as <b>{r.account.accountName}</b>.
+                        </p>
+                      )}
                       <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '2px 0 0' }}>
-                        {business
-                          ? 'A business account, so the name on it is the business and not the trainer.'
-                          : r.nameCheck.detail}
+                        {r.nameCheck.detail}
                         {r.account.changedSinceApproval
                           ? ' The account was changed after the identity was approved, so it is no longer the one the bank statement was checked against.'
                           : ''}

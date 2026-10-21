@@ -7,16 +7,20 @@
  * at approval, but the account can be changed afterwards and nothing has ever
  * compared the name on the account with the name on the trainer.
  *
- * So this compares the name the bank gave us against the name the trainer gave us,
- * and it is deliberately tolerant, because a hard block on a mismatch refuses
- * legitimate payouts. Nigerian names are formatted every way imaginable by every
- * bank in the country, and a name that reads as a mismatch is often just a name
- * written differently.
+ * So this compares two names, and the caller decides which two. It is the name the
+ * trainer gives the account against the name the bank has it under, because the
+ * trainer is the one who knows what their account is called -- a business account is
+ * in the name of the business, and a bank writes a name its own way.
+ *
+ * It is deliberately tolerant, because a hard block on a mismatch refuses legitimate
+ * payouts. Nigerian names are formatted every way imaginable by every bank in the
+ * country, and a name that reads as a mismatch is often just a name written
+ * differently.
  *
  * The four answers:
  *   match     the same name, however it is written
- *   partial   the same person, near enough -- a missing surname, an extra middle
- *             name, an initial in place of a name
+ *   partial   the same person or business, near enough -- a missing surname, an extra
+ *             middle name, an initial in place of a name
  *   mismatch  a different name. Look at this one.
  *   unknown   there is not enough to compare
  */
@@ -28,6 +32,27 @@ const HONORIFICS = new Set([
 ]);
 
 /**
+ * Words that end a business name and say nothing about which business it is.
+ *
+ * A bank writes "MKO SOLAR LIMITED" and the trainer writes "MKO Solar Ltd" -- the
+ * same account, the same business, two spellings. Comparing those two without
+ * stripping the endings would call every business account a mismatch, which is a
+ * warning nobody would read.
+ *
+ * Only the endings that stand for each other are stripped. Words like NIGERIA,
+ * INTERNATIONAL and GROUP are not stripped, because they are part of which business
+ * this is: "Solar Nigeria" and "Solar Services" are two companies, and treating them
+ * as one would hide exactly the difference that matters.
+ *
+ * They are only stripped from the end, and only when they are the end.
+ */
+const BUSINESS_ENDINGS = new Set([
+  'LTD', 'LIMITED', 'PLC', 'INC', 'INCORPORATED', 'LLC', 'LLP', 'GMBH', 'SA', 'BV',
+  'NV', 'AG', 'CO', 'COMPANY', 'ENTERPRISE', 'ENTERPRISES', 'HOLDING', 'HOLDINGS',
+  'SERVICE', 'SERVICES', 'PRODUCT', 'PRODUCTS',
+]);
+
+/**
  * A name, taken apart.
  *
  * Single letters are kept apart from the rest, because an initial is a piece of the
@@ -36,13 +61,17 @@ const HONORIFICS = new Set([
  */
 function normaliseName(raw) {
   if (!raw || typeof raw !== 'string') return null;
-  const tokens = raw
+  let tokens = raw
     .toUpperCase()
     .replace(/[^A-Z\s]/g, ' ')
     .split(/\s+/)
     .filter(Boolean)
     .filter((t) => !HONORIFICS.has(t));
   if (!tokens.length) return null;
+  // Business endings come off the end, and only off the end.
+  while (tokens.length > 1 && BUSINESS_ENDINGS.has(tokens[tokens.length - 1])) {
+    tokens = tokens.slice(0, -1);
+  }
   return {
     all: tokens,
     full: tokens.filter((t) => t.length > 1),

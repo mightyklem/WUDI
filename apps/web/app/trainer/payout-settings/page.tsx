@@ -8,7 +8,8 @@ type Bank = { code: string; name: string };
 type NameCheck = { result: 'match' | 'partial' | 'mismatch' | 'unknown'; detail: string };
 type Account = {
   bankCode: string; bankName: string; accountName: string;
-  accountLast4: string; verified: boolean; hasRecipient: boolean;
+  declaredName: string | null; accountLast4: string;
+  verified: boolean; hasRecipient: boolean;
   holderType: string; nameOnFile: string | null; nameCheck: NameCheck;
 } | null;
 
@@ -17,6 +18,9 @@ export default function PayoutSettings() {
   const [account, setAccount] = useState<Account>(null);
   const [bankCode, setBankCode] = useState('');
   const [number, setNumber] = useState('');
+  // The name the trainer gives the account. They are the one who knows it: a business
+  // account is in the name of the business, and a bank writes a name its own way.
+  const [declaredName, setDeclaredName] = useState('');
   // Whose account this is. A business account is registered in the name of the
   // business, which is not the trainer's name, and saying which it is keeps that from
   // looking like something is wrong.
@@ -58,6 +62,7 @@ export default function PayoutSettings() {
           bankName: banks.find((b) => b.code === bankCode)?.name,
           accountNumber: number,
           holderType,
+          declaredName,
         }),
       });
       const j = await r.json().catch(() => ({}));
@@ -87,59 +92,52 @@ export default function PayoutSettings() {
       {account && (
         <div className="card" style={{ marginTop: 14, borderColor: 'var(--line-2)' }}>
           <p className="eyebrow" style={{ marginBottom: 6 }}>On file</p>
-          <p style={{ margin: 0, fontSize: 'var(--t-md)', fontWeight: 700 }}>{account.accountName}</p>
+          <p style={{ margin: 0, fontSize: 'var(--t-md)', fontWeight: 700 }}>
+            {account.declaredName || account.accountName}
+          </p>
           <p className="muted" style={{ margin: '2px 0 0', fontSize: 'var(--t-sm)' }}>
             {account.bankName} · ending {account.accountLast4}
             {account.holderType === 'business' ? ' · business account' : ''}
           </p>
+          {account.declaredName && account.declaredName !== account.accountName && (
+            <p className="muted" style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)' }}>
+              Your bank has this account as <b>{account.accountName}</b>.
+            </p>
+          )}
           <p className="muted" style={{ margin: '8px 0 0', fontSize: 'var(--t-sm)' }}>
             {account.verified
               ? '✓ Verified with your bank'
               : 'Not yet verified — payouts are held until this is confirmed.'}
           </p>
 
-          {/* The name the bank gave for this account, and the name we have for you.
-              If the two are not the same, an admin has to look at it before the money
-              moves -- so it is far better that it is said here, where it can be
-              fixed in a minute, than there, where it is a delay. A business account
-              is in the name of the business, so it is expected to be different. */}
-          {account.nameCheck && account.nameCheck.result !== 'match' && (
+          {/* The name they gave, against the name the bank has. This is a check of
+              their own claim and not a demand that the account be in the name they
+              signed up with -- a business account is in the name of the business,
+              and a bank writes a name its own way. */}
+          {account.nameCheck && account.nameCheck.result === 'mismatch' && (
             <div
               style={{
                 marginTop: 12, padding: '12px 14px', borderRadius: 'var(--r-sm)',
-                background: account.nameCheck.result === 'mismatch' ? 'var(--clay-soft)' : 'var(--gold-soft)',
-                border: `1px solid ${account.nameCheck.result === 'mismatch' ? 'var(--bad-line)' : 'var(--warn-line)'}`,
+                background: 'var(--clay-soft)', border: '1px solid var(--bad-line)',
               }}
             >
-              <p style={{ margin: 0, fontSize: 'var(--t-sm)', fontWeight: 800, color: account.nameCheck.result === 'mismatch' ? 'var(--clay-ink)' : 'var(--gold-ink)' }}>
-                {account.holderType === 'business'
-                  ? 'This is a business account.'
-                  : account.nameCheck.result === 'mismatch'
-                    ? 'This account is in a different name.'
-                    : 'This account is in a slightly different name.'}
+              <p style={{ margin: 0, fontSize: 'var(--t-sm)', fontWeight: 800, color: 'var(--clay-ink)' }}>
+                Your bank has this account under a different name.
               </p>
-              {account.holderType === 'business' ? (
-                <p style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)', color: 'var(--ink)' }}>
-                  Your bank has it as <b>{account.accountName}</b>. That is the business,
-                  not you, so it does not have to match the name on your account.
-                </p>
-              ) : (
-                <>
-                  <p style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)', color: 'var(--ink)' }}>
-                    Your bank says <b>{account.accountName}</b>. Your name on Learnovize is{' '}
-                    <b>{account.nameOnFile || 'not set'}</b>.
-                  </p>
-                  <p className="muted" style={{ margin: '6px 0 0', fontSize: 'var(--t-sm)' }}>
-                    {account.nameCheck.detail} Payouts are held while a personal account
-                    is in a different name, so it is worth fixing now — add the name your
-                    bank uses to your account details, or use an account in your own name.
-                  </p>
-                  <Link href="/me/account" className="btn" style={{ marginTop: 10 }}>
-                    Update the name on your account
-                  </Link>
-                </>
-              )}
+              <p style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)', color: 'var(--ink)' }}>
+                You said <b>{account.declaredName}</b>. Your bank says <b>{account.accountName}</b>.
+              </p>
+              <p className="muted" style={{ margin: '6px 0 0', fontSize: 'var(--t-sm)' }}>
+                {account.nameCheck.detail} Payouts wait while the name given is not the
+                name the account is in, so it is worth changing below. If the account
+                really is in another name, give that name instead.
+              </p>
             </div>
+          )}
+          {account.nameCheck && account.nameCheck.result === 'partial' && (
+            <p className="muted" style={{ margin: '8px 0 0', fontSize: 'var(--t-sm)' }}>
+              {account.nameCheck.detail}
+            </p>
           )}
         </div>
       )}
@@ -207,16 +205,37 @@ export default function PayoutSettings() {
           maxLength={13}
         />
         <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
-          We check this against your bank and show you the name it belongs to before
+          We check the number against your bank and show you the name it belongs to before
           saving. Your number is stored encrypted.
           {holderType === 'business' && ' We will ask for a bank statement in the business name, so an admin can confirm the account is yours.'}
         </p>
 
+        {/* The name the account is in. The trainer is the one who knows it: a business
+            account is in the name of the business, and a bank writes a name its own
+            way. So they state it, and it is checked against what the bank says. */}
+        <label className="fl">The name on this account</label>
+        <input
+          type="text"
+          value={declaredName}
+          onChange={(e) => setDeclaredName(e.target.value)}
+          placeholder={holderType === 'business' ? 'MKO Solar Ltd' : 'Augustine Okafor'}
+          maxLength={120}
+          required
+          autoComplete="off"
+        />
+        <p className="muted" style={{ fontSize: 'var(--t-sm)', marginTop: 6 }}>
+          The name your bank has this account under. It does not have to be the name you
+          signed up with — a business account is in the name of the business. We check it
+          against your bank, so if the two do not agree we will tell you before anything
+          is sent.
+        </p>
+
         <div className="btnrow" style={{ marginTop: 14 }}>
-          <button className="btn primary" type="submit" disabled={busy || !bankCode || !number}>
+          <button className="btn primary" type="submit" disabled={busy || !bankCode || !number || !declaredName.trim()}>
             {busy ? 'Checking…' : 'Verify and save'}
           </button>
         </div>
+
 
         {msg && <p className="okmsg" style={{ marginTop: 12 }}>{msg}</p>}
         {err && <p className="err" style={{ marginTop: 12 }}>{err}</p>}

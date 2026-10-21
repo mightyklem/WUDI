@@ -62,3 +62,29 @@ test('an account changed after approval is flagged', () => {
   assert.equal(accountChangedSinceApproval(null, new Date('2026-02-01T10:00:00Z')), false);
   assert.equal(accountChangedSinceApproval(approved, null), false);
 });
+
+// A business account: the name the trainer gives it against the name the bank has.
+// These two spellings are the same business, and calling them different would put a
+// warning in front of every business account in the product.
+
+test('a business written Ltd against Limited is the same name', () => {
+  assert.equal(compareAccountName('MKO SOLAR LIMITED', 'MKO Solar Ltd').result, 'match');
+  assert.equal(compareAccountName('MKO SOLAR LTD', 'MKO Solar Limited').result, 'match');
+  assert.equal(compareAccountName('MKO SOLAR LTD', 'MKO Solar').result, 'match');
+});
+
+test('business endings are only stripped when they stand for each other', () => {
+  // NIGERIA and GROUP are part of which business this is, so they are not stripped
+  // and the two names are not the same. This is close, not identical, so it is
+  // "partial" rather than a mismatch.
+  assert.equal(compareAccountName('SOLAR NIGERIA LIMITED', 'SOLAR SERVICES').result, 'partial');
+  assert.equal(compareAccountName('MKO GROUP LIMITED', 'MKO HOLDINGS').result, 'partial');
+});
+
+test('a business account in a different business is a mismatch', () => {
+  assert.equal(compareAccountName('MKO SOLAR LIMITED', 'BLESSING ADEYEMI').result, 'mismatch');
+});
+
+test('a personal account declared in someone else name is a mismatch', () => {
+  assert.equal(compareAccountName('OKAFOR AUGUSTINE', 'Chinedu Okonkwo').result, 'mismatch');
+});

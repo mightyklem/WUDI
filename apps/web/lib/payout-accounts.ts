@@ -48,7 +48,10 @@ export type AccountRecord = {
   account: {
     bankCode: string;
     bankName: string;
+    /** The name the bank gave the account. */
     accountName: string;
+    /** The name the trainer gave the account. */
+    declaredName: string | null;
     accountLast4: string;
     holderType: string;
     setAt: string;
@@ -64,26 +67,49 @@ export type AccountRecord = {
 };
 
 /**
- * Compare the name on the bank account with the names we hold.
+ * The name the trainer gave the account, against the name the bank gave it.
  *
- * Two names are worth trying: the one the trainer gave us, which is the name on
- * their certificate, and the one they teach under, which is what appears on their
- * classes. Either one being close is a reason to look.
+ * This checks a claim against a fact. It is not a check of identity -- the identity is
+ * the document and the bank statement, which a person reads -- and it is not a check
+ * that the account is in the trainer's own name, because that is not always so: a
+ * business account is in the name of the business, and a bank writes a name its own
+ * way.
+ *
+ * What it catches is a name typed wrong, and a name that is not the one the account is
+ * actually in. Those are worth a look before money moves, and the trainer is told the
+ * same thing first, so it should never arrive here.
  */
 export function nameCheckFor(
-  accountName: string | null | undefined,
-  fullName: string | null | undefined,
-  displayName: string | null | undefined,
+  declaredName: string | null | undefined,
+  bankName: string | null | undefined,
 ): NameCheck {
-  // The helper is plain JavaScript with no types on it, so the result is widened to a
-  // plain string here. It is narrowed back on the way out, because the four results
-  // are a closed set and a fifth one would be a bug rather than a new state.
-  const check = compareAccountName(accountName || '', fullName || '', displayName || '') as {
+  if (!declaredName) {
+    return {
+      result: 'unknown',
+      detail: 'No name was given for this account. The trainer was asked for one.',
+    };
+  }
+  if (!bankName) {
+    return {
+      result: 'unknown',
+      detail: 'The bank did not give a name for this account.',
+    };
+  }
+  const check = compareAccountName(bankName, declaredName) as {
     result: NameCheck['result'];
     detail: string;
   };
-  return { result: check.result, detail: check.detail };
+  const detail =
+    check.result === 'match'
+      ? 'The name given is the name your bank has.'
+      : check.result === 'partial'
+        ? `Your bank writes it as “${bankName}”. Close enough to be the same name.`
+        : check.result === 'mismatch'
+          ? `Your bank calls this account “${bankName}”, which is not the name that was given.`
+          : check.detail;
+  return { result: check.result, detail };
 }
+
 
 /**
  * Every trainer an admin might need to look at.
@@ -109,6 +135,7 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
           bankCode: true,
           bankName: true,
           accountName: true,
+          declaredName: true,
           accountNumberLast4: true,
           recipientCode: true,
           holderType: true,
@@ -181,8 +208,6 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
 
     const pendingNgn = pending?._sum.amountNet || 0;
     const holderType = account?.holderType || 'personal';
-    const business = holderType === 'business';
-    const check = nameCheckFor(account?.accountName, user?.fullName, p.displayName);
 
     return {
       trainerId: p.userId,
@@ -199,17 +224,15 @@ export async function payoutAccountRecords(): Promise<AccountRecord[]> {
             bankCode: account.bankCode,
             bankName: account.bankName,
             accountName: account.accountName,
+            declaredName: account.declaredName,
             accountLast4: account.accountNumberLast4,
             holderType,
             setAt: account.createdAt.toISOString(),
             changedSinceApproval: accountChangedSinceApproval(approvedAt, account.updatedAt),
           }
         : null,
-      // A business account is registered in the name of the business, so a difference
-      // from the trainer's own name is expected rather than a warning.
-      nameCheck: business && check.result === 'mismatch'
-        ? { result: 'partial' as const, detail: `Business account. Your bank has it as “${account?.accountName}”.` }
-        : check,
+      // What the trainer called the account, against what the bank calls it.
+      nameCheck: nameCheckFor(account?.declaredName, account?.accountName),
       pendingNgn,
       pendingCount: pending?._count._all || 0,
       shortByNgn: Math.max(0, MIN_PAYOUT_NGN - pendingNgn),

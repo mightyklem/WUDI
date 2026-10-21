@@ -72,10 +72,19 @@ export async function resolveAccount(
  */
 export async function savePayoutAccount(
   trainerId: string,
-  input: { bankCode: string; bankName: string; accountNumber: string; accountName: string; holderType?: string },
+  input: {
+    bankCode: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    /** The name the trainer gives the account. */
+    declaredName?: string;
+    holderType?: string;
+  },
 ) {
   const tail = last4(input.accountNumber);
   const holderType = input.holderType === 'business' ? 'business' : 'personal';
+  const declared = (input.declaredName || '').trim().replace(/\s+/g, ' ') || null;
 
   const existing = await prisma.payoutAccount.findFirst({ where: { trainerId } });
   const encrypted = encryptSecret(input.accountNumber.replace(/\s/g, ''));
@@ -89,6 +98,7 @@ export async function savePayoutAccount(
           accountNumberEnc: encrypted,
           accountNumberLast4: tail,
           accountName: input.accountName,
+          declaredName: declared,
           holderType,
           // Re-resolved above, so this is cleared until a fresh transferrecipient is made.
           recipientCode: null,
@@ -103,6 +113,7 @@ export async function savePayoutAccount(
           accountNumberEnc: encrypted,
           accountNumberLast4: tail,
           accountName: input.accountName,
+          declaredName: declared,
           holderType,
           verifiedAt: new Date(),
         },
@@ -116,34 +127,32 @@ export async function payoutAccountFor(trainerId: string) {
   const a = await prisma.payoutAccount.findFirst({ where: { trainerId } });
   if (!a) return null;
 
-  // The name the bank gave for the account, compared with the name the trainer gave
-  // us. The trainer is told the answer straight away, because a mismatch found here
-  // costs nothing to fix and a mismatch found by an admin costs the trainer a delay.
+  // The name the trainer gave the account, against the name the bank gave it. This is
+  // a check of their own claim, not of their identity, and it is not a check that the
+  // account is in the name they signed up with -- a business account is in the name of
+  // the business, and a bank writes a name its own way.
   const [user, profile] = await Promise.all([
     prisma.user.findUnique({ where: { id: trainerId }, select: { fullName: true } }),
     prisma.trainerProfile.findUnique({ where: { userId: trainerId }, select: { displayName: true } }),
   ]);
-  const check = nameCheckFor(a.accountName, user?.fullName, profile?.displayName);
-  const business = (a.holderType || 'personal') === 'business';
+  const check = nameCheckFor(a.declaredName, a.accountName);
 
   return {
     bankCode: a.bankCode,
     bankName: a.bankName,
+    /** What the bank calls the account. */
     accountName: a.accountName,
+    /** What the trainer calls it. */
+    declaredName: a.declaredName,
     accountLast4: a.accountNumberLast4,
     verified: !!a.verifiedAt,
     hasRecipient: !!a.recipientCode,
     // Whose account it is. A business account is registered in the name of the
     // business, so its name is not the trainer's name and is not compared with it.
     holderType: a.holderType || 'personal',
-    // The name we hold for this trainer, so the screen can show both and let them
-    // see the difference for themselves.
+    // The name we hold for this trainer, shown so they can see it beside the account.
     nameOnFile: user?.fullName || profile?.displayName || null,
-    // A business account is in the name of the business, so a difference from the
-    // trainer's own name is expected and is said as such rather than as a warning.
-    nameCheck: business && check.result === 'mismatch'
-      ? { result: 'partial' as const, detail: `A business account, in the name “${a.accountName}”.` }
-      : check,
+    nameCheck: check,
   };
 }
 
