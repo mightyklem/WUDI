@@ -73,7 +73,12 @@ if (missing.length || wrong.length) {
       '\n  functions and runtime contexts, then deploy again. Nothing has been published.' +
       '\n',
   );
-  process.exit(1);
+  // Only a published deployment is stopped. On a developer machine there is no site
+  // to configure, and a build that cannot be done locally is a build nobody runs.
+  if (process.env.NETLIFY) {
+    process.exit(1);
+  }
+  console.log('  (not a Netlify build, so this is a warning rather than a failure)');
+} else {
+  console.log(`  configuration ok — ${REQUIRED.length} required settings are present.`);
 }
-
-console.log(`  configuration ok — ${REQUIRED.length} required settings are present.`);
