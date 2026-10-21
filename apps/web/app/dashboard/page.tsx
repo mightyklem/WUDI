@@ -127,7 +127,11 @@ export default function Dashboard() {
         {greeting.text}{name ? `, ${name}` : ''}
       </h1>
       <p className="sub">{head.title}</p>
-      <p className="u-sub-sm" style={{ marginTop: 4 }}>{me.user.email}</p>
+      {/* The address was how we said who was here, back when the heading named a job
+          rather than a person. Once the greeting carries the name it is a third line
+          saying the same thing, so it only stays for somebody who has not given us a
+          name to use. */}
+      {!name && <p className="u-sub-sm" style={{ marginTop: 4 }}>{me.user.email}</p>}
 
       {/* Anything unpaid, before anything else on the page. */}
       <PaymentDueBanner />

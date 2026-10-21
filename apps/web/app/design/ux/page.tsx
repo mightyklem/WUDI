@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import SiteNav from '../../components/SiteNav';
 import { UxCard, UxCta, UxRule } from '../../components/ux';
+import { GreetingStrip, TrainerTabs } from './preview';
 
 export const metadata: Metadata = { title: 'Learnovize — UI/UX review' };
 
@@ -80,8 +81,24 @@ export default function UxReview() {
 
       <UxRule />
 
+      {/* ---------------- 1b. the greeting ---------------- */}
+      <Screen title="The greeting" note="Clarity — the page says hello, and knows the hour">
+        <GreetingStrip />
+        <p className="u-sub" style={{ marginTop: 12 }}>
+          The top of the home page says hello and says the name, and the job the person
+          came for sits underneath it in a quieter line. The hour is the one in Lagos,
+          because Lagos is where the classes are taught and where the people opening the
+          app are — a phone set to UTC should not call it the middle of the night.
+        </p>
+      </Screen>
+
+      <UxRule />
+
       {/* ---------------- 2. manage your classes ---------------- */}
       <Screen title="Manage your classes" note="Clarity — one class, marked">
+        <div style={{ marginBottom: 14 }}>
+          <TrainerTabs />
+        </div>
         <div style={{ display: 'grid', gap: 12 }}>
           <UxCard best bestLabel="Next up">
             <p className="u-h">Reels — Solar Installation</p>
@@ -154,8 +171,11 @@ export default function UxReview() {
             <p className="u-h">Consistency</p>
             <p className="u-sub">
               All three screens use the same card shape, the same spacing rhythm and a single
-              accent colour. Teal is the only accent on this page, and it is used for the
-              same thing on every screen: the thing you should press.
+              accent colour. Teal is the accent on these screens, and it is used for the
+              same thing on every screen: the thing you should press. The trainer&rsquo;s gold
+              is the one exception, and it stays on the gold that means a trainer &mdash;
+              it tints the tab strip rather than filling it, so navigation never shouts
+              louder than the action.
             </p>
           </UxCard>
 

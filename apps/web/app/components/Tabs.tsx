@@ -33,6 +33,12 @@ export default function Tabs<K extends string>({
   accent?: string;
 }) {
   const fill = accent || 'var(--accent)';
+  // A light fill -- the trainer's gold -- cannot carry a solid block. It was the loudest
+  // thing on the screen, louder than the one button that is actually an action, and a
+  // tab is navigation rather than a call to do something. So a light accent tints the
+  // strip and the chosen tab is a white pill on top of it. The teal is dark, so it keeps
+  // the filled treatment and stays the one bright thing where it is used.
+  const light = isLight(fill);
   return (
     <div
       role="tablist"
@@ -40,7 +46,7 @@ export default function Tabs<K extends string>({
         display: 'grid',
         gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
         gap: 6,
-        background: 'var(--card)',
+        background: light ? tint(fill, 0.18) : 'var(--card)',
         border: '1px solid var(--line)',
         borderRadius: 'var(--r-md)',
         padding: 6,
@@ -65,9 +71,9 @@ export default function Tabs<K extends string>({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               fontWeight: active ? 800 : 600,
-              background: active ? fill : 'var(--pill)',
+              background: active ? (light ? 'var(--card)' : fill) : light ? 'transparent' : 'var(--pill)',
               color: active ? inkOn(fill) : undefined,
-              borderColor: active ? fill : 'transparent',
+              borderColor: active ? (light ? deepen(fill, 0.55) : fill) : 'transparent',
             }}
           >
             {t.label}
@@ -82,18 +88,66 @@ export default function Tabs<K extends string>({
 /**
  * The colour of the writing on a filled tab.
  *
- * The trainer's yellow is a light colour, and white on it is about 1.9 to 1 -- the label
+ * The trainer's yellow is a light colour, and white on it is about 1.7 to 1 -- the label
  * was technically drawn and practically unreadable. So the ink is worked out from the
  * fill: white on a dark one, near-black on a light one.
  */
 function inkOn(fill: string): string {
+  return luminance(fill) > 0.45 ? '#241C00' : '#fff';
+}
+
+/**
+ * How light a fill is, 0 to 1. Anything that cannot be read as a hex colour -- a CSS
+ * variable, say -- counts as dark, which is what the teal accent is.
+ */
+function luminance(fill: string): number {
   const m = /^#([0-9a-f]{6})$/i.exec(fill.trim());
-  if (!m) return '#fff';
+  if (!m) return 0;
   const n = parseInt(m[1], 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
     const s = c / 255;
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
   });
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return lum > 0.45 ? '#241C00' : '#fff';
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
+
+/** True when a fill is light enough that a solid block of it would shout. */
+function isLight(fill: string): boolean {
+  return luminance(fill) > 0.45;
+}
+
+/**
+ * A fill mixed with white, so a light accent can still tint a surface.
+ *
+ * `amount` is how much of the accent goes into the result, so a tenth is a whisper of it
+ * and not a colour of its own.
+ */
+function tint(fill: string, amount: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(fill.trim());
+  if (!m) return 'var(--card)';
+  const n = parseInt(m[1], 16);
+  const mix = (c: number) => Math.round(c * amount + 255 * (1 - amount));
+  const r = mix((n >> 16) & 255);
+  const g = mix((n >> 8) & 255);
+  const b = mix(n & 255);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * A fill mixed with black, for the line that says which tab is chosen.
+ *
+ * The gold on the soft gold it sits on was about 1.5 to 1 -- the shape was there but it
+ * did not draw the eye. Darkened, the same line is about 4.6 to 1 and the white pill
+ * reads as the chosen one at a glance.
+ */
+function deepen(fill: string, amount: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(fill.trim());
+  if (!m) return fill;
+  const n = parseInt(m[1], 16);
+  const mix = (c: number) => Math.round(c * (1 - amount));
+  const r = mix((n >> 16) & 255);
+  const g = mix((n >> 8) & 255);
+  const b = mix(n & 255);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+

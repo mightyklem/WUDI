@@ -40,6 +40,21 @@ export function headlineFor(role: Role) {
 }
 
 /**
+ * The hours of the day and the greeting that goes with each of them.
+ *
+ * Written as the hours themselves rather than as a set of rules, so the review board
+ * and the home page cannot drift apart: the board shows these windows, and the home
+ * page looks them up.
+ */
+export const GREETING_WINDOWS: { from: number; to: number; icon: IconName; text: string }[] = [
+  { from: 0, to: 5, icon: 'moon', text: 'Good night' },
+  { from: 5, to: 12, icon: 'sunrise', text: 'Good morning' },
+  { from: 12, to: 17, icon: 'sun', text: 'Good afternoon' },
+  { from: 17, to: 21, icon: 'sunset', text: 'Good evening' },
+  { from: 21, to: 24, icon: 'moon', text: 'Good night' },
+];
+
+/**
  * The greeting at the top of the home page, and the mark that goes with it.
  *
  * The old heading named the job -- "Run your classes" -- which is a label for the page
@@ -52,11 +67,8 @@ export function headlineFor(role: Role) {
  */
 export function greetingFor(now: Date = new Date()): { icon: IconName; text: string } {
   const hour = lagosHour(now);
-  if (hour < 5) return { icon: 'moon', text: 'Good night' };
-  if (hour < 12) return { icon: 'sunrise', text: 'Good morning' };
-  if (hour < 17) return { icon: 'sun', text: 'Good afternoon' };
-  if (hour < 21) return { icon: 'sunset', text: 'Good evening' };
-  return { icon: 'moon', text: 'Good night' };
+  const w = GREETING_WINDOWS.find((x) => hour >= x.from && hour < x.to);
+  return w ? { icon: w.icon, text: w.text } : { icon: 'moon', text: 'Good night' };
 }
 
 export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
