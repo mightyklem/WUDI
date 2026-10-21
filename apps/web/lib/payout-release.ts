@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { paystackGet, paystackPost, toKobo } from '@/lib/payments';
 import { ensureRecipient } from '@/lib/payout-account';
+import { nameCheckFor } from '@/lib/payout-accounts';
+import { accountChangedSinceApproval } from '@learnovize/shared/account-name';
 
 /**
  * Releasing a trainer's money.
@@ -27,6 +29,20 @@ export type EligiblePayout = {
   ready: boolean;
   blockers: Blocker[];
   account: { bankName: string; accountLast4: string; accountName: string } | null;
+  /**
+   * Whether the name on the bank account is the trainer's name, and whether the
+   * account was changed after the identity was approved.
+   *
+   * A mismatch does not stop the release -- a name written differently by a bank is
+   * common enough that a hard block would refuse real money -- but it is loud, and it
+   * has to be acknowledged before the money goes anywhere.
+   */
+  accountCheck: {
+    nameResult: 'match' | 'partial' | 'mismatch' | 'unknown';
+    nameDetail: string;
+    changedSinceApproval: boolean;
+    needsAcknowledgement: boolean;
+  } | null;
 };
 
 /** Everything an admin needs to decide, and everything that would stop us. */
@@ -44,10 +60,17 @@ export async function payoutQueue(): Promise<EligiblePayout[]> {
     where: { userId: { in: [...new Set(held.map((p) => p.trainerId))] } },
     select: {
       userId: true, displayName: true, payoutAccounts: true,
-      approvalState: true, paidCertApproved: true,
+      approvalState: true, paidCertApproved: true, approvals: true,
     },
   });
   const byId = new Map(profiles.map((p) => [p.userId, p]));
+
+  // The names we hold for each trainer, so the account can be checked against them.
+  const users = await prisma.user.findMany({
+    where: { id: { in: [...new Set(held.map((p) => p.trainerId))] } },
+    select: { id: true, fullName: true },
+  });
+  const userById = new Map(users.map((u) => [u.id, u]));
 
   return held.map((p) => {
     const blockers: Blocker[] = [];
@@ -113,6 +136,25 @@ export async function payoutQueue(): Promise<EligiblePayout[]> {
             accountName: account.accountName,
           }
         : null,
+      accountCheck: account
+        ? (() => {
+            const user = userById.get(p.trainerId);
+            const check = nameCheckFor(account.accountName, user?.fullName, profile?.displayName);
+            const approval = profile?.approvals?.find((a) => a.status === 'approved');
+            const changedSinceApproval = accountChangedSinceApproval(
+              approval?.decidedAt ? approval.decidedAt.toISOString() : null,
+              account.updatedAt.toISOString(),
+            );
+            return {
+              nameResult: check.result,
+              nameDetail: check.detail,
+              changedSinceApproval,
+              // Only a name that is plainly a different name has to be acknowledged.
+              // A name that is nearly right is shown and left alone.
+              needsAcknowledgement: check.result === 'mismatch',
+            };
+          })()
+        : null,
     };
   });
 }
@@ -133,8 +175,17 @@ export type ReleaseResult =
  *
  * A failed transfer leaves the payout in 'failed' with the reason attached rather than
  * reverting to 'held', so it stops being silently retried and an admin can look at it.
+ *
+ * `acknowledge` is the admin saying they have seen that the name on the bank account
+ * is not the trainer's name. It does not unlock anything else -- a payout with a
+ * blocker is still refused -- it only records that a person looked at the one warning
+ * that a judgement is needed on.
  */
-export async function releasePayout(payoutId: string, adminId: string): Promise<ReleaseResult> {
+export async function releasePayout(
+  payoutId: string,
+  adminId: string,
+  options: { acknowledge?: boolean } = {},
+): Promise<ReleaseResult> {
   const payout = await prisma.payout.findUnique({
     where: { id: payoutId },
   });
@@ -148,7 +199,7 @@ export async function releasePayout(payoutId: string, adminId: string): Promise<
 
   const profile = await prisma.trainerProfile.findUnique({
     where: { userId: payout.trainerId },
-    select: { payoutAccounts: true, approvalState: true },
+    select: { payoutAccounts: true, approvalState: true, displayName: true, approvals: true },
   });
   // Re-checked here, not only in the blocker list. The list is what the admin sees; this
   // is what actually stops the money, and the two have to agree or the display is a lie.
@@ -165,6 +216,28 @@ export async function releasePayout(payoutId: string, adminId: string): Promise<
   }
   if (payout.amountNet < MIN_PAYOUT_NGN) {
     return { ok: false, code: 'below-minimum', message: `Below the ₦${MIN_PAYOUT_NGN} minimum` };
+  }
+
+  // The name on the account against the name on the trainer. A different name is the
+  // one thing here that a person has to look at, so it is the one thing that has to be
+  // acknowledged before the money moves.
+  const trainer = await prisma.user.findUnique({
+    where: { id: payout.trainerId },
+    select: { fullName: true },
+  });
+  const nameCheck = nameCheckFor(
+    account.accountName,
+    trainer?.fullName,
+    profile?.displayName,
+  );
+  if (nameCheck.result === 'mismatch' && !options.acknowledge) {
+    return {
+      ok: false,
+      code: 'needs-acknowledgement',
+      message:
+        `The name on this account (${account.accountName}) is not the trainer's name. ` +
+        'Look at it, then release it again with the warning acknowledged.',
+    };
   }
 
   const recipientCode = await ensureRecipient(account.id);
@@ -231,6 +304,21 @@ export async function releasePayout(payoutId: string, adminId: string): Promise<
       data: { actorId: adminId, action: 'payout.released', target: `payout:${payoutId}`, reason: `₦${payout.amountNet}` },
     }),
   ]);
+
+  // The acknowledgement is recorded on its own, so that a payout which was released
+  // over a name mismatch carries the fact that somebody looked at it and said so.
+  if (options.acknowledge) {
+    await prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        action: 'payout.released.name-mismatch-acknowledged',
+        target: `payout:${payoutId}`,
+        reason:
+          `Account name "${account.accountName}" does not match the trainer's name. ` +
+          `Name check: ${nameCheck.detail}`,
+      },
+    });
+  }
 
   return { ok: true, payoutId, transferRef: res.data.reference || transferRef };
 }

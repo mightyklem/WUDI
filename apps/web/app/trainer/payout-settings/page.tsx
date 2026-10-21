@@ -5,9 +5,11 @@ import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 
 type Bank = { code: string; name: string };
+type NameCheck = { result: 'match' | 'partial' | 'mismatch' | 'unknown'; detail: string };
 type Account = {
   bankCode: string; bankName: string; accountName: string;
   accountLast4: string; verified: boolean; hasRecipient: boolean;
+  nameOnFile: string | null; nameCheck: NameCheck;
 } | null;
 
 export default function PayoutSettings() {
@@ -83,11 +85,48 @@ export default function PayoutSettings() {
           <p className="muted" style={{ margin: '2px 0 0', fontSize: 'var(--t-sm)' }}>
             {account.bankName} · ending {account.accountLast4}
           </p>
-          <p className="muted" style={{ margin: '8px 0 0', fontSize: 'var(--t-sm)' }}>
-            {account.verified
-              ? '✓ Verified with your bank'
-              : 'Not yet verified — payouts are held until this is confirmed.'}
-          </p>
+            <p className="muted" style={{ margin: '8px 0 0', fontSize: 'var(--t-sm)' }}>
+              {account.verified
+                ? '✓ Verified with your bank'
+                : 'Not yet verified — payouts are held until this is confirmed.'}
+            </p>
+
+            {/* The name the bank gave for this account, and the name we have for you.
+                If the two are not the same, an admin has to look at it before the money
+                moves -- so it is far better that it is said here, where it can be
+                fixed in a minute, than there, where it is a delay. */}
+            {account.nameCheck && account.nameCheck.result !== 'match' && (
+              <div
+                style={{
+                  marginTop: 12, padding: '12px 14px', borderRadius: 'var(--r-sm)',
+                  background: account.nameCheck.result === 'mismatch' ? 'var(--clay-soft)' : 'var(--gold-soft)',
+                  border: `1px solid ${account.nameCheck.result === 'mismatch' ? 'var(--bad-line)' : 'var(--warn-line)'}`,
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 'var(--t-sm)', fontWeight: 800, color: account.nameCheck.result === 'mismatch' ? 'var(--clay-ink)' : 'var(--gold-ink)' }}>
+                  {account.nameCheck.result === 'mismatch'
+                    ? 'This account is in a different name.'
+                    : 'This account is in a slightly different name.'}
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: 'var(--t-sm)', color: 'var(--ink)' }}>
+                  Your bank says <b>{account.accountName}</b>. Your name on Learnovize is{' '}
+                  <b>{account.nameOnFile || 'not set'}</b>.
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0', fontSize: 'var(--t-sm)' }}>
+                  {account.nameCheck.detail} Payouts are held while the account is in a
+                  different name, so it is worth fixing now — add the name your bank
+                  uses to your account details, or use an account in your own name.
+                </p>
+                <Link
+                  href="/me/account"
+                  className="btn"
+                  style={{ marginTop: 10 }}
+                >
+                  Update the name on your account
+                </Link>
+              </div>
+            )}
+
         </div>
       )}
 

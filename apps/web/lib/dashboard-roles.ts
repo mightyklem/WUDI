@@ -89,6 +89,12 @@ export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
     { href: '/feed', icon: '◎', label: 'Explore', ...MUTED_TILE },
     { href: '/me/registrations', icon: '🎟', label: 'Attend', ...MUTED_TILE },
     { href: '/me/certificates', icon: '🏅', label: 'Certificates', ...GOLD_TILE, badge: certs },
+    // Where the money goes, and how much of it there is. Neither page was linked from
+    // anywhere, so a trainer who had been approved and was owed money had no way of
+    // finding the screen that puts their bank account on file -- and the payout was
+    // simply held, with nothing on screen to say why.
+    { href: '/trainer/earnings', icon: '₦', label: 'Earnings', ...LEAF_TILE },
+    { href: '/trainer/payout-settings', icon: '🏦', label: 'Payouts', ...MUTED_TILE },
     { href: '/me/notifications', icon: '🔔', label: 'Alerts', ...MUTED_TILE },
   ];
 

@@ -22,10 +22,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { payoutId } = (await req.json().catch(() => ({}))) as { payoutId?: string };
+  const { payoutId, acknowledge } = (await req.json().catch(() => ({}))) as {
+    payoutId?: string;
+    acknowledge?: boolean;
+  };
   if (!payoutId) return NextResponse.json({ error: 'payoutId required' }, { status: 400 });
 
-  const result = await releasePayout(payoutId, actorId);
+  const result = await releasePayout(payoutId, actorId, { acknowledge: acknowledge === true });
   if (!result.ok) {
     // 409 for "we won't do this yet", 502 for "the provider said no". Different problems
     // deserve different handling by whoever is looking at the screen.

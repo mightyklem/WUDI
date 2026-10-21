@@ -67,6 +67,19 @@ export default function Earnings() {
           </div>
         ))}
       </div>
+
+      {/* Where the money is sent. This is the one link a trainer who is owed money
+          needs, and it was not on this page or anywhere else. */}
+      <div className="card" style={{ marginTop: 18 }}>
+        <p className="u-h-md">Where you get paid</p>
+        <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '4px 0 0' }}>
+          Your bank account has to be on file before anything can be released. We check
+          the number against your bank and show you the name it belongs to.
+        </p>
+        <div className="btnrow">
+          <Link href="/trainer/payout-settings" className="btn primary">Your payout account</Link>
+        </div>
+      </div>
     </div>
   );
 }

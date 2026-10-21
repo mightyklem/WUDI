@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { decryptSecret, encryptSecret, last4 } from '@/lib/secretbox';
 import { paystackGet, paystackPost } from '@/lib/payments';
+import { nameCheckFor } from '@/lib/payout-accounts';
 
 /**
  * Trainer payout accounts.
@@ -111,6 +112,16 @@ export async function savePayoutAccount(
 export async function payoutAccountFor(trainerId: string) {
   const a = await prisma.payoutAccount.findFirst({ where: { trainerId } });
   if (!a) return null;
+
+  // The name the bank gave for the account, compared with the name the trainer gave
+  // us. The trainer is told the answer straight away, because a mismatch found here
+  // costs nothing to fix and a mismatch found by an admin costs the trainer a delay.
+  const [user, profile] = await Promise.all([
+    prisma.user.findUnique({ where: { id: trainerId }, select: { fullName: true } }),
+    prisma.trainerProfile.findUnique({ where: { userId: trainerId }, select: { displayName: true } }),
+  ]);
+  const check = nameCheckFor(a.accountName, user?.fullName, profile?.displayName);
+
   return {
     bankCode: a.bankCode,
     bankName: a.bankName,
@@ -118,6 +129,10 @@ export async function payoutAccountFor(trainerId: string) {
     accountLast4: a.accountNumberLast4,
     verified: !!a.verifiedAt,
     hasRecipient: !!a.recipientCode,
+    // The name we hold for this trainer, so the screen can show both and let them
+    // see the difference for themselves.
+    nameOnFile: user?.fullName || profile?.displayName || null,
+    nameCheck: check,
   };
 }
 
