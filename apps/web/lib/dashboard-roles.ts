@@ -79,6 +79,8 @@ export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
     { href: '/me/registrations', icon: '🎟', label: 'My seats', ...MUTED_TILE, badge: seats },
     { href: '/me/certificates', icon: '🏅', label: 'Certificates', ...GOLD_TILE, badge: certs },
     { href: '/trainers', icon: '🤝', label: 'Follow', ...LEAF_TILE },
+    { href: '/me/profile', icon: '👤', label: 'My profile', ...MUTED_TILE },
+    { href: '/messages', icon: '✉', label: 'Messages', ...TEAL_TILE },
     { href: '/me/notifications', icon: '🔔', label: 'Alerts', ...MUTED_TILE },
   ];
 
@@ -95,6 +97,8 @@ export function tilesFor(role: Role, badges: Badges = {}): Tile[] {
     // simply held, with nothing on screen to say why.
     { href: '/trainer/earnings', icon: '₦', label: 'Earnings', ...LEAF_TILE },
     { href: '/trainer/payout-settings', icon: '🏦', label: 'Payouts', ...MUTED_TILE },
+    { href: '/me/profile', icon: '👤', label: 'My profile', ...MUTED_TILE },
+    { href: '/messages', icon: '✉', label: 'Messages', ...TEAL_TILE },
     { href: '/me/notifications', icon: '🔔', label: 'Alerts', ...MUTED_TILE },
   ];
 

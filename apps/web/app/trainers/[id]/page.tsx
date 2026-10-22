@@ -3,11 +3,15 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import SiteNav from '../../components/SiteNav';
 import VerifiedBadge from '../../components/VerifiedBadge';
-import { authFetch } from '@/lib/client-auth';
+import Avatar from '../../components/Avatar';
+import ShareButton from '../../components/ShareButton';
+import { authFetch, getAccess } from '@/lib/client-auth';
 
 type Data = {
   trainer: {
     userId: string; displayName: string; bio: string | null; topics: string[];
+    photoUrl: string | null; personPhotoUrl: string | null;
+    followerCount: number; isFollowing: boolean; isMe: boolean;
     badge: { verified: boolean; expired?: boolean; label: string | null; rating?: string | null };
   };
   reviews: {
@@ -23,6 +27,8 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const [data, setData] = useState<Data | null>(null);
   const [missing, setMissing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     authFetch(`/api/trainers/${id}`)
@@ -35,7 +41,7 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
       <div className="wrap">
         <SiteNav />
         <h1>Trainer not found.</h1>
-        <p className="sub"><Link className="btn link" href="/trainers">← All trainers</Link></p>
+        <p className="sub"><Link className="btn link" href="/trainers">→ All trainers</Link></p>
       </div>
     );
   }
@@ -43,16 +49,87 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
 
   const { trainer, reviews } = data;
 
+  async function toggleFollow() {
+    if (!data) return;
+    setBusy(true);
+    setNote(null);
+    try {
+      const access = getAccess();
+      if (!access) {
+        setNote('Sign in to follow.');
+        return;
+      }
+      const was = data.trainer.isFollowing;
+      const r = await authFetch(`/api/trainers/${id}/follow`, {
+        method: was ? 'DELETE' : 'POST',
+        headers: { authorization: `Bearer ${access}` },
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        setNote(j.error || 'Could not follow.');
+        return;
+      }
+      setData({
+        ...data,
+        trainer: {
+          ...data.trainer,
+          isFollowing: !was,
+          followerCount: data.trainer.followerCount + (was ? -1 : 1),
+        },
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="wrap">
       <SiteNav />
-      <h1 style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        {trainer.displayName}
-        <VerifiedBadge state={trainer.badge} />
-      </h1>
-      <p className="sub">{trainer.topics.join(' · ') || 'Trainer'}</p>
+
+      {/* The picture, the name, and what they teach -- together, so the page reads as
+          a person rather than as a form with a heading. */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+        <Avatar
+          name={trainer.displayName}
+          photoUrl={trainer.personPhotoUrl || trainer.photoUrl}
+          size={72}
+          seed={trainer.userId}
+        />
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: 0 }}>
+            {trainer.displayName}
+            <VerifiedBadge state={trainer.badge} />
+          </h1>
+          <p className="sub" style={{ margin: '4px 0 0' }}>
+            {trainer.topics.join(' · ') || 'Trainer'}
+            {trainer.followerCount > 0 && ` · ${trainer.followerCount} following`}
+          </p>
+        </div>
+      </div>
+
+      {/* Follow, message, share. The three things you do with a person you have found
+          on a screen: keep them, ask them something, pass them on. */}
+      {trainer.isMe ? (
+        <div className="btnrow" style={{ marginTop: 16 }}>
+          <Link className="btn primary" href="/me/profile">Edit your profile</Link>
+        </div>
+      ) : (
+        <div className="btnrow" style={{ marginTop: 16 }}>
+          <button className="btn primary" onClick={toggleFollow} disabled={busy}>
+            {trainer.isFollowing ? 'Following' : 'Follow'}
+          </button>
+          <Link className="btn" href={`/messages/${trainer.userId}`}>Message</Link>
+          <ShareButton
+            url={`/trainers/${trainer.userId}`}
+            title={trainer.displayName}
+            label="Share"
+          />
+        </div>
+      )}
+      {note && <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>{note}</p>}
 
       <div className="card" style={{ marginTop: 18 }}>
+
         {reviews.count > 0 ? (
           <>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>

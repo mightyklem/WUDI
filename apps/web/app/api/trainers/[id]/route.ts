@@ -14,13 +14,14 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const profile = await prisma.trainerProfile.findUnique({
-    where: { userId: id },
-    include: {
-      user: { select: { suspended: true } },
-      application: true,
-    },
-  });
+    const profile = await prisma.trainerProfile.findUnique({
+      where: { userId: id },
+      include: {
+        user: { select: { suspended: true, photoUrl: true } },
+        application: true,
+      },
+    });
+
   if (!profile || profile.user.suspended) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
@@ -38,6 +39,21 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     include: { author: { select: { id: true } } },
   });
 
+  // How many people follow this trainer, and whether the person asking is one of
+  // them. Without this the follow button cannot say what it is going to do.
+  const [followerCount, me] = await Promise.all([
+    prisma.follow.count({ where: { trainerId: id } }),
+    (async () => {
+      const token = getBearer(req);
+      const userId = token ? await verifyAccessToken(token) : null;
+      if (!userId) return null;
+      const f = await prisma.follow.findUnique({
+        where: { followerId_trainerId: { followerId: userId, trainerId: id } },
+      });
+      return { userId, following: !!f };
+    })(),
+  ]);
+
   return NextResponse.json({
     trainer: {
       userId: profile.userId,
@@ -45,6 +61,12 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       bio: profile.bio,
       topics: profile.topics,
       photoUrl: profile.photoUrl,
+      // The picture the person set on their own profile, which is the one they expect
+      // to see on a profile. A trainer's own upload is used when there is one.
+      personPhotoUrl: profile.user.photoUrl,
+      followerCount,
+      isFollowing: me?.following ?? false,
+      isMe: me?.userId === id,
       // Derived, never stored as a flag -- see lib/verification.ts.
       badge: badgeState(profile.application),
     },

@@ -34,7 +34,9 @@ const TYPES: Record<string, { icon: string; tint: string; label: string }> = {
   'training-updated': { icon: '🗓', tint: 'tint-accent', label: 'Class updated' },
   'training-cancelled': { icon: '⚠', tint: 'tint-clay', label: 'Class cancelled' },
   'registration-cancelled': { icon: '✕', tint: 'tint-clay', label: 'Registration cancelled' },
-  'report-resolved': { icon: '🛡', tint: 'tint-accent', label: 'Report resolved' },
+    'report-resolved': { icon: '🛡', tint: 'tint-accent', label: 'Report resolved' },
+    'message-received': { icon: '✉', tint: 'tint-accent', label: 'New message' },
+
 };
 
 const FALLBACK = { icon: '🔔', tint: 'tint-neutral', label: 'Update' };
@@ -57,6 +59,10 @@ function hrefFor(n: Note): string | null {
   if (typeof p.sessionId === 'string') return `/classroom/${p.sessionId}`;
   if (typeof p.slug === 'string') return `/t/${p.slug}/register`;
   if (typeof p.trainingId === 'string') return `/trainings/${p.trainingId}`;
+  // A message is opened where it was sent, which is the thread.
+  if (typeof p.messageId === 'string' && typeof p.fromUserId === 'string') {
+    return `/messages/${p.fromUserId}`;
+  }
   return null;
 }
 

@@ -16,6 +16,9 @@ type Post = {
   isAd: boolean;
   adTargetType: string | null;
   isOfficial: boolean;
+  /** Whose post it is, and whether it is mine. */
+  authorId: string | null;
+  mine: boolean;
   organization: { name: string; slug: string; logoUrl: string | null } | null;
   // Null for official content, announcements and ads — those are not classes.
   training: {
@@ -32,6 +35,10 @@ export default function Feed() {
   const [cert, setCert] = useState('any');
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  // Which post is being edited, and what it is being edited to.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
   // Following used to have no view at all — it only sent an email. Now it filters.
   const [following, setFollowing] = useState(false);
   const [followingEmpty, setFollowingEmpty] = useState(false);
@@ -223,6 +230,62 @@ export default function Feed() {
                 setMsg('Reported — moderators will review.');
               }}>Report</button>
             </div>
+
+            {/* Your own post, so you can change what it says or take it down. A post
+                you cannot edit is a post you have to live with. */}
+            {p.mine && (
+              <div className="btnrow">
+                <button className="btn" onClick={() => { setEditingId(p.id); setEditTitle(p.title || ''); setEditBody(p.body || ''); }}>
+                  Edit
+                </button>
+                <button
+                  className="btn"
+                  onClick={async () => {
+                    const j = await authed(`/api/posts/${p.id}`, { method: 'DELETE' });
+                    if (j) { setMsg('Your post has been taken down.'); load(); }
+                  }}
+                >
+                  Take down
+                </button>
+              </div>
+            )}
+
+            {editingId === p.id && (
+              <div className="card" style={{ marginTop: 12, background: 'var(--surface-2)' }}>
+                <label className="fl">Title</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  maxLength={140}
+                  placeholder="What is this post about?"
+                />
+                <label className="fl" style={{ marginTop: 12 }}>Text</label>
+                <textarea
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  style={{ width: '100%', font: 'inherit', fontSize: 'var(--t-base)', color: 'var(--ink)', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', padding: '10px 12px' }}
+                />
+                <div className="btnrow" style={{ marginTop: 12 }}>
+                  <button
+                    className="btn primary"
+                    onClick={async () => {
+                      const j = await authed(`/api/posts/${p.id}`, {
+                        method: 'PUT',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ title: editTitle, body: editBody }),
+                      });
+                      if (j) { setEditingId(null); setMsg('Saved.'); load(); }
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button className="btn" onClick={() => setEditingId(null)}>Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
           );
         })}

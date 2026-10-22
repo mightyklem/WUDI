@@ -32,8 +32,16 @@ model User {
   // Nullable, not required, because rows exist already and a name is not worth losing an
   // account over. Everything that prints a person falls back to the email until it is set,
   // and the certificate says so rather than inventing one.
-  fullName          String?
-  passwordHash      String
+    fullName          String?
+    // The person's own picture and about.
+    //
+    // A profile is the one thing every account has, and it used to be something only a
+    // trainer had: a learner had no picture, no about, and nowhere to put either. These
+    // belong to the person, not to the role they happen to be wearing.
+    photoUrl          String?
+    bio               String?
+    passwordHash      String
+
   isAdmin           Boolean   @default(false)
   suspended         Boolean   @default(false)
   // Learnovize's own content team. Verified accounts can publish ecards, videos and
@@ -75,7 +83,32 @@ model User {
   reviewsWritten  TrainerReview[]      @relation("ReviewAuthor")
   speechGrants    SpeechGrant[]
   giveawayEntries GiveawayEntry[]
-}
+  messagesSent    Message[]            @relation("MessageSender")
+  messagesGot     Message[]            @relation("MessageRecipient")
+  }
+
+  /// A message from one person to another.
+  ///
+  /// There is no conversation table on purpose. A thread is simply the messages between
+  /// two people, and the inbox is the latest message from each of them. One table, two
+  /// queries, and nothing to keep in step when somebody is deleted.
+  ///
+  /// A learner asking a trainer a question is the first thing this is for, so a message
+  /// is pushed as well as stored -- the recipient is often not in the app when it is sent.
+  model Message {
+    id          String   @id @default(cuid())
+    senderId    String
+    sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+    recipientId String
+    recipient   User     @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+    body        String
+    readAt      DateTime?
+    createdAt   DateTime @default(now())
+    @@index([recipientId, createdAt])
+    @@index([senderId, createdAt])
+    @@index([senderId, recipientId])
+    }
+
 
 /// One award or clawback of points. Append-only so a rank can always be re-derived.
 ///

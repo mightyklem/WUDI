@@ -21,7 +21,11 @@ const LIMITS: Record<string, { max: number; types: string[]; toPrivate: boolean 
     accountstatement: { max: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'application/pdf'], toPrivate: true },
 
   evidence: { max: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'application/pdf', 'video/mp4'], toPrivate: true },
-  asset: { max: 5 * 1024 * 1024, types: ['image/jpeg', 'image/png'], toPrivate: false },
+    asset: { max: 5 * 1024 * 1024, types: ['image/jpeg', 'image/png'], toPrivate: false },
+    // A profile picture. Public, because it is shown to strangers on a profile, and an
+    // image only, because it is drawn in a circle.
+    photo: { max: 5 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp'], toPrivate: false },
+
 };
 
 // POST /api/uploads (multipart: file, kind=id|evidence|asset) — authed.

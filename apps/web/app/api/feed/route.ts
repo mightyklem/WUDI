@@ -22,7 +22,11 @@ export async function GET(req: Request) {
   const adWindow = searchParams.get('ads') === '1';
   // ?following=1 narrows to trainers this person follows. Following used to
   // change nothing you could see — it only triggered an email.
-  const followingOnly = searchParams.get('following') === '1';
+    const followingOnly = searchParams.get('following') === '1';
+    // ?mine=1 is the person's own posts. It is how the profile page shows what they
+    // have published, and it is the only way to find a post to take down.
+    const mineOnly = searchParams.get('mine') === '1';
+
 
   const token = getBearer(req);
   const me = token ? await verifyAccessToken(token) : null;
@@ -61,25 +65,30 @@ export async function GET(req: Request) {
       }
     : null;
 
-  const posts = await prisma.feedPost.findMany({
-    where: {
-      status: 'live',
-      ...(trainingFilter ? { training: trainingFilter } : {}),
-      ...(adWindow ? {} : { isAd: false }),
-    },
-    include: {
-      training: {
-        include: {
-          trainer: { select: { displayName: true } },
-          sessions: { orderBy: { startsAtUtc: 'asc' }, take: 1 },
-        },
+    const posts = await prisma.feedPost.findMany({
+      where: {
+        // A person looking at their own posts also sees the ones they took down, so
+        // that "taken down" is a state they can see rather than a hole.
+        ...(mineOnly && me
+          ? { authorId: me, status: { in: ['live', 'removed'] } }
+          : { status: 'live' }),
+        ...(trainingFilter ? { training: trainingFilter } : {}),
+        ...(adWindow ? {} : { isAd: false }),
       },
-      author: { select: { isOfficial: true } },
-      organization: { select: { name: true, slug: true, verification: true, logoUrl: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-  });
+      include: {
+        training: {
+          include: {
+            trainer: { select: { displayName: true } },
+            sessions: { orderBy: { startsAtUtc: 'asc' }, take: 1 },
+          },
+        },
+        author: { select: { isOfficial: true } },
+        organization: { select: { name: true, slug: true, verification: true, logoUrl: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
 
   // An empty "following" needs to say why, not render a blank feed.
   if (followingOnly && !posts.length) {
@@ -116,15 +125,21 @@ export async function GET(req: Request) {
             firstSession: p.training.sessions[0]?.startsAtUtc || null,
           }
         : null;
-      return {
-        id: p.id, type: p.type, mediaUrl: p.mediaUrl,
-        kind: p.kind,
-        title: p.title,
-        body: p.body,
-        thumbUrl: p.thumbUrl,
-        isAd: p.isAd,
-        adTargetType: p.adTargetType,
-        adTargetId: p.adTargetId,
+        return {
+          id: p.id, type: p.type, mediaUrl: p.mediaUrl,
+          kind: p.kind,
+          title: p.title,
+          body: p.body,
+          thumbUrl: p.thumbUrl,
+          isAd: p.isAd,
+          adTargetType: p.adTargetType,
+          adTargetId: p.adTargetId,
+          // Who wrote it, and whether it is mine. A post has to be editable by the
+          // person who wrote it, and the feed is where they see it, so the feed has
+          // to say whose it is.
+          authorId: p.authorId,
+          mine: !!me && p.authorId === me,
+
         // The verified badge: official Learnovize accounts and verified orgs.
         isOfficial: p.author?.isOfficial === true || p.organization?.verification === 'verified',
         organization: p.organization

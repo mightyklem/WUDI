@@ -17,28 +17,43 @@ export type Channel = 'inapp' | 'email' | 'push';
  * Only time-critical events get a push. Pushing everything trains people to dismiss the
  * app without reading, which costs us permission prompts later (FR-11.2).
  */
-const PUSHABLE: string[] = [
-  'new-training-from-followed',
-  'session-starting',
-  'certificate-issued',
-  'payment-received',
-  'report-received',
-];
+  const PUSHABLE: string[] = [
+    'new-training-from-followed',
+    'session-starting',
+    'certificate-issued',
+    'payment-received',
+    'report-received',
+    // Somebody asked a question and is waiting for an answer. That is the one kind of
+    // message worth interrupting somebody for.
+    'message-received',
+  ];
 
-const PUSH_TITLES: Record<string, string> = {
-  'new-training-from-followed': 'New training',
-  'session-starting': 'Starting soon',
-  'certificate-issued': 'Your certificate is ready',
-  'payment-received': 'Payment received',
-  'report-received': 'Thanks — we received your report',
-};
+  const PUSH_TITLES: Record<string, string> = {
+    'new-training-from-followed': 'New training',
+    'session-starting': 'Starting soon',
+    'certificate-issued': 'Your certificate is ready',
+    'payment-received': 'Payment received',
+    'report-received': 'Thanks — we received your report',
+    'message-received': 'New message',
+  };
+
 
 export async function notify(opts: {
-  userIds: string[];
-  type: string;
-  payload?: Prisma.InputJsonValue;
-  email?: { subject: string; text: string } | null;
-}): Promise<{ channels: Channel[] }> {
+    userIds: string[];
+    type: string;
+    payload?: Prisma.InputJsonValue;
+    email?: { subject: string; text: string } | null;
+    /**
+     * The line under the title on a push, and where the push lands.
+     *
+     * A message is pushed but not emailed: a person asking a trainer a question is
+     * worth interrupting somebody for, and a message is not worth putting in their
+     * inbox. The wording and the destination are given here rather than being taken
+     * from the email, because there is no email.
+     */
+    push?: { body: string; url?: string };
+  }): Promise<{ channels: Channel[] }> {
+
   const channels: Channel[] = ['inapp'];
   if (!opts.userIds.length) return { channels: [] };
   await prisma.notification.createMany({
@@ -86,12 +101,13 @@ if (PUSHABLE.includes(opts.type) && termiiEnabled() && opts.email) {
         where: { userId: { in: opts.userIds } }, select: { token: true },
       });
       if (tokens.length) {
-        const res = await sendPush({
-          tokens: tokens.map((t) => t.token),
-          title,
-          body: opts.email?.subject || title,
-          data: (opts.payload || {}) as Record<string, unknown>,
-        });
+          const res = await sendPush({
+            tokens: tokens.map((t) => t.token),
+            title,
+            body: opts.push?.body || opts.email?.subject || title,
+            data: (opts.payload || {}) as Record<string, unknown>,
+          });
+
         // Only claim the channel if Expo accepted at least one ticket.
         if (res.sent > 0) channels.push('push');
       }
@@ -107,15 +123,18 @@ if (PUSHABLE.includes(opts.type) && termiiEnabled() && opts.email) {
       });
       const usable = webTokens.filter((t) => t.p256dh && t.auth);
       if (usable.length) {
-        const sent = await sendWebPush({
-          tokens: usable.map((t) => ({
-            endpoint: t.token, p256dh: t.p256dh as string, auth: t.auth as string,
-          })),
-          title,
-          body: opts.email?.subject || title,
-          url: (opts.payload as { trainingId?: string } | undefined)?.trainingId
-            ? `/trainings/${(opts.payload as { trainingId: string }).trainingId}`
-            : '/',
+          const sent = await sendWebPush({
+            tokens: usable.map((t) => ({
+              endpoint: t.token, p256dh: t.p256dh as string, auth: t.auth as string,
+            })),
+            title,
+            body: opts.push?.body || opts.email?.subject || title,
+            url: opts.push?.url
+              ? opts.push.url
+              : (opts.payload as { trainingId?: string } | undefined)?.trainingId
+                ? `/trainings/${(opts.payload as { trainingId: string }).trainingId}`
+                : '/',
+
           tag: opts.type,
         });
         if (sent > 0) channels.push('push');
