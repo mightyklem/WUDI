@@ -9,6 +9,7 @@ export default function Account() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [signatureUrl, setSignatureUrl] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -42,11 +43,12 @@ export default function Account() {
             <View style={s.card}>
               <Text style={s.eyebrow}>Become a trainer</Text>
               <Field label="Display name" value={name} onChangeText={setName} />
+              <Field label="Certificate signature image URL" value={signatureUrl} onChangeText={setSignatureUrl} />
               <View style={s.row}>
                 <Btn
                   title="Save trainer profile" primary
                   onPress={() => go(async () => {
-                    await api.saveTrainerProfile({ displayName: name, bio: '', topics: [] });
+                    await api.saveTrainerProfile({ displayName: name, bio: '', topics: [], signatureUrl: signatureUrl || undefined });
                     await refreshMe();
                   })}
                 />

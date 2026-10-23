@@ -1,5 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { createHash } from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Certificate PDF rendering.
@@ -20,6 +22,11 @@ export type CertRenderInput = {
   dateText: string;
   number: string;
   logoUrl?: string | null;
+  /**
+   * The trainer's uploaded signature image (public http[s] URL). Drawn below the
+   * Learnovize seal at bottom-right, with the trainer's name beneath it.
+   */
+  signatureUrl?: string | null;
   /**
    * The signature block, printed onto the document.
    *
@@ -52,12 +59,18 @@ export async function renderCertificatePdf(input: CertRenderInput): Promise<Uint
   const ink = rgb(0.11, 0.17, 0.2);
   const mut = rgb(0.42, 0.45, 0.47);
   const teal = rgb(0.11, 0.49, 0.55);
-  const green = rgb(0.05, 0.48, 0.24);
 
-  // Border + seal
+  // Border + Learnovize seal (brand logo replaces the letter L)
   page.drawRectangle({ x: 24, y: 24, width: width - 48, height: height - 48, borderColor: ink, borderWidth: 2 });
-  page.drawCircle({ x: width - 130, y: 130, size: 52, color: green });
-  page.drawText('L', { x: width - 143, y: 112, size: 44, font: serif, color: rgb(1, 1, 1) });
+
+  // Learnovize logo at bottom right (replaces the former letter-L seal).
+  try {
+    const logoPath = path.join(process.cwd(), 'apps', 'web', 'public', 'learnovize-wordmark.png');
+    const logoBuf = fs.readFileSync(logoPath);
+    const logoImg = await doc.embedPng(logoBuf);
+    const lw = Math.min(170 / logoImg.width, 28 / logoImg.height, 1);
+    page.drawImage(logoImg, { x: width - 180, y: 100, width: logoImg.width * lw, height: logoImg.height * lw });
+  } catch { /* best effort — the wordmark is a static brand asset */ }
 
   let y = height - 110;
   const center = (text: string, size: number, font = sans, color = ink) => {
@@ -89,9 +102,21 @@ export async function renderCertificatePdf(input: CertRenderInput): Promise<Uint
       const img = ct.includes('png') ? await doc.embedPng(buf) : await doc.embedJpg(buf);
       const scale = Math.min(120 / img.width, 60 / img.height, 1);
       page.drawImage(img, { x: 70, y: 90, width: img.width * scale, height: img.height * scale });
-    } catch { /* logo optional — seal + name carry the branding */ }
+    } catch { /* logo optional — brand mark carries the trainer identity */ }
   }
-  page.drawText(input.trainerName, { x: 70, y: 70, size: 11, font: sans, color: mut });
+
+  // Trainer's uploaded signature image + name, bottom right below the Learnovize seal.
+  if (input.signatureUrl && /^https?:\/\//.test(input.signatureUrl)) {
+    try {
+      const res = await fetch(input.signatureUrl);
+      const buf = new Uint8Array(await res.arrayBuffer());
+      const ct = res.headers.get('content-type') || '';
+      const img = ct.includes('png') ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+      const scale = Math.min(150 / img.width, 40 / img.height, 1);
+      page.drawImage(img, { x: width - 180, y: 45, width: img.width * scale, height: img.height * scale });
+    } catch { /* signature optional */ }
+  }
+  page.drawText(input.trainerName, { x: width - 180, y: 34, size: 10, font: sans, color: mut });
 
   // Signature block, bottom-right, below the seal rather than in the visual centre. The
   // claims above are what a person reads; this is what a machine checks. Kept small and

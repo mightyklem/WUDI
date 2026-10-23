@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const t = await prisma.training.findUnique({
     where: { id },
     include: {
-      sessions: { select: { startsAtUtc: true, endsAtUtc: true } },
+      sessions: { select: { id: true, startsAtUtc: true, endsAtUtc: true } },
       days: { orderBy: { dayIndex: 'asc' } },
     },
   });
@@ -136,7 +136,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         await tx.training.update({ where: { id }, data: { status: 'full' } });
       }
       await tx.notification.create({
-        data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title } },
+        data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title, sessionId: t.sessions[0]?.id ?? null } },
       });
       return registration;
     });

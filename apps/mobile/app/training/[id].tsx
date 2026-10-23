@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { s, Btn, TopBar } from '../../lib/ui';
 import { api, TrainingDetail } from '../../lib/api';
 
@@ -8,6 +8,8 @@ export default function Training() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [t, setT] = useState<TrainingDetail | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [reserved, setReserved] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     api.training(id).then((j) => setT(j.training)).catch((e) => setMsg(e.message));
@@ -31,13 +33,22 @@ export default function Training() {
           </View>
         ))}
         <View style={s.row}>
-          <Btn
-            title={left <= 0 ? 'Full' : 'Reserve seat'}
-            primary disabled={left <= 0}
-            onPress={async () => {
-              try { await api.register(t.id); setMsg('Seat reserved!'); } catch (e) { setMsg(e instanceof Error ? e.message : 'Failed'); }
-            }}
-          />
+            <Btn
+              title={left <= 0 ? 'Full' : reserved ? 'Joined' : 'Reserve seat'}
+              primary disabled={left <= 0 || reserved}
+              onPress={async () => {
+                try {
+                  await api.register(t.id);
+                  setMsg('Seat reserved!');
+                  setReserved(true);
+                } catch (e) { setMsg(e instanceof Error ? e.message : 'Failed'); }
+              }}
+            />
+            {reserved && (
+              <View style={s.row}>
+                <Btn title="Join class" onPress={() => router.push(`/classroom/${t.sessions[0]?.id}`)} />
+              </View>
+            )}
         </View>
         {msg && <Text style={s.muted}>{msg}</Text>}
       </View>
