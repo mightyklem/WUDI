@@ -199,6 +199,9 @@ export async function POST(req: Request) {
       title: training.title, trainer: training.trainer.displayName, when: first,
       cert: training.certMode === 'none' ? 'Free attendance' : `${training.certMode} certificate`,
       slug: training.slug,
+      topic: training.topic,
+      description: training.description,
+      photoUrl: training.trainer.photoUrl,
     });
     mediaUrl = url;
   } else {
