@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ScrollView, Text, View, Switch, StyleSheet, Modal, TextInput, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import Constants from 'expo-constants';
 import {
   LiveKitRoom,
   useTracks,
@@ -21,6 +22,8 @@ type ParticipantView = {
   name: string;
   micTrack: { sid: string; muted: boolean } | null;
   camTrack: { sid: string; muted: boolean } | null;
+  /** Raw camera publication, for pinning to stage. */
+  camPub: any | null;
   isLocal: boolean;
 };
 
@@ -47,19 +50,46 @@ function Tiles({ audioOnly }: { audioOnly: boolean }) {
   );
 }
 
-function LocalCameraTile({ mirror, onFlip }: { mirror: boolean; onFlip: () => void }) {
+function LocalCameraTile() {
   const local = useLocalParticipant();
   const camTrack = local?.cameraTrack;
+  // Front camera by default, preview mirrored like any selfie app. The flip
+  // button switches the physical camera and follows with the mirror, so the
+  // back camera shows the room as the room sees itself.
+  const [facing, setFacing] = useState<'user' | 'environment'>('user');
+  const [flipping, setFlipping] = useState(false);
   if (!camTrack) return null;
+
+  const flip = async () => {
+    const track = (camTrack as any)?.track;
+    if (!track?.restartTrack || flipping) return;
+    const next = facing === 'user' ? 'environment' : 'user';
+    setFlipping(true);
+    try {
+      await track.restartTrack({ facingMode: next });
+      setFacing(next);
+    } catch {
+      // Device refused (e.g. single-camera phone): stay where we are.
+    } finally {
+      setFlipping(false);
+    }
+  };
+
   return (
     <View style={style.localTile}>
       <VideoTrack
         trackRef={{ publication: camTrack } as any}
         style={style.localVideo}
-        mirror={mirror}
+        mirror={facing === 'user'}
       />
-      <TouchableOpacity style={style.flipBtn} onPress={onFlip} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-        <Text style={style.flipText}>⟲</Text>
+      <TouchableOpacity
+        style={style.flipBtn}
+        onPress={flip}
+        disabled={flipping}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityLabel="Switch camera"
+      >
+        <Text style={style.flipText}>{flipping ? '…' : '⟲'}</Text>
       </TouchableOpacity>
       <Text style={style.localLabel}>You</Text>
     </View>
@@ -81,11 +111,26 @@ function ScreenShareView({ track }: { track: any }) {
 function ModerationPanel({
   sessionId,
   participants,
+  pinnedId,
+  onPin,
 }: {
   sessionId: string;
   participants: ParticipantView[];
+  pinnedId: string | null;
+  onPin: (identity: string | null) => void;
 }) {
   const [msg, setMsg] = useState<string | null>(null);
+
+  // The server answers 409 "has no microphone/camera track" when the learner
+  // was granted speech but hasn't switched the device on yet. That is a
+  // waiting state, not a failure — say so instead of printing the raw error.
+  const friendly = (e: unknown, identity: string): string => {
+    const raw = e instanceof Error ? e.message : String(e);
+    const m = /has no (microphone|camera) track/.exec(raw);
+    if (m) return `${identity} hasn't switched their ${m[1]} on yet — ask them to speak first.`;
+    if (/no longer in the room/i.test(raw)) return `${identity} is no longer in the room.`;
+    return raw || 'Failed';
+  };
 
   const mod = useCallback(
     async (action: string, identity: string, source?: 'microphone' | 'camera') => {
@@ -93,7 +138,7 @@ function ModerationPanel({
         await api.moderateSession(sessionId, { action, identity, source });
         setMsg(null);
       } catch (e) {
-        setMsg(e instanceof Error ? e.message : 'Failed');
+        setMsg(friendly(e, identity));
       }
     },
     [sessionId],
@@ -116,41 +161,53 @@ function ModerationPanel({
       <Text style={s.sec}>Participants.</Text>
       {msg && <Text style={{ color: '#8F1D1D', marginBottom: 6 }}>{msg}</Text>}
       {participants.length === 0 && <Text style={s.muted}>No one else in the room.</Text>}
-      {participants.map((p) => (
-        <View key={p.identity} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: '#eee' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={s.meta}>{p.name}</Text>
-            {p.isLocal && <Text style={{ color: '#666', fontSize: 10 }}> (you)</Text>}
-          </View>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            {p.micTrack ? (
+      {participants.map((p) => {
+        const pinned = pinnedId === p.identity;
+        return (
+          <View key={p.identity} style={{ paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#eee' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={s.meta}>{p.name}</Text>
+                {p.isLocal && <Text style={{ color: '#666', fontSize: 10 }}> (you)</Text>}
+              </View>
               <Btn
-                title={p.micTrack.muted ? 'Unmute mic' : 'Mute mic'}
-                onPress={() => {
-                  const t = p.micTrack!;
-                  mod(t.muted ? 'unmuteMic' : 'muteMic', p.identity);
-                }}
-                disabled={p.isLocal}
+                title={pinned ? 'Unpin' : 'Pin'}
+                onPress={() => onPin(pinned ? null : p.identity)}
+                disabled={p.isLocal || !p.camTrack}
               />
-            ) : (
-              <Btn title="Grant mic" onPress={() => mod('allowSpeak', p.identity)} disabled={p.isLocal} />
-            )}
-            {p.camTrack ? (
-              <Btn
-                title={p.camTrack.muted ? 'Enable cam' : 'Disable cam'}
-                onPress={() => {
-                  const t = p.camTrack!;
-                  mod(t.muted ? 'unmuteCamera' : 'muteCamera', p.identity);
-                }}
-                disabled={p.isLocal}
-              />
-            ) : (
-              <Btn title="Enable cam" onPress={() => mod('allowSpeak', p.identity)} disabled={p.isLocal} />
-            )}
-            <Btn title="Ask to speak" onPress={() => request(p.identity)} disabled={p.isLocal} />
+            </View>
+            {/* One toggle per device, full stop. Mic and camera are silenced
+                independently after speech is granted; there is no separate
+                all-or-nothing mute here because that is what kept revoking the
+                grant people had just been given. */}
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+              {p.micTrack ? (
+                <Btn
+                  title={p.micTrack.muted ? 'Unmute mic' : 'Mute mic'}
+                  onPress={() => {
+                    const t = p.micTrack!;
+                    mod(t.muted ? 'unmuteMic' : 'muteMic', p.identity, 'microphone');
+                  }}
+                  disabled={p.isLocal}
+                />
+              ) : (
+                <Btn title="Grant speech" onPress={() => mod('allowSpeak', p.identity)} disabled={p.isLocal} />
+              )}
+              {p.camTrack && (
+                <Btn
+                  title={p.camTrack.muted ? 'Unmute cam' : 'Mute cam'}
+                  onPress={() => {
+                    const t = p.camTrack!;
+                    mod(t.muted ? 'unmuteCamera' : 'muteCamera', p.identity, 'camera');
+                  }}
+                  disabled={p.isLocal}
+                />
+              )}
+              <Btn title="Ask to speak" onPress={() => request(p.identity)} disabled={p.isLocal} />
+            </View>
           </View>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -270,6 +327,7 @@ function Room({
   onDismiss,
   onShareToggle,
   shareOn,
+  onShareFailed,
   onReport,
   reportVisible,
 }: {
@@ -284,15 +342,18 @@ function Room({
   onDismiss: () => void;
   onShareToggle: () => void;
   shareOn: boolean;
+  onShareFailed: () => void;
   onReport: () => void;
   reportVisible: boolean;
 }) {
   // Audio-only by default (cellular-friendly); video is opt-in per session.
   const [audioOnly, setAudioOnly] = useState(true);
-  const [mirror, setMirror] = useState(true);
   const livekitRoom = useRoomContext();
   const remote = useParticipants();
   const isTrainerOrMod = role === 'trainer' || role === 'moderator' || role === 'admin';
+  // Who the trainer pinned to the stage. Local decision, instant, reversible.
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [shareErr, setShareErr] = useState<string | null>(null);
 
   // Screen share tracks published by any participant (including local).
   const shareTracks = useTracks([{ source: Track.Source.ScreenShare, withPlaceholder: false }]);
@@ -308,16 +369,27 @@ function Room({
       name: p.name || p.identity,
       micTrack: mic ? { sid: mic.sid, muted: mic.isMuted ?? false } : null,
       camTrack: cam ? { sid: cam.sid, muted: cam.isMuted ?? false } : null,
+      camPub: cam ?? null,
       isLocal: false,
     };
   });
 
-  // Apply the desired screen-share state to the local participant.
+  // A pin that outlives its track is a pin on nothing: clear it.
+  const pinned = participants.find((p) => p.identity === pinnedId && p.camPub && !p.camTrack?.muted) ?? null;
+
+  // Apply the desired screen-share state to the local participant. Failures
+  // surface in the room (not the console): on a phone this is usually the OS
+  // refusing capture — Expo Go can't do it at all, and iOS needs a broadcast
+  // extension that only ships in a store build.
   useEffect(() => {
     if (!livekitRoom) return;
-    livekitRoom.localParticipant.setScreenShareEnabled(shareOn).catch((e: Error) => {
-      // Screen share may not be supported on this device/OS.
-      console.error('Screen share failed:', e);
+    if (!shareOn) {
+      setShareErr(null);
+      return;
+    }
+    livekitRoom.localParticipant.setScreenShareEnabled(true).catch((e: Error) => {
+      setShareErr(e instanceof Error ? e.message : 'Screen share is not available on this device.');
+      onShareFailed();
     });
   }, [livekitRoom, shareOn]);
 
@@ -333,15 +405,24 @@ function Room({
       </View>
       <Text style={s.muted}>Room: {room}</Text>
 
-      {/* Main stage: screen share takes precedence when active. */}
+      {/* Main stage: screen share first, then the trainer's pin, then the room. */}
       {activeShare ? (
         <ScreenShareView track={activeShare} />
+      ) : pinned ? (
+        <View style={style.shareContainer}>
+          <VideoTrack
+            trackRef={{ publication: pinned.camPub } as any}
+            style={style.shareVideo}
+          />
+          <Text style={style.shareLabel}>📌 {pinned.name}</Text>
+        </View>
       ) : (
         <View style={style.stage}>
-          <LocalCameraTile mirror={mirror} onFlip={() => setMirror((m) => !m)} />
+          <LocalCameraTile />
           <Tiles audioOnly={audioOnly} />
         </View>
       )}
+      {shareErr && <Text style={{ color: '#8F1D1D', marginTop: 6 }}>{shareErr}</Text>}
 
       {speechRequest && (
         <SpeechRequestBanner
@@ -356,7 +437,9 @@ function Room({
         />
       )}
 
-      {isTrainerOrMod && <ModerationPanel sessionId={sessionId} participants={participants} />}
+      {isTrainerOrMod && (
+        <ModerationPanel sessionId={sessionId} participants={participants} pinnedId={pinnedId} onPin={setPinnedId} />
+      )}
 
       <ReportModal
         visible={reportVisible}
@@ -376,6 +459,7 @@ export default function Classroom() {
   const [err, setErr] = useState<string | null>(null);
   const [speechRequest, setSpeechRequest] = useState<{ requestedBy: string } | null>(null);
   const [shareOn, setShareOn] = useState(false);
+  const [shareNote, setShareNote] = useState<string | null>(null);
   const [reportVisible, setReportVisible] = useState(false);
 
   useEffect(() => {
@@ -400,8 +484,16 @@ export default function Classroom() {
   }, [sessionId]);
 
   const toggleShare = useCallback(async () => {
+    // Expo Go has no screen-capture module at all; the button would only ever
+    // fail. Say so up front instead of after a spinner. (iOS store builds need
+    // a broadcast extension; Android dev builds work out of the box.)
+    if (!shareOn && Constants.appOwnership === 'expo') {
+      setShareNote('Screen share needs the Learnovize app build — Expo Go cannot capture the screen.');
+      return;
+    }
+    setShareNote(null);
     setShareOn((prev) => !prev);
-  }, []);
+  }, [shareOn]);
 
   const openReport = () => setReportVisible(true);
 
@@ -425,6 +517,7 @@ export default function Classroom() {
           onDismiss={() => setSpeechRequest(null)}
           onShareToggle={toggleShare}
           shareOn={shareOn}
+          onShareFailed={() => setShareOn(false)}
           onReport={openReport}
           reportVisible={reportVisible}
         />
@@ -434,6 +527,7 @@ export default function Classroom() {
         <Btn title="More" onPress={openReport} />
         <Btn title="Leave" onPress={() => setCreds(null)} />
       </View>
+      {shareNote && <Text style={{ color: '#8F1D1D', marginTop: 6 }}>{shareNote}</Text>}
     </ScrollView>
   );
 }
