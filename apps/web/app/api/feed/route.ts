@@ -173,7 +173,10 @@ export async function POST(req: Request) {
   }
   const training = await prisma.training.findUnique({
     where: { id: trainingId },
-    include: { trainer: true, sessions: { orderBy: { startsAtUtc: 'asc' }, take: 1 } },
+    include: {
+      trainer: { include: { user: { select: { photoUrl: true } } } },
+      sessions: { orderBy: { startsAtUtc: 'asc' }, take: 1 },
+    },
   });
   if (!training || training.trainerId !== userId) {
     return NextResponse.json({ error: 'Not found or not owner' }, { status: 404 });
@@ -194,14 +197,22 @@ export async function POST(req: Request) {
     const key = `feed/${trainingId}/${Date.now().toString(36)}-${randomBytes(4).toString('hex')}.${ext}`;
     mediaUrl = await putPublic(key, new Uint8Array(await file.arrayBuffer()), file.type);
   } else if (type === 'ecard') {
-    const first = training.sessions[0]?.startsAtUtc.toUTCString().slice(0, 16) || '';
+    const first = training.sessions[0]?.startsAtUtc;
+    // Full Lagos date + time ("Tue 27 Oct, 9am WAT"). The old slice(0, 16)
+    // of toUTCString cut the time off entirely.
+    const { lagosWhenLabel } = await import('@/lib/lagos');
     const { url } = await renderECard({
-      title: training.title, trainer: training.trainer.displayName, when: first,
+      title: training.title, trainer: training.trainer.displayName,
+      when: first ? lagosWhenLabel(first) : '',
       cert: training.certMode === 'none' ? 'Free attendance' : `${training.certMode} certificate`,
       slug: training.slug,
       topic: training.topic,
       description: training.description,
-      photoUrl: training.trainer.photoUrl,
+      // Teaching photo first, account picture second: most trainers only
+      // ever set the account picture (Edit profile), so the trainer copy
+      // is empty and the card fell back to initials.
+      photoUrl: training.trainer.photoUrl || training.trainer.user?.photoUrl || null,
+      siteOrigin: new URL(req.url).origin,
     });
     mediaUrl = url;
   } else {

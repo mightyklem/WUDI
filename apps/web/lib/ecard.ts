@@ -50,6 +50,8 @@ export async function renderECard(opts: {
   topic?: string | null;
   description?: string | null;
   photoUrl?: string | null;
+  /** Origin (e.g. https://learnovize.com) to resolve relative upload paths against. */
+  siteOrigin?: string | null;
   /** Optional social handle / contact line, e.g. "@judyscorner". */
   handle?: string | null;
 }): Promise<{ key: string; url: string }> {
@@ -73,19 +75,38 @@ export async function renderECard(opts: {
   const titleLines = wrap(title, 26, 3);
   const descLines = desc ? wrap(desc, 48, 3) : [];
 
-  // Trainer photo → data URI, best effort. Absolute http[s] only; anything
-  // else (relative path, data already, empty) falls back to initials.
+  // Trainer photo → data URI, best effort. Uploads come back as relative
+  // /api/files/... paths on local storage, so resolve those against the
+  // site origin; absolute http[s] URLs are used as-is. Anything else falls
+  // back to initials.
+  const rawPhoto = (opts.photoUrl || '').trim();
+  const origin = (opts.siteOrigin || '').trim().replace(/\/$/, '');
+  const photoSrc =
+    /^https?:\/\//.test(rawPhoto)
+      ? rawPhoto
+      : rawPhoto.startsWith('/') && origin
+        ? `${origin}${rawPhoto}`
+        : null;
   let photoDataUri: string | null = null;
-  let photoMime = '';
-  if (opts.photoUrl && /^https?:\/\//.test(opts.photoUrl)) {
+  if (photoSrc) {
     try {
-      const res = await fetch(opts.photoUrl);
+      const res = await fetch(photoSrc);
       const ct = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-      if (res.ok && ['image/jpeg', 'image/png', 'image/webp'].includes(ct)) {
+      const ext = photoSrc.split('?')[0].split('.').pop()?.toLowerCase();
+      const mime =
+        ['image/jpeg', 'image/png', 'image/webp'].includes(ct)
+          ? ct
+          : ext === 'jpg' || ext === 'jpeg'
+            ? 'image/jpeg'
+            : ext === 'png'
+              ? 'image/png'
+              : ext === 'webp'
+                ? 'image/webp'
+                : null;
+      if (res.ok && mime) {
         const buf = Buffer.from(await res.arrayBuffer());
         if (buf.length > 0 && buf.length <= 1_500_000) {
-          photoMime = ct;
-          photoDataUri = `data:${ct};base64,${buf.toString('base64')}`;
+          photoDataUri = `data:${mime};base64,${buf.toString('base64')}`;
         }
       }
     } catch {
