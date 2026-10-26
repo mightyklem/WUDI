@@ -657,6 +657,8 @@ const lp = room.localParticipant;
             onClose={() => setPanel(null)}
             d={d}
             mod={mod}
+            spotlight={spotlight}
+            onSpotlight={(id) => setSpotlight((cur) => (cur === id ? null : id))}
           />
         </div>
       </div>

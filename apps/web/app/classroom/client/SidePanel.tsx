@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Room } from 'livekit-client';
+import { Track, type Room } from 'livekit-client';
 import { displayName, initials, type Role } from './model';
 import type { useClassroomData, useModeration } from './useClassroom';
 import GiveawayPanel from './GiveawayPanel';
@@ -38,6 +38,8 @@ export default function SidePanel({
   onClose,
   d,
   mod,
+  spotlight,
+  onSpotlight,
 }: {
   room: Room;
   sessionId: string;
@@ -48,6 +50,8 @@ export default function SidePanel({
   onClose: () => void;
   d: Data;
   mod: Mod;
+  spotlight: string | null;
+  onSpotlight: (identity: string | null) => void;
 }) {
   if (!tab) return null;
   return (
@@ -75,7 +79,7 @@ export default function SidePanel({
         </button>
       </div>
       {tab === 'chat' && <Chat d={d} myId={myId} />}
-      {tab === 'people' && <People room={room} role={role} d={d} mod={mod} />}
+      {tab === 'people' && <People room={room} role={role} d={d} mod={mod} spotlight={spotlight} onSpotlight={onSpotlight} />}
       {tab === 'polls' && <Polls room={room} role={role} d={d} />}
       {tab === 'giveaway' && (
         <GiveawayPanel sessionId={sessionId} isTrainer={role === 'trainer'} />
@@ -162,7 +166,7 @@ function Chat({ d, myId }: { d: Data; myId: string }) {
 
 /* ------------------------------ people ------------------------------ */
 
-function People({ room, role, d, mod }: { room: Room; role: Role; d: Data; mod: Mod }) {
+function People({ room, role, d, mod, spotlight, onSpotlight }: { room: Room; role: Role; d: Data; mod: Mod; spotlight: string | null; onSpotlight: (identity: string | null) => void }) {
   const canMod = role === 'trainer' || role === 'moderator' || role === 'admin';
   const selfId = room.localParticipant.identity;
   const selfName = displayName({ identity: selfId, name: room.localParticipant.name });
@@ -178,15 +182,27 @@ function People({ room, role, d, mod }: { room: Room; role: Role; d: Data; mod: 
       hand: false,
       canSpeak: !!room.localParticipant.permissions?.canPublish,
       isSelf: true,
+      micMuted: null as boolean | null,
+      camMuted: null as boolean | null,
+      hasMic: false,
+      hasCam: false,
     };
-    const others = d.remotes.map((p) => ({
-      key: p.identity,
-      identity: p.identity,
-      name: displayName(p),
-      hand: d.hands.has(p.identity),
-      canSpeak: !!p.permissions?.canPublish,
-      isSelf: false,
-    }));
+    const others = d.remotes.map((p) => {
+      const micPub = p.getTrackPublication(Track.Source.Microphone);
+      const camPub = p.getTrackPublication(Track.Source.Camera);
+      return {
+        key: p.identity,
+        identity: p.identity,
+        name: displayName(p),
+        hand: d.hands.has(p.identity),
+        canSpeak: !!p.permissions?.canPublish,
+        isSelf: false,
+        micMuted: micPub ? micPub.isMuted : null,
+        camMuted: camPub ? camPub.isMuted : null,
+        hasMic: !!micPub,
+        hasCam: !!camPub,
+      };
+    });
     return [self, ...others];
   }, [d.remotes, d.hands, room, selfId, selfName]);
 
@@ -242,21 +258,44 @@ function People({ room, role, d, mod }: { room: Room; role: Role; d: Data; mod: 
           <span style={{ flex: 1 }} />
           {r.hand && !r.canSpeak && <span className="croom-person-tag" data-kind="hand">✋ raised</span>}
           {r.canSpeak && <span className="croom-person-tag" data-kind="speaking">can speak</span>}
+          {/* One toggle per device, full stop — the same simplification as the
+              mobile room. Mic and camera are silenced independently after speech
+              is granted; the old five-button row (including an all-or-nothing
+              Mute that revoked the grant just given) is gone. */}
           {canMod && !r.isSelf && (
             <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {r.canSpeak ? (
-                <>
-                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('mute', r.identity)}>Mute</button>
-                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('muteMic', r.identity)}>Mute mic</button>
-                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('unmuteMic', r.identity)}>Unmute mic</button>
-                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('muteCamera', r.identity)}>Mute cam</button>
-                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('unmuteCamera', r.identity)}>Unmute cam</button>
-                </>
+              {r.hasMic ? (
+                <button
+                  type="button"
+                  className="croom-mini"
+                  disabled={mod.busy}
+                  onClick={() => void mod.act(r.micMuted ? 'unmuteMic' : 'muteMic', r.identity)}
+                >
+                  {r.micMuted ? 'Unmute mic' : 'Mute mic'}
+                </button>
               ) : (
-                <>
-                  <button type="button" className="croom-mini primary" disabled={mod.busy} onClick={() => void mod.act('allowSpeak', r.identity)}>Grant mic</button>
-                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.requestSpeak(r.identity)}>Ask to speak</button>
-                </>
+                <button type="button" className="croom-mini primary" disabled={mod.busy} onClick={() => void mod.act('allowSpeak', r.identity)}>Grant speech</button>
+              )}
+              {r.hasCam && (
+                <button
+                  type="button"
+                  className="croom-mini"
+                  disabled={mod.busy}
+                  onClick={() => void mod.act(r.camMuted ? 'unmuteCamera' : 'muteCamera', r.identity)}
+                >
+                  {r.camMuted ? 'Unmute cam' : 'Mute cam'}
+                </button>
+              )}
+              <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.requestSpeak(r.identity)}>Ask to speak</button>
+              {r.hasCam && !r.camMuted && (
+                <button
+                  type="button"
+                  className="croom-mini"
+                  aria-pressed={spotlight === r.identity}
+                  onClick={() => onSpotlight(spotlight === r.identity ? null : r.identity)}
+                >
+                  {spotlight === r.identity ? 'Unpin' : 'Pin'}
+                </button>
               )}
             </span>
           )}

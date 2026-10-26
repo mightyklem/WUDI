@@ -604,6 +604,13 @@ export function useModeration(sessionId: string) {
         body: JSON.stringify({ action, identity, reason }),
       });
       const j = await r.json().catch(() => ({}));
+      const raw = j.error || 'That action failed.';
+      // Granted speech but no published track yet is a waiting state, not a
+      // failure: the learner hasn't switched the device on. Say so.
+      const trackMatch = /has no (microphone|camera) track/.exec(raw);
+      const text = trackMatch
+        ? `They haven't switched their ${trackMatch[1]} on yet — ask them to speak first.`
+        : raw;
       const said =
         action === 'end' ? 'Session ended.'
         : action === 'allowSpeak' ? 'They can speak now.'
@@ -613,7 +620,7 @@ export function useModeration(sessionId: string) {
         : action === 'muteCamera' ? 'Camera disabled.'
         : action === 'unmuteCamera' ? 'Camera enabled.'
         : 'Done.';
-      setFeedback({ ok: r.ok, text: r.ok ? said : (j.error || 'That action failed.') });
+      setFeedback({ ok: r.ok, text: r.ok ? said : text });
     } catch {
       setFeedback({ ok: false, text: 'Could not reach the server.' });
     } finally {
