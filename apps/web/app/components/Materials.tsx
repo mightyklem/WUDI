@@ -64,7 +64,7 @@ export function TrainerMaterials({ trainerId }: { trainerId: string }) {
   useEffect(() => { load(); }, [load]);
 
   if (rows === null) return <p className="muted">Loading materials…</p>;
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return <p className="muted" style={{ margin: 0 }}>Nothing on the shelf yet.</p>;
 
   async function buy(m: MaterialRow) {
     setBusy(m.id);
