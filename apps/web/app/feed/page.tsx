@@ -6,6 +6,7 @@ import { QuoteStrip } from './QuoteStrip';
 import { formatNgn } from '@learnovize/shared';
 import { lagosWhenLabel } from '@/lib/lagos';
 import SiteNav from '../components/SiteNav';
+import ShareButton from '../components/ShareButton';
 
 type Post = {
   id: string; type: string; mediaUrl: string; likeCount: number;
@@ -220,6 +221,12 @@ export default function Feed() {
                 {full ? 'Full' : `Register · ${p.training!.seatsLeft} left`}
               </Link>
               <Link className="btn link" href={`/t/${p.training!.slug}/register`}>Details →</Link>
+              <ShareButton
+                url={`/t/${p.training!.slug}/register`}
+                title={`${p.training!.title} — live on Learnovize`}
+                label="⇪ Share"
+                className="btn"
+              />
             </div>
             )}
             <div className="btnrow">

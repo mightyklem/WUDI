@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import DayPicker from '../../../trainings/DayPicker';
 import RegisterButton from '../../../trainings/RegisterButton';
+import ShareButton from '../../../components/ShareButton';
 import { formatNgn, tierLabel } from '@learnovize/shared';
 import SiteNav from '../../../components/SiteNav';
 
@@ -117,6 +118,13 @@ export default async function InvitePage({ params }: { params: Promise<{ slug: s
         )}
       </div>
       <p className="muted">Invite pages load fast and open directly from shared links — no app install needed.</p>
+      <div className="btnrow">
+        <ShareButton
+          url={`/t/${slug}/register`}
+          title={`${t.title} — live on Learnovize with ${t.trainer.displayName}`}
+          label="⇪ Share this class"
+        />
+      </div>
     </div>
   );
 }
