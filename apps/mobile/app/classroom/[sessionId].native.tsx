@@ -96,6 +96,86 @@ function LocalCameraTile() {
   );
 }
 
+/** Lagos wall-clock "9:00 AM" from a UTC instant. Lagos is UTC+1 all year. */
+function lagosClock(iso: string): string {
+  const d = new Date(new Date(iso).getTime() + 3600000);
+  const h24 = d.getUTCHours();
+  const m = d.getUTCMinutes();
+  const suffix = h24 < 12 ? 'AM' : 'PM';
+  const h = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h}:${String(m).padStart(2, '0')} ${suffix}`;
+}
+
+/** The room at a glance: what, whose, when, and who is here. */
+function RoomHeader({
+  title,
+  trainerName,
+  startsAtUtc,
+  endsAtUtc,
+  count,
+}: {
+  title: string;
+  trainerName: string;
+  startsAtUtc: string;
+  endsAtUtc: string;
+  count: number;
+}) {
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={[s.bigtitle, { flex: 1 }]} numberOfLines={2}>{title}</Text>
+        <View style={{ backgroundColor: '#0E7A3D', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12, marginLeft: 8 }}>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>● Live</Text>
+        </View>
+      </View>
+      <Text style={{ fontSize: 13, color: '#5C5C5C', marginTop: 2 }}>
+        {trainerName} · {lagosClock(startsAtUtc)} – {lagosClock(endsAtUtc)} WAT · {count} in room
+      </Text>
+    </View>
+  );
+}
+
+/** Labeled control buttons, one thumb's reach. Icon over label, like the
+    platforms people already know — no guessing what a lone glyph does. */
+function ControlBtn({
+  glyph,
+  label,
+  onPress,
+  on = false,
+  danger = false,
+  disabled = false,
+}: {
+  glyph: string;
+  label: string;
+  onPress: () => void;
+  on?: boolean;
+  danger?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={label}
+      style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 60,
+        paddingVertical: 8,
+        paddingHorizontal: 6,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: danger ? '#E5484D' : '#E6E6E2',
+        backgroundColor: danger ? '#E5484D' : on ? '#0B1F14' : '#fff',
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <Text style={{ fontSize: 20, color: danger || on ? '#fff' : '#121212' }}>{glyph}</Text>
+      <Text style={{ fontSize: 11, marginTop: 2, color: danger || on ? '#fff' : '#121212' }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 function ScreenShareView({ track }: { track: any }) {
   return (
     <View style={style.shareContainer}>
@@ -330,6 +410,11 @@ function Room({
   onShareFailed,
   onReport,
   reportVisible,
+  onLeave,
+  trainingTitle,
+  trainerName,
+  startsAtUtc,
+  endsAtUtc,
 }: {
   url: string;
   token: string;
@@ -345,9 +430,17 @@ function Room({
   onShareFailed: () => void;
   onReport: () => void;
   reportVisible: boolean;
+  onLeave: () => void;
+  trainingTitle: string;
+  trainerName: string;
+  startsAtUtc: string;
+  endsAtUtc: string;
 }) {
-  // Audio-only by default (cellular-friendly); video is opt-in per session.
-  const [audioOnly, setAudioOnly] = useState(true);
+  // Audio-only by default (cellular-friendly); the Camera button below is the
+  // real switch and it calls setCameraEnabled, so the two can never disagree.
+  const [camOn, setCamOn] = useState(false);
+  const [micOn, setMicOn] = useState(role !== 'participant');
+  const [peopleOpen, setPeopleOpen] = useState(role === 'trainer' || role === 'moderator' || role === 'admin');
   const livekitRoom = useRoomContext();
   const remote = useParticipants();
   const isTrainerOrMod = role === 'trainer' || role === 'moderator' || role === 'admin';
@@ -397,13 +490,35 @@ function Room({
     onDismiss();
   };
 
+  const toggleMic = useCallback(async () => {
+    const next = !micOn;
+    setMicOn(next);
+    try {
+      await livekitRoom?.localParticipant.setMicrophoneEnabled(next);
+    } catch {
+      setMicOn(!next);
+    }
+  }, [livekitRoom, micOn]);
+
+  const toggleCam = useCallback(async () => {
+    const next = !camOn;
+    setCamOn(next);
+    try {
+      await livekitRoom?.localParticipant.setCameraEnabled(next);
+    } catch {
+      setCamOn(!next);
+    }
+  }, [livekitRoom, camOn]);
+
   return (
-    <LiveKitRoom serverUrl={url} token={token} connect audio video={!audioOnly}>
-      <View style={s.row}>
-        <Text>Audio-only (saves data)</Text>
-        <Switch value={audioOnly} onValueChange={setAudioOnly} />
-      </View>
-      <Text style={s.muted}>Room: {room}</Text>
+    <LiveKitRoom serverUrl={url} token={token} connect audio video={false}>
+      <RoomHeader
+        title={trainingTitle}
+        trainerName={trainerName}
+        startsAtUtc={startsAtUtc}
+        endsAtUtc={endsAtUtc}
+        count={remote.length + 1}
+      />
 
       {/* Main stage: screen share first, then the trainer's pin, then the room. */}
       {activeShare ? (
@@ -418,8 +533,8 @@ function Room({
         </View>
       ) : (
         <View style={style.stage}>
-          <LocalCameraTile />
-          <Tiles audioOnly={audioOnly} />
+          {camOn && <LocalCameraTile />}
+          <Tiles audioOnly={!camOn} />
         </View>
       )}
       {shareErr && <Text style={{ color: '#8F1D1D', marginTop: 6 }}>{shareErr}</Text>}
@@ -431,13 +546,26 @@ function Room({
           onUnmute={() => {
             // The local participant unmutes their own mic client-side.
             livekitRoom?.localParticipant.setMicrophoneEnabled(true);
+            setMicOn(true);
             dismissRequest();
           }}
           onDismiss={dismissRequest}
         />
       )}
 
-      {isTrainerOrMod && (
+      {/* Labeled controls, one thumb's reach. */}
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        <ControlBtn glyph={micOn ? '🎙' : '🔇'} label={micOn ? 'Mute' : 'Unmute'} on={micOn} onPress={toggleMic} />
+        <ControlBtn glyph="📷" label="Camera" on={camOn} onPress={toggleCam} />
+        <ControlBtn glyph="🖥" label={shareOn ? 'Stop' : 'Share'} on={shareOn} onPress={onShareToggle} />
+        {isTrainerOrMod && (
+          <ControlBtn glyph="👥" label="People" on={peopleOpen} onPress={() => setPeopleOpen((v) => !v)} />
+        )}
+        <ControlBtn glyph="⋯" label="More" onPress={onReport} />
+        <ControlBtn glyph="⏻" label="Leave" danger onPress={onLeave} />
+      </View>
+
+      {isTrainerOrMod && peopleOpen && (
         <ModerationPanel sessionId={sessionId} participants={participants} pinnedId={pinnedId} onPin={setPinnedId} />
       )}
 
@@ -447,15 +575,16 @@ function Room({
         onDismiss={() => onDismiss()}
         onSent={() => onReport()}
       />
-
-      <Text style={s.muted}>Chat, polls, raise-hand and moderation ride the web classroom in Phase 3; native controls land with the dev-build milestone.</Text>
     </LiveKitRoom>
   );
 }
 
 export default function Classroom() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const [creds, setCreds] = useState<{ token: string; url: string; room: string; role: string; trainerId: string } | null>(null);
+  const [creds, setCreds] = useState<{
+    token: string; url: string; room: string; role: string; trainerId: string;
+    trainingTitle: string; trainerName: string; startsAtUtc: string; endsAtUtc: string;
+  } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [speechRequest, setSpeechRequest] = useState<{ requestedBy: string } | null>(null);
   const [shareOn, setShareOn] = useState(false);
@@ -520,13 +649,13 @@ export default function Classroom() {
           onShareFailed={() => setShareOn(false)}
           onReport={openReport}
           reportVisible={reportVisible}
+          onLeave={() => setCreds(null)}
+          trainingTitle={creds.trainingTitle}
+          trainerName={creds.trainerName}
+          startsAtUtc={creds.startsAtUtc}
+          endsAtUtc={creds.endsAtUtc}
         />
       )}
-      <View style={s.row}>
-        <Btn title={shareOn ? 'Stop share' : 'Share'} onPress={toggleShare} />
-        <Btn title="More" onPress={openReport} />
-        <Btn title="Leave" onPress={() => setCreds(null)} />
-      </View>
       {shareNote && <Text style={{ color: '#8F1D1D', marginTop: 6 }}>{shareNote}</Text>}
     </ScrollView>
   );

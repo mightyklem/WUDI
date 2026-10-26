@@ -71,7 +71,7 @@ export const api = {
   markNotificationsRead: () => req('/api/me/notifications', { method: 'POST' }) as Promise<{ marked: number }>,
   verify: (number: string) => req(`/api/verify/${encodeURIComponent(number)}`, {}, false) as Promise<VerifyResult>,
   sessionToken: (sessionId: string) =>
-    req(`/api/sessions/${sessionId}/token`, { method: 'POST' }) as Promise<{ token: string; url: string; room: string; role: string; trainerId: string }>,
+    req(`/api/sessions/${sessionId}/token`, { method: 'POST' }) as Promise<{ token: string; url: string; room: string; role: string; trainerId: string; trainingTitle: string; trainerName: string; startsAtUtc: string; endsAtUtc: string }>,
   moderateSession: (sessionId: string, body: { action: string; identity?: string; source?: 'microphone' | 'camera'; reason?: string }) =>
     req(`/api/sessions/${sessionId}/moderate`, { method: 'POST', body: JSON.stringify(body) }) as Promise<{ ok: boolean; canPublish?: boolean; enabled?: boolean; source?: string }>,
   requestSpeak: (sessionId: string, identity: string) =>

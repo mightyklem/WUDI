@@ -177,6 +177,10 @@ const canPublish = canPublishInRoom(role, !!grant && !grant.revokedAt);
     // The room is told who it is looking at through token metadata, and the client
     // uses this flag to decide whether to switch the mic and camera on by itself.
     // Getting it wrong meant the trainer joining muted with no way to fix it.
+    const trainer = await prisma.trainerProfile.findUnique({
+      where: { userId: session.training.trainerId },
+      select: { displayName: true },
+    });
     return NextResponse.json({
       token: jwt,
       url: process.env.LIVEKIT_URL,
@@ -184,5 +188,10 @@ const canPublish = canPublishInRoom(role, !!grant && !grant.revokedAt);
       role,
       trainerId: session.training.trainerId,
       canPublish: canPublishInRoom(role, !!grant && !grant.revokedAt),
+      // Display info for the room header, so clients don't need a second call.
+      trainingTitle: session.training.title,
+      trainerName: trainer?.displayName || 'Learnovize trainer',
+      startsAtUtc: session.startsAtUtc,
+      endsAtUtc: session.endsAtUtc,
     });
   }
