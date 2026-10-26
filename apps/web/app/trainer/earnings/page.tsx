@@ -24,25 +24,70 @@ export default function Earnings() {
   // with no account on file is money that is being kept and not paid.
   const [accountOnFile, setAccountOnFile] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
+  // Why nothing is on screen yet: 'login' (signed out), 'loading', or the
+  // API's own answer ('not-a-trainer', 'expired', ...). The old code showed
+  // "Log in as a trainer" for all three, so a signed-in trainer whose fetch
+  // failed was told to log in — which fixed nothing and explained nothing.
+  const [gate, setGate] = useState<'loading' | 'login' | { error: string } | null>(null);
 
   function load() {
     const access = getAccess();
-    if (!access) return;
+    if (!access) {
+      setGate('login');
+      return;
+    }
+    setGate('loading');
     authFetch('/api/trainer/earnings', { headers: { authorization: `Bearer ${access}` } })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(async (r) => {
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          setGate({ error: j.error || 'Could not load earnings.' });
+          return null;
+        }
+        return r.json();
+      })
       .then((j) => {
         if (!j) return;
+        setGate(null);
         setRows(j.rows);
         setTotals(j.totals);
         setPlan(j.plan);
         if (j.balance) setBalance(j.balance);
-      });
+      })
+      .catch(() => setGate({ error: 'Could not load earnings. Check your connection.' }));
     authFetch('/api/trainer/payout-account', { headers: { authorization: `Bearer ${access}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => { if (j) setAccountOnFile(!!j.account); });
   }
   useEffect(load, []);
-  if (rows === null) return <div className="wrap"><p className="muted">Log in as a trainer to see earnings.</p></div>;
+  if (gate === 'login') {
+    return (
+      <div className="wrap">
+        <SiteNav />
+        <h1>Earnings.</h1>
+        <p className="sub">Your class sales, fees and payouts live here.</p>
+        <div className="btnrow">
+          <Link className="btn primary" href="/login">Log in</Link>
+          <Link className="btn" href="/onboarding">Become a trainer</Link>
+        </div>
+      </div>
+    );
+  }
+  if (gate !== null) {
+    return (
+      <div className="wrap">
+        <SiteNav />
+        <h1>Earnings.</h1>
+        <p className="muted">{gate === 'loading' ? 'Loading your earnings…' : gate.error}</p>
+        {gate !== 'loading' && (
+          <div className="btnrow">
+            <button className="btn" onClick={load}>Try again</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (rows === null) return <div className="wrap"><SiteNav /><p className="muted">Loading your earnings…</p></div>;
 
   async function upgrade(p: string) {
     const access = getAccess();

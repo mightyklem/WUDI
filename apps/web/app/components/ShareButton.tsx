@@ -15,11 +15,16 @@ export default function ShareButton({
   title,
   label = 'Share',
   className = 'btn',
+  ariaLabel,
+  titleAttr,
 }: {
   url: string;
   title: string;
-  label?: string;
+  label?: React.ReactNode;
   className?: string;
+  /** Needed when the label is an icon alone, so the button still has a name. */
+  ariaLabel?: string;
+  titleAttr?: string;
 }) {
   const [said, setSaid] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -114,7 +119,14 @@ export default function ShareButton({
   }
 
   return (
-    <button type="button" className={className} onClick={share}>
+    <button
+      type="button"
+      className={className}
+      onClick={share}
+      aria-label={ariaLabel}
+      title={titleAttr}
+      style={typeof label !== 'string' ? { minWidth: 48, justifyContent: 'center' } : undefined}
+    >
       {said || label}
     </button>
   );

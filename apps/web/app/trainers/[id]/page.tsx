@@ -6,6 +6,7 @@ import VerifiedBadge from '../../components/VerifiedBadge';
 import Avatar from '../../components/Avatar';
 import ShareButton from '../../components/ShareButton';
 import Tabs from '../../components/Tabs';
+import Icon from '@/components/Icon';
 import { TrainerMaterials } from '../../components/Materials';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import { formatNgn } from '@learnovize/shared';
@@ -42,11 +43,28 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [tab, setTab] = useState<'shop' | 'classes' | 'reviews' | 'about'>('shop');
+  // Sessions of this trainer the viewer attended but has not reviewed yet.
+  // Attended-and-unreviewed is the only state that can act, so it is the only
+  // one fetched: anything else would be a button that leads nowhere.
+  const [toReview, setToReview] = useState<{ sessionId: string }[] | null>(null);
 
   useEffect(() => {
     authFetch(`/api/trainers/${id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => (j ? setData(j) : setMissing(true)));
+    if (getAccess()) {
+      authFetch('/api/me/reviews')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          const sessions: { sessionId: string; trainerId: string; myRating: number | null }[] = j?.sessions || [];
+          setToReview(
+            sessions.filter((s) => s.trainerId === id && s.myRating === null).map((s) => ({ sessionId: s.sessionId })),
+          );
+        })
+        .catch(() => setToReview([]));
+    } else {
+      setToReview([]);
+    }
   }, [id]);
 
   if (missing) {
@@ -122,22 +140,41 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* The only three things you do with a person you found: keep them,
-          ask them something, pass them on. Symbols first, so the row reads
-          at a glance in any language. */}
+          ask them something, pass them on. Icons alone, in the brand set, so
+          the row reads at a glance in any language; names survive on tooltips
+          and screen readers. */}
       {trainer.isMe ? (
         <div className="btnrow" style={{ marginTop: 14 }}>
           <Link className="btn primary" href="/me/profile">✎ Edit your store</Link>
         </div>
       ) : (
         <div className="btnrow" style={{ marginTop: 14 }}>
-          <button className="btn primary" onClick={toggleFollow} disabled={busy} aria-pressed={trainer.isFollowing}>
-            {trainer.isFollowing ? '✓ Following' : '＋ Follow'}
+          <button
+            className={trainer.isFollowing ? 'btn primary' : 'btn'}
+            onClick={toggleFollow}
+            disabled={busy}
+            aria-pressed={trainer.isFollowing}
+            aria-label={trainer.isFollowing ? 'Unfollow this trainer' : 'Follow this trainer'}
+            title={trainer.isFollowing ? 'Following' : 'Follow'}
+            style={{ minWidth: 48, justifyContent: 'center' }}
+          >
+            <Icon name={trainer.isFollowing ? 'check' : 'people'} size={20} />
           </button>
-          <Link className="btn" href={`/messages/${trainer.userId}`}>✉ Message</Link>
+          <Link
+            className="btn"
+            href={`/messages/${trainer.userId}`}
+            aria-label={`Message ${trainer.displayName}`}
+            title="Message"
+            style={{ minWidth: 48, justifyContent: 'center' }}
+          >
+            <Icon name="chat" size={20} />
+          </Link>
           <ShareButton
             url={`/trainers/${trainer.userId}`}
             title={trainer.displayName}
-            label="⇪ Share"
+            label={<Icon name="share" size={20} />}
+            ariaLabel="Share this trainer"
+            titleAttr="Share"
           />
         </div>
       )}
@@ -183,7 +220,15 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
           {tab === 'reviews' && (
             reviews.count > 0 ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                {(toReview?.length || 0) > 0 && (
+                  <div className="card" style={{ padding: 14, marginBottom: 12, borderLeft: '4px solid var(--leaf)' }}>
+                    <p className="u-h" style={{ margin: 0 }}>You attended — say how it went</p>
+                    <p className="muted u-sub" style={{ margin: '4px 0 10px' }}>
+                      {toReview!.length} class{toReview!.length === 1 ? '' : 'es'} waiting for your rating.
+                    </p>
+                    <Link className="btn primary" href="/me/reviews">★ Leave a review</Link>
+                  </div>
+                )}                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
                   <span style={{ fontSize: 'var(--t-2xl)', fontWeight: 800 }}>{reviews.average}</span>
                   <span className="badge ok" style={{ fontSize: 'var(--t-base)' }}>
                     {'★'.repeat(Math.round(reviews.average!))}
@@ -205,6 +250,14 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
                   ))}
                 </div>
               </>
+            ) : (toReview?.length || 0) > 0 ? (
+              <div className="card" style={{ padding: 16 }}>
+                <p className="u-h" style={{ margin: 0 }}>No reviews yet — yours can be the first</p>
+                <p className="muted u-sub" style={{ margin: '4px 0 12px' }}>
+                  You attended this trainer&apos;s class, so your rating counts.
+                </p>
+                <Link className="btn primary" href="/me/reviews">★ Leave the first review</Link>
+              </div>
             ) : (
               <p className="muted" style={{ margin: 0 }}>
                 No reviews yet. Only learners who actually attended can leave the first one.
