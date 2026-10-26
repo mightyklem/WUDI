@@ -127,8 +127,8 @@ A trainer creates a training with:
 ### 4.8 Certificates
 
 * FR-8.1 A participant is eligible only if their attendance meets the training's minimum percentage and, for paid certification, they have paid.  
-* FR-8.2 At the end of the programme, the trainer sees the list of eligible participants and approves who receives a certificate. The trainer cannot certify someone who does not meet the minimum attendance.  
-* FR-8.3 Certificates are co-branded: they show the trainer's name, logo, and signature, and the platform's seal.  
+* FR-8.2 Certificates issue automatically when a session ends for every eligible participant. The trainer holds a veto, not a gate: ineligible participants can never be certified, and an issued certificate can be revoked with a reason. No learner waits on a trainer who never logs in.  
+* FR-8.3 Certificates are co-branded: they show the trainer's name, logo, and uploaded signature image, and the platform's seal.  
 * FR-8.4 Each certificate has a unique certificate number.  
 * FR-8.5 A public verification page lets anyone enter a certificate number and see whether it is genuine, along with the participant's name, training title, trainer, and date.  
 * FR-8.6 Participants can view, download, and share their certificates, including to professional and social networks.  
@@ -139,35 +139,51 @@ A trainer creates a training with:
 * FR-9.1 Payments are made in Nigerian naira through one main Nigerian payment provider supporting cards (Verve, Visa, Mastercard), bank transfer, and USSD. A second provider may be added later.  
 * FR-9.2 Plans and commission:
 
-| Plan | Price | Learnovize commission on paid certifications | Maximum class size | Other benefits |
+| Plan | Price | Learnovize commission on paid sales | Maximum class size | Other benefits |
 | :---- | :---- | :---- | :---- | :---- |
-| Free | Free | 5% | 50 | Core features |
-| Pro | $9 per month (USD reference; proposed ₦12,000, to be confirmed) | 3% | 200 | Custom certificate design |
-| Business | $39 per month (USD reference; proposed ₦52,000, to be confirmed) | 1% | 500 | Multiple moderators, analytics |
+| Free | Free | 25% | 50 | Core features |
+| Pro | $9 per month (USD reference; proposed ₦12,000, to be confirmed) | 25% | 200 | Custom certificate design |
+| Business | $39 per month (USD reference; proposed ₦52,000, to be confirmed) | 25% | 500 | Multiple moderators, analytics |
+
+Commission is a flat 25% on every plan (decided; the per-plan 5%/3%/1% split was dropped). Plans differ by class size and features, not by commission.
 
 The full split of features between plans is to be confirmed.
 
 * FR-9.3 Payment provider fees are shown separately from Learnovize's commission. Trainers see a clear breakdown of each payment: amount paid, provider fee, Learnovize commission, and amount due to the trainer.  
-* FR-9.4 Payouts: the trainer is paid after the last session ends, following a short waiting period in case of problems. The payout is the payments received minus Learnovize's commission and payment fees. The length of the waiting period is to be decided.  
+* FR-9.4 Payouts: the trainer is paid after the last session ends, following a 7-day holding period in case of problems (configurable via PAYOUT_HOLD_DAYS). Earnings accumulate and are released once they reach the ₦5,000 minimum (PAYOUT_MIN_NGN). The payout is the payments received minus Learnovize's commission and payment fees.  
 * FR-9.5 Refunds:  
   * A full refund if the trainer cancels or does not hold the training.  
   * A refund if the participant cancels at least 24 hours before the start.  
   * No refund after that, or if the participant attends but does not meet the minimum attendance.  
-  * Who absorbs the payment provider's fee on a refund is to be decided.  
+  * Who absorbs the payment provider's fee on a refund is to be decided. Fees the customer covered at checkout are never charged a second time off the trainer's payout.  
 * FR-9.6 Trainers can see their earnings, the commission and fees deducted, and payout status.  
 * FR-9.7 Faster payouts for trusted, well-rated trainers may be offered later, for example as a perk on higher plans. *(Future)*
 
 ### 4.10 Explore Feed
 
 * FR-10.1 The Explore page is a scrollable social feed of promo posts for upcoming trainings.  
-* FR-10.2 A post can be a video of up to 1 minute, an e-card, or an infographic.  
+* FR-10.2 A post can be a video of up to 1 minute (≤50MB mp4), an e-card (auto-generated speaker template with trainer photo, topic and date), or an infographic image (≤5MB).  
 * FR-10.3 Each post shows the trainer, the training title and date, whether it is free or certified, and a Register button.  
-* FR-10.4 Participants can watch, share, register, follow the trainer, save the training, and like the post.  
+* FR-10.4 Participants can watch, share (native share sheet on phones; WhatsApp/X/Telegram/Facebook/LinkedIn links on desktop), register, follow the trainer, save the training, and like the post.  
 * FR-10.5 Participants can browse or search by topic, date, and free versus certified.  
 * FR-10.6 Trainers can create feed posts for their trainings (uploading their own video or image, or using the platform's e-card and infographic templates).  
 * FR-10.7 Posts go live immediately. Users can report any post, and admins can review reports, hide or remove posts, and suspend accounts (see 4.12).  
 * FR-10.8 Posts for trainings that are full, cancelled, or finished are marked accordingly or removed from the feed.  
 * FR-10.9 Comments and a personalized feed are not in this release.
+
+### 4.13 Trainer Materials Store
+
+* FR-13.1 Trainers upload sellable files (ebooks, slides, notes, audio, video, images) from their profile and sell them standalone — no class registration required. Price in whole naira; 0 means free.
+* FR-13.2 Video uploads up to 1GB go direct from browser to private storage via presigned URLs (serverless payload limits forbid routing them through the API); all other types up to 50MB upload through the API.
+* FR-13.3 Files live in the private bucket and are served only through a gated download route after purchase (or free grant). No material ever sits on a public URL.
+* FR-13.4 Paid materials check out through Paystack like class payments; free materials grant on first download. One purchase row per buyer per material — no double-buying.
+* FR-13.5 Copyright guardrails: mandatory rights attestation on every upload (timestamped); SHA-256 fingerprinting with automatic hold on byte-identical files already shelved by another trainer; user reports with auto-hold at 3 open reports; admin release/remove with audit log; repeat infringers face suspension.
+* FR-13.6 Material revenue is recorded per purchase; wiring it into trainer payouts follows the same hold/minimum rules as class revenue.
+
+### 4.14 Help & Support
+
+* FR-14.1 The landing page carries a knowledge base: FAQ accordion plus a rotating inspiration line. No inventory counts on the welcome hero.
+* FR-14.2 Anyone — signed in or not — can send a support ticket (name, contact, topic, message). Tickets queue oldest-first for admins, who mark them answered/closed.
 
 ### 4.11 Notifications
 
@@ -179,7 +195,7 @@ The full split of features between plans is to be confirmed.
 ### 4.12 Admin and Safety
 
 * FR-12.1 Admins can review trainer approval requests.  
-* FR-12.2 Admins can review reported posts, trainers, and certificates, and take action.  
+* FR-12.2 Admins can review reported posts, trainers, materials, support tickets, and certificates, and take action.  
 * FR-12.3 Admins can view platform activity such as number of trainings, registrations, payments, and certificates issued.  
 * FR-12.4 Community rules define what content and behavior are not allowed.  
 * FR-12.5 A review queue shows new posts and reported posts in one place, newest first.  
@@ -227,7 +243,7 @@ Self-hosting the media server means the team is responsible for server capacity,
 | Build approach | Recommended: Next.js for the website and React Native for the mobile apps |
 | Revenue | Commission on paid certifications plus trainer subscription plans |
 | Who can train | Anyone can host free trainings; approval required for paid certification |
-| Certificate rules | Minimum attendance (trainer-set), then trainer approval |
+| Certificate rules | Minimum attendance (trainer-set), then automatic issue with trainer veto via revoke |
 | Certificate style | Co-branded with unique verifiable number |
 | Discovery | Invite links plus an Explore feed of 1-minute videos, e-cards, and infographics |
 | Feed actions | Watch, share, register, follow, save, like (no comments yet) |
@@ -235,16 +251,16 @@ Self-hosting the media server means the team is responsible for server capacity,
 | Recordings | None; trainings are live only |
 | Launch scope | Everything at once |
 | Launch market | Nigeria first, with prices in naira |
-| Commission | Free 5%, Pro 3%, Business 1%; payment provider fees shown separately |
+| Commission | Flat 25% on all plans; payment provider fees shown separately |
 | Plans | Free, Pro ($9 per month), Business ($39 per month), USD reference |
 | Class size limits | Free 50, Pro 200, Business 500 |
 | Minimum attendance | Default 80%, trainer can choose 60% to 100% |
 | Present in a session | Stays at least 75% of the session; moderator can correct |
 | Refunds | If trainer cancels, or participant cancels at least 24 hours before start |
 | Trainer approval | Identity check plus proof of expertise, reviewed by Learnovize |
-| Payouts | After the training ends, following a short waiting period |
-| Payments | One main Nigerian provider: cards, bank transfer, USSD |
-| What participants pay for | Only the certificate; attendance is always free |
+| Payouts | After the training ends, 7-day hold, ₦5,000 release minimum |
+| Payments | Paystack (live): cards, bank transfer, USSD; mock provider in dev only |
+| What participants pay for | Certificates and materials; attendance is always free |
 | Feed safety | Posts live immediately, user reports, round-the-clock monitoring |
 
 ---
@@ -287,7 +303,7 @@ Although the launch is complete, build and test in stages:
 | Hard attendance limit turns away interested people | Show demand to the trainer; consider a waitlist in a future release. |
 | Video hosting and bandwidth costs grow with usage | Monitor usage, set upload limits, and review the subscription and commission pricing. |
 | Payment disputes and refunds | Clear refund policy (see 4.9) and record of all transactions. |
-| Thin margin on the Free plan: 5% commission, and free trainings still cost money to run | Class size limits, paid plans, and close monitoring of cost per training. |
+| Thin margin on free trainings (they still cost money to run) despite the flat 25% commission | Class size limits, paid plans, and close monitoring of cost per training. |
 | Round-the-clock monitoring is costly for a small team | Automatic flags, the hide button, careful shift planning, and a budget for it. |
 | Not complying with the Nigeria Data Protection Act | Legal advice, registration with the regulator, and secure storage of trainers' ID documents. |
 | Naira exchange-rate changes affect plan prices | Price in naira and review prices regularly. |
@@ -298,11 +314,11 @@ Although the launch is complete, build and test in stages:
 
 1. Branding: logo and visual identity, and confirming the name Learnovize is available (website address, social media handles, and trademark).  
 2. Naira prices: confirm ₦12,000 for Pro and ₦52,000 for Business, and how often prices are reviewed.  
-3. Feature split: exactly which features belong to Free, Pro, and Business, beyond class size, commission, custom certificate design, multiple moderators, and analytics.  
-4. Payouts and refunds: the length of the waiting period before payouts, and who absorbs the payment provider's fee on a refund.  
+3. Feature split: exactly which features belong to Free, Pro, and Business, beyond class size, custom certificate design, multiple moderators, and analytics. (Commission is flat 25% on all plans — no longer part of the split.)  
+4. ~~Payouts and refunds: the length of the waiting period before payouts, and who absorbs the payment provider's fee on a refund.~~ Decided: 7-day hold (PAYOUT_HOLD_DAYS), ₦5,000 release minimum; customer-covered fees are never charged twice.  
 5. Trainer approval: which identity documents and proof of expertise are accepted, and how long a review should take.  
-6. Payment provider: which provider is selected, and its onboarding requirements.  
-7. Feed upload limits: video file size, image size, and formats.  
+6. ~~Payment provider: which provider is selected, and its onboarding requirements.~~ Decided: Paystack live (mock in dev only).
+7. ~~Feed upload limits: video file size, image size, and formats.~~ Decided: 60s video ≤50MB mp4, image ≤5MB; materials video ≤1GB (presigned), other types ≤50MB.
 8. Community rules: the written rules for the Explore feed and live classes.  
 9. Monitoring team: how many people are needed for round-the-clock monitoring, and the shift plan.  
 10. Legal: company registration, registration with the Nigeria Data Protection Commission, terms of service, privacy policy, and certificate wording, all to be confirmed with a Nigerian lawyer.  
@@ -333,8 +349,8 @@ Full plan with concrete outputs and exit gates: `DOCS/Implementation Plan- Learn
 | 2 — Training + Invites + Registration | FR-3, 4, 5.1, 5.4–5.6 | Create/edit/cancel training; SSR invite `/t/:slug/register` with previews; atomic seat-claim; confirm/reminder/change mails | Idea → invite → full → cancel-reopens-seat |
 | 3 — Live Classroom | FR-6 | LiveKit rooms per session, role tokens, chat/polls/raise-hand/share, mandatory low-data mode, no recording, moderator invite/accept | 50-user class stable; permission tests pass |
 | 4 — Attendance | FR-7 | Join/leave webhooks, present = ≥75% session, program % + progress view, at-risk alerts, moderator corrections | 3-session % correct incl. disconnect + correction |
-| 5 — Certificates | FR-8 | Eligibility (attendance% + paid), trainer approves only eligible, co-branded PDF + `LEARNOVIZE-YYYY-XXXXXX`, public `/verify`, revoke | Attend → approve → verify → revoke → revoked |
-| 6 — Money | FR-5.2–5.3, 9 | Paystack NGN (cards/transfer/USSD), trainer approval gate, plans 50/200/500 + 5%/3%/1%, earnings page, held payouts, refunds | Purchase → correct split → payout → refund paths pass |
+| 5 — Certificates | FR-8 | Eligibility (attendance% + paid), auto-issue with trainer veto via revoke, co-branded PDF + `LEARNOVIZE-YYYY-XXXXXX`, public `/verify`, revoke | Attend → auto-issue → verify → revoke → revoked |
+| 6 — Money | FR-5.2–5.3, 9 | Paystack NGN (cards/transfer/USSD), trainer approval gate, plans 50/200/500 + flat 25% commission, earnings page, held payouts, refunds | Purchase → correct split → payout → refund paths pass |
 | 7 — Feed + Notifications | FR-10, 11 | Promo posts (60s video/e-card/infographic), register/follow/save/like, filters; push/email/in-app + Termii SMS/WhatsApp | Post → discover → register from feed |
 | 8 — Admin + Safety | FR-12, §7 | Approval + review queues, one-click hide, audit log, metrics; ToS/privacy/NDPA docs; 24/7 rota | Report → hide <5 min in drill |
 | 9 — Mobile | §5 parity | Expo iOS/Android parity, deep links, <3s invite on 3G | Web E2E passes on both stores |

@@ -84,7 +84,7 @@ FR: 5.2–5.3, 9.1–9.6, 12.1 (approval review)
 Outputs:
 - Payments: Paystack primary (locked), NGN, cards + transfer + USSD. Cert-fee checkout (per locked Phase-0 timing). Webhooks signature-verified, idempotent, reconciled to `payments`.
 - Trainer approval flow: submit ID + expertise evidence → admin approve/reject-with-reason/revoke. ID docs in private bucket, encrypted, retention policy, NDPA-compliant access log. Gate: unapproved trainer cannot set paid cert price (API + UI).
-- Plans: Free/Pro/Business with caps 50/200/500 + commission 5%/3%/1%. Provider fee shown separately. Trainer earnings page: amount / fee / commission / net / payout status.
+- Plans: Free/Pro/Business with caps 50/200/500 + flat 25% commission (decided; was 5%/3%/1%). Provider fee shown separately. Trainer earnings page: amount / fee / commission / net / payout status.
 - Payouts: after last session + hold period, payout job + ledger. Refunds: auto-full on trainer cancel/no-show; auto if participant cancels ≥24h before start; none after or for low attendance. Fee-absorber per Phase-0 decision.
 - Admin: approval queue + payout review.
 

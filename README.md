@@ -26,9 +26,11 @@ Participants have no easy place to discover trainings, and certificates are hard
 3. **Free attendance, paid certification** — attendance is always free. Certification is an optional add-on. Only approved trainers can offer paid certification.
 4. **Live classroom** — WebRTC video/audio or audio-only, live chat, polls, raise-hand, screen share, mute/remove. Low-data mode for weak connections. No recordings/replays (live only).
 5. **Trustworthy attendance** — auto-tracked by time stayed (present = ≥75% of session) + join/leave logs. Moderators can correct for network drops. Participants see progress live (e.g. "2 of 3 sessions, 67% — you need 80%") and get at-risk alerts.
-6. **Verifiable certificates** — eligible only if attendance % met (trainer-set 60–100%, default 80%) + paid if required. Trainer approves final list (can't approve ineligible). Co-branded (trainer logo/signature + Learnovize seal), unique number, public verification page, revocation support.
-7. **Explore feed** — scrollable promo feed for upcoming trainings (≤1 min video, e-card, infographic). Watch, share, register, follow trainer, save, like. Search by topic/date/free vs certified.
-8. **Payments & payouts (NGN)** — cards (Verve/Visa/Mastercard), bank transfer, USSD via one main Nigerian provider (Paystack/Flutterwave TBD). Clear split: amount / provider fee / Learnovize commission / trainer payout. Payout after last session + holding period.
+6. **Verifiable certificates** — auto-issued when sessions end for everyone eligible (attendance % met: trainer-set 60–100%, default 80% + paid if required). Trainers hold a veto via revocation, never a gate — no learner waits on a trainer who never logs in. Co-branded (trainer logo + uploaded signature + Learnovize seal), unique number, public verification page, revocation support.
+7. **Explore feed** — scrollable promo feed for upcoming trainings (≤60s video, speaker e-card, infographic). Watch, share (native sheet + WhatsApp/X/Telegram/Facebook/LinkedIn), register, follow trainer, save, like. Search by topic/date/free vs certified.
+8. **Payments & payouts (NGN)** — Paystack live (cards Verve/Visa/Mastercard, bank transfer, USSD); mock provider in dev only. Clear split: amount / provider fee / Learnovize commission (flat 25% all plans) / trainer payout. Payout after last session + 7-day hold, released at the ₦5,000 minimum.
+9. **Trainer materials store** — trainers sell ebooks, slides, notes, audio and video (1GB cap, presigned direct upload) from their profile, free or paid. Private storage, gated download, rights attestation + duplicate fingerprinting + report takedowns.
+10. **Help & support** — FAQ knowledge base and support tickets on the landing page, open to everyone including signed-out visitors.
 
 ## Roles
 
@@ -42,13 +44,13 @@ Participants have no easy place to discover trainings, and certificates are hard
 
 ## Plans & limits
 
-| Plan | Price | Commission on paid certs | Max class |
+| Plan | Price | Commission on paid sales | Max class |
 |------|-------|--------------------------|-----------|
-| Free | Free | 5% | 50 |
-| Pro | ~₦12,000/mo ($9 ref, TBC) | 3% | 200 |
-| Business | ~₦52,000/mo ($39 ref, TBC) | 1% | 500 |
+| Free | Free | 25% | 50 |
+| Pro | ~₦12,000/mo ($9 ref, TBC) | 25% | 200 |
+| Business | ~₦52,000/mo ($39 ref, TBC) | 25% | 500 |
 
-Pro adds custom certificate design. Business adds multiple moderators + analytics. Full split TBC.
+Commission is flat 25% on all plans — plans differ by class size and features. Pro adds custom certificate design. Business adds multiple moderators + analytics. Full split TBC.
 
 ## Tech direction (proposed)
 
@@ -73,7 +75,7 @@ Self-hosting media = team owns capacity, monitoring, bandwidth cost. Load-test t
 1. Foundation: auth, trainer profiles, create training + invites, registration
 2. Live classroom: video/audio, chat, polls, moderator, attendance
 3. Certificates: rules, approval, co-branded certs, verification page
-4. Money: paid certs, trainer approval, commissions, subscriptions, payouts/refunds
+4. Money: paid certs, trainer approval, flat 25% commission, 7-day hold + ₦5,000 payout minimum, payouts/refunds
 5. Explore feed: posts, follow/save/like, reporting + moderation
 6. Mobile apps: iOS + Android parity
 7. Launch prep: load testing, security review, NDPA compliance, admin tools
@@ -107,7 +109,7 @@ Code (`apps/web`, `apps/mobile`, `backend/`) lands in stages 1–6.
 ## Open questions
 
 - Final NGN prices + review cadence
-- Full Free/Pro/Business feature split
+- Full Free/Pro/Business feature split (commission already decided: flat 25%)
 - Payout holding period + who absorbs provider fee on refunds
 - Accepted ID / proof-of-expertise docs + review SLA
 - Payment provider selection, feed upload limits, community rules copy, monitoring staffing, legal (CAC, NDPC, ToS/privacy, cert wording)
