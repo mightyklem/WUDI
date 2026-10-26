@@ -567,8 +567,12 @@ export function useModeration(sessionId: string) {
     'disruptive',
   ] as const;
 
+  type ModAction =
+    | 'mute' | 'allowSpeak' | 'remove' | 'end'
+    | 'muteMic' | 'unmuteMic' | 'muteCamera' | 'unmuteCamera';
+
   const act = useCallback(async (
-    action: 'mute' | 'allowSpeak' | 'remove' | 'end',
+    action: ModAction,
     identity?: string,
   ) => {
     setBusy(true);
@@ -600,10 +604,15 @@ export function useModeration(sessionId: string) {
         body: JSON.stringify({ action, identity, reason }),
       });
       const j = await r.json().catch(() => ({}));
-      const said = action === 'end' ? 'Session ended.'
+      const said =
+        action === 'end' ? 'Session ended.'
         : action === 'allowSpeak' ? 'They can speak now.'
         : action === 'mute' ? 'Muted.'
-        : 'Removed.';
+        : action === 'muteMic' ? 'Microphone muted.'
+        : action === 'unmuteMic' ? 'Microphone unmuted.'
+        : action === 'muteCamera' ? 'Camera disabled.'
+        : action === 'unmuteCamera' ? 'Camera enabled.'
+        : 'Done.';
       setFeedback({ ok: r.ok, text: r.ok ? said : (j.error || 'That action failed.') });
     } catch {
       setFeedback({ ok: false, text: 'Could not reach the server.' });
@@ -612,5 +621,39 @@ export function useModeration(sessionId: string) {
     }
   }, [sessionId]);
 
-  return { act, busy, feedback, setFeedback };
+  /** Ask a learner to unmute; also grants publish so Unmute now can succeed. */
+  const requestSpeak = useCallback(async (identity: string) => {
+    setBusy(true);
+    try {
+      const { getAccess } = await import('@/lib/client-auth');
+      const access = getAccess();
+      // Grant first so the learner's Unmute banner can actually publish.
+      const grant = await fetch(`/api/sessions/${sessionId}/moderate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+        body: JSON.stringify({ action: 'allowSpeak', identity, reason: 'asked to speak' }),
+      });
+      const gj = await grant.json().catch(() => ({}));
+      if (!grant.ok) {
+        setFeedback({ ok: false, text: gj.error || 'Could not grant speaking rights.' });
+        return;
+      }
+      const r = await fetch(`/api/sessions/${sessionId}/request-speak`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+        body: JSON.stringify({ identity }),
+      });
+      const j = await r.json().catch(() => ({}));
+      setFeedback({
+        ok: r.ok,
+        text: r.ok ? 'Asked them to speak.' : (j.error || 'Could not send the request.'),
+      });
+    } catch {
+      setFeedback({ ok: false, text: 'Could not reach the server.' });
+    } finally {
+      setBusy(false);
+    }
+  }, [sessionId]);
+
+  return { act, requestSpeak, busy, feedback, setFeedback };
 }

@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import CertConsent from './CertConsent';
 
 export default function RegisterButton({ trainingId, full, label, hasEnded }: { trainingId: string; full: boolean; label?: string; hasEnded?: boolean }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [joinSessionId, setJoinSessionId] = useState<string | null>(null);
   // Default false on purpose. Registration works either way; publishing does not
   // happen by accident.
   const [certConsentPublic, setCertConsentPublic] = useState(false);
@@ -25,6 +27,10 @@ export default function RegisterButton({ trainingId, full, label, hasEnded }: { 
       if (!r.ok) {
         setMsg(j.error || 'Registration failed');
         return;
+      }
+
+      if (typeof j.sessionId === 'string' && j.sessionId) {
+        setJoinSessionId(j.sessionId);
       }
 
       // Paid class: the seat is held, now send them straight to payment.
@@ -68,9 +74,14 @@ export default function RegisterButton({ trainingId, full, label, hasEnded }: { 
   return (
     <span>
       <CertConsent checked={certConsentPublic} onChange={setCertConsentPublic} id={`cert-${trainingId}`} />
-      <button className="btn primary" disabled={full || busy} onClick={go} style={{ marginTop: 10 }}>
-        {full ? 'Full' : busy ? 'Working…' : label || 'Reserve seat'}
+      <button className="btn primary" disabled={full || busy || !!joinSessionId} onClick={go} style={{ marginTop: 10 }}>
+        {full ? 'Full' : busy ? 'Working…' : joinSessionId ? 'Seat reserved' : label || 'Reserve seat'}
       </button>
+      {joinSessionId && (
+        <Link className="btn primary" href={`/classroom/${joinSessionId}`} style={{ marginTop: 10, marginLeft: 8 }}>
+          Join class
+        </Link>
+      )}
       {msg && <p className="muted">{msg}</p>}
     </span>
   );

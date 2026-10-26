@@ -30,7 +30,9 @@ export async function GET(req: Request) {
       rank: true,
       createdAt: true,
       trainerProfile: {
-        select: { displayName: true, topics: true, photoUrl: true, bio: true, logoUrl: true },
+        select: {
+          displayName: true, topics: true, photoUrl: true, bio: true, logoUrl: true, signatureUrl: true,
+        },
       },
     },
   });

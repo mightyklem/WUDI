@@ -77,6 +77,7 @@ export default function ClassroomRoom({
   sessionTitle,
   role,
   myId,
+  trainerId,
   subtitle,
   minPct,
   introStartsAt,
@@ -85,15 +86,17 @@ export default function ClassroomRoom({
   quality,
   retryIn,
   retryNow,
-onLeave,
-    mediaIssue,
-    onEnd,
-  }: {
+  onLeave,
+  mediaIssue,
+  onEnd,
+}: {
   room: Room;
   sessionId: string;
   sessionTitle: string;
   role: Role;
   myId: string;
+  /** Trainer user id — target for in-class reports. */
+  trainerId: string;
   subtitle: string;
   minPct: number;
   introStartsAt: string;
@@ -102,15 +105,52 @@ onLeave,
   quality: number;
   retryIn: number;
   retryNow: () => void;
-onLeave: () => void;
-    mediaIssue?: string | null;
-    onEnd: () => void;
+  onLeave: () => void;
+  mediaIssue?: string | null;
+  onEnd: () => void;
 }) {
   const d = useClassroomData(room, myId, role);
   const mod = useModeration(sessionId);
   const [panel, setPanel] = useState<Tab | null>(null);
   const [view, setView] = useState<'auto' | 'grid' | 'speaker'>('auto');
   const [spotlight, setSpotlight] = useState<string | null>(null);
+  const [speechRequest, setSpeechRequest] = useState<{ requestedBy: string } | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportType, setReportType] = useState<'problem' | 'abuse'>('problem');
+  const [reportReason, setReportReason] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportMsg, setReportMsg] = useState<string | null>(null);
+
+  // Learner: pick up an unread "speech-requested" for this session and show Unmute now.
+  useEffect(() => {
+    if (role === 'trainer' || role === 'moderator' || role === 'admin') return;
+    let stop = false;
+    const check = async () => {
+      try {
+        const { getAccess } = await import('@/lib/client-auth');
+        const access = getAccess();
+        if (!access) return;
+        const r = await fetch('/api/me/notifications', {
+          headers: { authorization: `Bearer ${access}` },
+          cache: 'no-store',
+        });
+        if (!r.ok || stop) return;
+        const j = await r.json();
+        const notes = (j.notifications || []) as Array<{
+          type: string; readAt: string | null; payload?: { sessionId?: string; requestedBy?: string };
+        }>;
+        const hit = notes.find(
+          (n) => n.type === 'speech-requested' && !n.readAt && n.payload?.sessionId === sessionId,
+        );
+        if (hit && !stop) {
+          setSpeechRequest({ requestedBy: hit.payload?.requestedBy || 'The trainer' });
+        }
+      } catch { /* optional */ }
+    };
+    void check();
+    const id = setInterval(check, 12_000);
+    return () => { stop = true; clearInterval(id); };
+  }, [role, sessionId]);
 
 const lp = room.localParticipant;
   const handUp = d.hands.has(myId);
@@ -316,6 +356,50 @@ const lp = room.localParticipant;
     onEnd();
   }, [mod, onEnd]);
 
+  const unmuteFromRequest = useCallback(async () => {
+    try {
+      await lp.setMicrophoneEnabled(true);
+      setSpeechRequest(null);
+    } catch (e) {
+      d.setNotice(explain('microphone', e));
+    }
+  }, [d, explain, lp]);
+
+  const submitReport = useCallback(async () => {
+    const reason = reportReason.trim();
+    if (!reason) {
+      setReportMsg('Say what happened first.');
+      return;
+    }
+    setReportBusy(true);
+    setReportMsg(null);
+    try {
+      const { getAccess } = await import('@/lib/client-auth');
+      const access = getAccess();
+      const r = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+        body: JSON.stringify({
+          targetType: 'trainer',
+          targetId: trainerId,
+          reason: `${reportType === 'abuse' ? 'Report abuse: ' : 'Report a problem: '}${reason}`,
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setReportMsg(j.error || 'Could not send the report.');
+        return;
+      }
+      setReportOpen(false);
+      setReportReason('');
+      d.setNotice('Report sent. An admin will review it.');
+    } catch {
+      setReportMsg('Could not reach the server.');
+    } finally {
+      setReportBusy(false);
+    }
+  }, [d, reportReason, reportType, trainerId]);
+
   /* ---------------- fullscreen ----------------
      The stage is the only thing worth filling a screen with. On a phone in landscape the
      class header, the toolbar and the participant strip all take space the lesson needs.
@@ -456,17 +540,33 @@ const lp = room.localParticipant;
             {mediaIssue && (
               <p className="croom-media-issue" role="alert">{mediaIssue}</p>
             )}
+            {speechRequest && (
+              <div className="croom-speech-ask" role="status">
+                <div>
+                  <b>You were asked to speak</b>
+                  <p>Your mic is off. Unmute to join the conversation.</p>
+                </div>
+                <div className="croom-speech-ask-actions">
+                  <button type="button" className="croom-mini primary" onClick={() => void unmuteFromRequest()}>
+                    Unmute now
+                  </button>
+                  <button type="button" className="croom-mini" onClick={() => setSpeechRequest(null)}>
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
             <ControlBar
               role={role}
               micOn={!!d.local?.mic}
               camOn={!!d.local?.cam}
               shareOn={!!d.local?.share}
               mayPublish={d.mayPublish}
-        canScreenShare={canScreenShare}
-        cams={cams}
-        camId={camId}
-        camBusy={camBusy}
-        onSelectCamera={selectCamera}
+              canScreenShare={canScreenShare}
+              cams={cams}
+              camId={camId}
+              camBusy={camBusy}
+              onSelectCamera={selectCamera}
               mics={mics}
               micId={micId}
               micBusy={micBusy}
@@ -484,9 +584,69 @@ const lp = room.localParticipant;
               onReaction={(e) => void d.popReaction(e)}
               onLeave={onLeave}
               onEnd={() => void end()}
+              onReport={() => { setReportOpen(true); setReportMsg(null); }}
               busy={mod.busy}
             />
           </div>
+          {reportOpen && (
+            <div className="croom-sheet-scrim" onClick={() => setReportOpen(false)} aria-hidden />
+          )}
+          {reportOpen && (
+            <div className="croom-sheet" role="dialog" aria-modal="true" aria-label="Report">
+              <button type="button" className="croom-sheet-handle" onClick={() => setReportOpen(false)} aria-label="Close">
+                <span aria-hidden>⌃</span>
+              </button>
+              <p className="croom-sheet-title">Report</p>
+              <div className="croom-sheet-rows" style={{ gap: 10, padding: '0 16px 20px' }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="croom-mini"
+                    data-on={reportType === 'problem' || undefined}
+                    onClick={() => setReportType('problem')}
+                  >
+                    Report a problem
+                  </button>
+                  <button
+                    type="button"
+                    className="croom-mini"
+                    data-on={reportType === 'abuse' || undefined}
+                    onClick={() => setReportType('abuse')}
+                  >
+                    Report abuse
+                  </button>
+                </div>
+                <textarea
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder="What happened?"
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    resize: 'vertical',
+                    font: 'inherit',
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,.2)',
+                    background: 'rgba(0,0,0,.25)',
+                    color: 'inherit',
+                  }}
+                />
+                {reportMsg && <p className="croom-notice" style={{ margin: 0 }}>{reportMsg}</p>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="croom-mini" onClick={() => setReportOpen(false)}>Cancel</button>
+                  <button
+                    type="button"
+                    className="croom-mini primary"
+                    disabled={reportBusy || !reportReason.trim()}
+                    onClick={() => void submitReport()}
+                  >
+                    {reportBusy ? 'Sending…' : 'Send report'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 <SidePanel
             room={room}
             sessionId={sessionId}

@@ -182,6 +182,7 @@ const canPublish = canPublishInRoom(role, !!grant && !grant.revokedAt);
       url: process.env.LIVEKIT_URL,
       room: session.livekitRoom,
       role,
+      trainerId: session.training.trainerId,
       canPublish: canPublishInRoom(role, !!grant && !grant.revokedAt),
     });
   }

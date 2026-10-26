@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const t = await prisma.training.findUnique({
     where: { id },
     include: {
-      sessions: { select: { startsAtUtc: true, endsAtUtc: true } },
+      sessions: { select: { id: true, startsAtUtc: true, endsAtUtc: true } },
       days: { orderBy: { dayIndex: 'asc' } },
     },
   });
@@ -135,16 +135,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (updated && updated.seatsTaken >= updated.cap) {
         await tx.training.update({ where: { id }, data: { status: 'full' } });
       }
+      const now = Date.now();
+      const joinSessionId = t.sessions
+        .filter((s) => new Date(s.endsAtUtc).getTime() > now)
+        .sort((a, b) => new Date(a.startsAtUtc).getTime() - new Date(b.startsAtUtc).getTime())[0]?.id
+        ?? t.sessions[0]?.id
+        ?? null;
       await tx.notification.create({
-        data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title } },
+        data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title, sessionId: joinSessionId } },
       });
-      return registration;
+      return { registration, joinSessionId };
     });
     // Outside the transaction: a slow or failed email must never roll back the seat claim.
     await sendSeatConfirmation(userId, t.title);
     return NextResponse.json(
       {
-        registration: { id: reg.id, trainingId: id },
+        registration: { id: reg.registration.id, trainingId: id },
+        // Soonest upcoming session — so the UI can offer Join class right after reserve.
+        sessionId: reg.joinSessionId,
         // The UI needs to know whether to send them straight to payment.
         requiresPayment: t.accessType === 'paid',
         price,

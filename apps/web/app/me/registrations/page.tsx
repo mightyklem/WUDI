@@ -174,7 +174,7 @@ export default function MyRegistrations() {
                                   {lagosWhenLabel(s.startsAtUtc)}
                                 </p>
                               </div>
-                              <UxCta quiet={i !== 0} href={`/classroom/${s.id}`}>Join</UxCta>
+                              <UxCta quiet={i !== 0} href={`/classroom/${s.id}`}>Join class</UxCta>
                             </div>
                           </UxCard>
                         ))}

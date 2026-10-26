@@ -230,7 +230,7 @@ function People({ room, role, d, mod }: { room: Room; role: Role; d: Data; mod: 
 
       <p className="eyebrow" style={{ color: 'var(--croom-dim)' }}>In the room</p>
       {rows.map((r) => (
-        <div key={r.key} className="croom-person">
+        <div key={r.key} className="croom-person" style={{ flexWrap: 'wrap', rowGap: 6 }}>
           <span
             className="croom-avatar"
             style={{ position: 'static', width: 34, height: 34, borderRadius: '50%', fontSize: 13, flex: '0 0 auto' }}
@@ -242,15 +242,23 @@ function People({ room, role, d, mod }: { room: Room; role: Role; d: Data; mod: 
           <span style={{ flex: 1 }} />
           {r.hand && !r.canSpeak && <span className="croom-person-tag" data-kind="hand">✋ raised</span>}
           {r.canSpeak && <span className="croom-person-tag" data-kind="speaking">can speak</span>}
-          {canMod && !r.isSelf && r.canSpeak && (
-            <button
-              type="button"
-              className="croom-mini"
-              disabled={mod.busy}
-              onClick={() => void mod.act('mute', r.identity)}
-            >
-              Mute
-            </button>
+          {canMod && !r.isSelf && (
+            <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {r.canSpeak ? (
+                <>
+                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('mute', r.identity)}>Mute</button>
+                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('muteMic', r.identity)}>Mute mic</button>
+                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('unmuteMic', r.identity)}>Unmute mic</button>
+                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('muteCamera', r.identity)}>Mute cam</button>
+                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.act('unmuteCamera', r.identity)}>Unmute cam</button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="croom-mini primary" disabled={mod.busy} onClick={() => void mod.act('allowSpeak', r.identity)}>Grant mic</button>
+                  <button type="button" className="croom-mini" disabled={mod.busy} onClick={() => void mod.requestSpeak(r.identity)}>Ask to speak</button>
+                </>
+              )}
+            </span>
           )}
         </div>
       ))}

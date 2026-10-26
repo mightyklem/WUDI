@@ -17,6 +17,7 @@ type Note = {
 // never written. The API has been serving notifications the whole time.
 const TYPES: Record<string, { icon: string; tint: string; label: string }> = {
   'registration-confirmed': { icon: '🎟', tint: 'tint-leaf', label: 'Seat confirmed' },
+  'speech-requested': { icon: '🎤', tint: 'tint-accent', label: 'You were asked to speak' },
   // Also the record that stops a reminder being sent twice, which is why it lives here
   // rather than in a separate table nobody would think to look in.
   'session-reminder': { icon: '⏰', tint: 'tint-accent', label: 'Starting soon' },
@@ -137,6 +138,9 @@ export default function Notifications() {
           {notes.map((n, i) => {
             const meta = TYPES[n.type] || FALLBACK;
             const href = hrefFor(n);
+            const joinNow =
+              (n.type === 'registration-confirmed' || n.type === 'speech-requested')
+              && typeof n.payload?.sessionId === 'string';
             const inner = (
               <div style={{ display: 'flex', gap: 13, alignItems: 'center' }}>
                 <span className={`tile-icon ${meta.tint}`} aria-hidden
@@ -154,6 +158,16 @@ export default function Notifications() {
               <div key={n.id} className={`card rise rise-${Math.min(i + 1, 4)}`}
                 style={{ padding: '14px 16px', borderLeft: n.readAt ? undefined : '3px solid var(--accent)' }}>
                 {href ? <Link href={href} style={{ textDecoration: 'none', color: 'inherit' }}>{inner}</Link> : inner}
+                {joinNow && (
+                  <div className="btnrow" style={{ marginTop: 10 }}>
+                    <Link
+                      className="btn primary"
+                      href={`/classroom/${n.payload!.sessionId as string}`}
+                    >
+                      {n.type === 'speech-requested' ? 'Unmute in class' : 'Join class now'}
+                    </Link>
+                  </div>
+                )}
               </div>
             );
           })}

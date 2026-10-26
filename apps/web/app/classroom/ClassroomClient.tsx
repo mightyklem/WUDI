@@ -286,6 +286,7 @@ useEffect(() => {
         introEndsAt={intro.endsAtUtc}
         role={pass?.role ?? 'participant'}
         myId={myId}
+        trainerId={intro.ownerId}
         state={state}
         quality={quality}
         retryIn={retryIn}

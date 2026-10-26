@@ -26,7 +26,10 @@ export async function clearSession() {
 }
 
 async function req(path: string, opts: RequestInit = {}, authed = true): Promise<unknown> {
-  const headers: Record<string, string> = { 'content-type': 'application/json', ...((opts.headers as Record<string, string>) || {}) };
+  const isFormData = opts.body instanceof FormData;
+  const headers: Record<string, string> = isFormData
+    ? {}
+    : { 'content-type': 'application/json', ...((opts.headers as Record<string, string>) || {}) };
   if (authed) {
     const { access } = await tokens();
     if (access) headers.authorization = `Bearer ${access}`;
@@ -46,8 +49,13 @@ export const api = {
   me: () => req('/api/me') as Promise<{ user: { id: string; email: string; isTrainer: boolean } }>,
   trainers: () => req('/api/trainers', {}, false) as Promise<{ trainers: { userId: string; displayName: string; bio: string | null; topics: string[] }[] }>,
   follow: (id: string) => req(`/api/trainers/${id}/follow`, { method: 'POST' }) as Promise<{ following: boolean }>,
-  saveTrainerProfile: (body: { displayName: string; bio: string; topics: string[] }) =>
+  saveTrainerProfile: (body: { displayName: string; bio: string; topics: string[]; signatureUrl?: string }) =>
     req('/api/trainer/profile', { method: 'PUT', body: JSON.stringify(body) }) as Promise<unknown>,
+  uploadSignature: (id: string, file: File | Blob) => {
+    const form = new FormData();
+    form.append('file', file);
+    return req(`/api/trainers/${id}/signature`, { method: 'POST', body: form }) as Promise<{ signatureUrl: string }>;
+  },
   feed: (q = '') => req(`/api/feed${q}`, {}, false) as Promise<{ posts: FeedPost[] }>,
   like: (id: string) => req(`/api/posts/${id}/like`, { method: 'POST' }) as Promise<{ liked: boolean }>,
   save: (id: string) => req(`/api/trainings/${id}/save`, { method: 'POST' }) as Promise<{ saved: boolean }>,
@@ -59,9 +67,17 @@ export const api = {
   progress: (trainingId: string) =>
     req(`/api/me/attendance?trainingId=${trainingId}`) as Promise<Progress>,
   myCerts: () => req('/api/certificates/mine') as Promise<{ certificates: Cert[] }>,
+  myNotifications: () => req('/api/me/notifications') as Promise<{ notifications: { id: string; type: string; payload: any; readAt: string | null; createdAt: string }[] }>,
+  markNotificationsRead: () => req('/api/me/notifications', { method: 'POST' }) as Promise<{ marked: number }>,
   verify: (number: string) => req(`/api/verify/${encodeURIComponent(number)}`, {}, false) as Promise<VerifyResult>,
   sessionToken: (sessionId: string) =>
-    req(`/api/sessions/${sessionId}/token`, { method: 'POST' }) as Promise<{ token: string; url: string; room: string; role: string }>,
+    req(`/api/sessions/${sessionId}/token`, { method: 'POST' }) as Promise<{ token: string; url: string; room: string; role: string; trainerId: string }>,
+  moderateSession: (sessionId: string, body: { action: string; identity?: string; source?: 'microphone' | 'camera'; reason?: string }) =>
+    req(`/api/sessions/${sessionId}/moderate`, { method: 'POST', body: JSON.stringify(body) }) as Promise<{ ok: boolean; canPublish?: boolean; enabled?: boolean; source?: string }>,
+  requestSpeak: (sessionId: string, identity: string) =>
+    req(`/api/sessions/${sessionId}/request-speak`, { method: 'POST', body: JSON.stringify({ identity }) }) as Promise<{ ok: boolean }>,
+  report: (body: { targetType: string; targetId: string; reason: string }) =>
+    req('/api/reports', { method: 'POST', body: JSON.stringify(body) }) as Promise<{ report: { id: string } }>,
 };
 
 export type FeedPost = {

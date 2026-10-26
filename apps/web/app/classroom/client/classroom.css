@@ -578,6 +578,22 @@ overflow: hidden;
   font-size: 13.5px;
 }
 
+.croom-speech-ask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 12px 10px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 193, 7, 0.18);
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  color: #ffe9a8;
+}
+.croom-speech-ask p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+.croom-speech-ask-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
 /* ---------- reactions floating ---------- */
 .croom-float {
   position: absolute;

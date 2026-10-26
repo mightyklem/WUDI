@@ -44,6 +44,7 @@ export default function ControlBar({
   onReaction,
   onLeave,
   onEnd,
+  onReport,
   busy,
 }: {
   role: Role;
@@ -77,6 +78,8 @@ export default function ControlBar({
   onReaction: (emoji: string) => void;
   onLeave: () => void;
   onEnd: () => void;
+  /** Opens the in-class report flow (problem / abuse against the trainer). */
+  onReport: () => void;
   busy: boolean;
 }) {
   // One sheet at a time.
@@ -286,6 +289,12 @@ export default function ControlBar({
           icon="✋"
           label={handUp ? 'Lower your hand' : 'Raise your hand'}
           onClick={() => { onHand(); close(); }}
+        />
+
+        <SheetRow
+          icon="⚠"
+          label="Report a problem"
+          onClick={() => { onReport(); close(); }}
         />
 
         <p className="croom-sheet-title" style={{ marginTop: 10 }}>React</p>

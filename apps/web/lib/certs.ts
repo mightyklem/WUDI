@@ -220,6 +220,7 @@ const pdf = await renderCertificatePdf({
     dateText,
     number,
     logoUrl: training.trainer.logoUrl,
+    signatureUrl: training.trainer.signatureUrl,
     signature: signed,
   });
   const sha256 = createHash('sha256').update(pdf).digest('hex');

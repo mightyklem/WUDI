@@ -18,7 +18,8 @@ type Profile = {
   rank: string;
   createdAt: string;
   trainerProfile: {
-    displayName: string; topics: string[]; photoUrl: string | null; bio: string | null; logoUrl: string | null;
+    displayName: string; topics: string[]; photoUrl: string | null; bio: string | null;
+    logoUrl: string | null; signatureUrl: string | null;
   } | null;
 };
 
@@ -36,6 +37,7 @@ export default function MyProfile() {
   const [bio, setBio] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [sigUploading, setSigUploading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -231,6 +233,58 @@ export default function MyProfile() {
               {profile.trainerProfile.topics.join(' · ')}
             </p>
           )}
+          <div style={{ marginTop: 14 }}>
+            <p className="eyebrow" style={{ marginBottom: 6 }}>Certificate signature</p>
+            <p className="muted" style={{ fontSize: 'var(--t-sm)', margin: '0 0 8px' }}>
+              Drawn on certificates under your name, below the Learnovize mark.
+            </p>
+            {profile.trainerProfile.signatureUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.trainerProfile.signatureUrl}
+                alt="Your signature"
+                style={{ maxWidth: 220, maxHeight: 64, objectFit: 'contain', display: 'block', marginBottom: 8 }}
+              />
+            )}
+            <label className="btn" style={{ display: 'inline-block', cursor: 'pointer' }}>
+              {sigUploading ? 'Uploading…' : profile.trainerProfile.signatureUrl ? 'Replace signature' : 'Upload signature'}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+                disabled={sigUploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setSigUploading(true);
+                  setErr(null);
+                  setMsg(null);
+                  try {
+                    const access = getAccess();
+                    const form = new FormData();
+                    form.append('file', file);
+                    const up = await authFetch(`/api/trainers/${profile.id}/signature`, {
+                      method: 'POST',
+                      headers: { authorization: `Bearer ${access}` },
+                      body: form,
+                    });
+                    const uj = await up.json().catch(() => ({}));
+                    if (!up.ok) {
+                      setErr(uj.error || 'Signature upload failed');
+                      return;
+                    }
+                    setMsg('Signature saved. New certificates will use it.');
+                    await load();
+                  } catch {
+                    setErr('Signature upload failed');
+                  } finally {
+                    setSigUploading(false);
+                  }
+                }}
+              />
+            </label>
+          </div>
           <div className="btnrow" style={{ marginTop: 12 }}>
             <Link className="btn" href="/trainer/approval">Your trainer details</Link>
             <Link className="btn" href="/trainer/earnings">Your earnings</Link>

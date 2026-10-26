@@ -7,20 +7,26 @@ import { autoIssueForSession } from '@/lib/certs';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/sessions/[id]/moderate { action: 'mute'|'allowSpeak'|'remove'|'end', identity? }
+// POST /api/sessions/[id]/moderate { action, identity, source?, reason? }
+// action: 'mute'|'allowSpeak'|'muteMic'|'unmuteMic'|'muteCamera'|'unmuteCamera'|'end'
 // Trainer or active moderator only. Mute/remove target one participant; end closes the room.
 //
 // Learners are minted with canPublish:false, so a class is listen-only by default and
 // cheap on data. 'allowSpeak' is how a learner who raised a hand actually gets to talk:
 // the server grants that one participant publish rights. It is server-side on purpose, so
 // a learner cannot grant themselves the ability to speak by sending a data-channel message.
+//
+// 'muteMic'/'unmuteMic' and 'muteCamera'/'unmuteCamera' act on a single source using
+// canPublishSources, so the trainer can silence a learner's mic without killing their
+// camera, or vice versa. 'mute'/'allowSpeak' keep the legacy all-or-nothing canPublish
+// behaviour.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const token = getBearer(req);
   const userId = token ? await verifyAccessToken(token) : null;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  const { action, identity, reason: statedReason } = (await req.json().catch(() => ({}))) as {
-    action?: string; identity?: string; reason?: string;
+  const { action, identity, source, reason: statedReason } = (await req.json().catch(() => ({}))) as {
+    action?: string; identity?: string; source?: 'microphone' | 'camera'; reason?: string;
   };
 
   const session = await prisma.session.findUnique({
@@ -107,9 +113,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         permission: { canPublish, canSubscribe: true, canPublishData: true },
       });
     } catch (e) {
-      // LiveKit only tracks participants that are actually connected. A trainer
-      // clicking this on someone who just dropped would otherwise get a 500, so
-      // say plainly what happened.
       const detail = e instanceof Error ? e.message : String(e);
       const gone = /does not exist|not found/i.test(detail);
       return NextResponse.json(
@@ -122,11 +125,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
 
-    // Persisted, not just applied to the live room. LiveKit permissions belong to
-    // one connection, so a learner who was granted the floor and then lost signal,
-    // backgrounded their phone, or reloaded the page dropped silently back to
-    // listen-only -- and the hand queue disagreed with the room they were in. The
-    // token route reads this row back and re-applies the grant on every join.
     if (canPublish) {
       await prisma.speechGrant.upsert({
         where: { sessionId_userId: { sessionId: id, userId: identity } },
@@ -140,14 +138,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
     }
 
-    // Worth recording: who was allowed to speak, and when. Admin actions are audited
-    // under the same log as everyone else's, so an intervention in someone's class is
-    // always traceable afterwards.
-    //
-    // A mute is an intervention in someone else's paid class, so a reason is required
-    // rather than assumed. ADR-007 says admin actions require one; the code was writing
-    // null for every mute, which made the field decorative. The client supplies it for
-    // the common case; staff acting outside the UI must send one themselves.
     const reason = String(statedReason || '').trim() || (canPublish ? 'raised hand' : null);
     if (!reason) {
       return NextResponse.json({ error: 'A mute needs a reason' }, { status: 400 });
@@ -163,6 +153,40 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       },
     });
     return NextResponse.json({ ok: true, canPublish });
+  }
+
+  if (action === 'muteMic' || action === 'unmuteMic' || action === 'muteCamera' || action === 'unmuteCamera') {
+    if (!identity) return NextResponse.json({ error: 'identity required' }, { status: 400 });
+    const enable = action === 'unmuteMic' || action === 'unmuteCamera';
+    const src = action === 'muteMic' || action === 'unmuteMic' ? 1 : 2; // 1=MICROPHONE, 2=CAMERA
+    try {
+      const participant = await svc.getParticipant(session.livekitRoom, identity);
+      const track = participant.tracks.find((t) => t.source === src);
+      if (!track) {
+        return NextResponse.json(
+          { error: `${enable ? 'un' : ''}mute failed: participant has no ${action.includes('Mic') ? 'microphone' : 'camera'} track` },
+          { status: 409 },
+        );
+      }
+      await svc.mutePublishedTrack(session.livekitRoom, identity, track.sid, !enable);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      const gone = /does not exist|not found/i.test(detail);
+      return NextResponse.json(
+        { error: gone ? 'That learner is no longer in the room' : 'Could not change their track' },
+        { status: gone ? 409 : 502 },
+      );
+    }
+    const which = action.includes('Mic') ? 'microphone' : 'camera';
+    await prisma.auditLog.create({
+      data: {
+        actorId: userId,
+        action: `participant.${enable ? 'unmute' : 'mute'}-${which}`,
+        target: `session:${id} user:${identity}`,
+        reason: statedReason ? String(statedReason).trim() : `${enable ? 'unmuted' : 'muted'} ${which}`,
+      },
+    });
+    return NextResponse.json({ ok: true, enabled: enable, source: which });
   }
   if (action === 'remove') {
     return NextResponse.json(
