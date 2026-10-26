@@ -212,7 +212,6 @@ export async function POST(req: Request) {
       // ever set the account picture (Edit profile), so the trainer copy
       // is empty and the card fell back to initials.
       photoUrl: training.trainer.photoUrl || training.trainer.user?.photoUrl || null,
-      siteOrigin: new URL(req.url).origin,
     });
     mediaUrl = url;
   } else {

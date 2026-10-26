@@ -1,4 +1,5 @@
-import { putPublic } from '@/lib/storage';
+import { readFile } from 'fs/promises';
+import { localPathFor, putPublic } from '@/lib/storage';
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -50,8 +51,6 @@ export async function renderECard(opts: {
   topic?: string | null;
   description?: string | null;
   photoUrl?: string | null;
-  /** Origin (e.g. https://learnovize.com) to resolve relative upload paths against. */
-  siteOrigin?: string | null;
   /** Optional social handle / contact line, e.g. "@judyscorner". */
   handle?: string | null;
 }): Promise<{ key: string; url: string }> {
@@ -75,24 +74,44 @@ export async function renderECard(opts: {
   const titleLines = wrap(title, 26, 3);
   const descLines = desc ? wrap(desc, 48, 3) : [];
 
-  // Trainer photo → data URI, best effort. Uploads come back as relative
-  // /api/files/... paths on local storage, so resolve those against the
-  // site origin; absolute http[s] URLs are used as-is. Anything else falls
-  // back to initials.
+  // Trainer photo → data URI, best effort. Our own uploads are read straight
+  // from storage rather than HTTP-fetched: local keys (/api/files/...) are
+  // read off disk, which also works when the server cannot reach its own
+  // origin. Absolute http[s] URLs (cloud CDN) are fetched. Anything else
+  // falls back to initials. Failures are logged so a blank photo is
+  // diagnosable from the function logs instead of silent.
   const rawPhoto = (opts.photoUrl || '').trim();
-  const origin = (opts.siteOrigin || '').trim().replace(/\/$/, '');
-  const photoSrc =
-    /^https?:\/\//.test(rawPhoto)
-      ? rawPhoto
-      : rawPhoto.startsWith('/') && origin
-        ? `${origin}${rawPhoto}`
-        : null;
   let photoDataUri: string | null = null;
-  if (photoSrc) {
+  const fail = (why: string) => console.warn(`[ecard] photo skipped for ${opts.slug}: ${why}`);
+  if (rawPhoto.startsWith('/api/files/')) {
     try {
-      const res = await fetch(photoSrc);
+      const filePath = localPathFor(`public/${rawPhoto.slice('/api/files/'.length)}`);
+      if (!filePath) {
+        fail('key escapes storage root');
+      } else {
+        const buf = await readFile(filePath);
+        const ext = filePath.split('.').pop()?.toLowerCase();
+        const mime =
+          ext === 'jpg' || ext === 'jpeg'
+            ? 'image/jpeg'
+            : ext === 'png'
+              ? 'image/png'
+              : ext === 'webp'
+                ? 'image/webp'
+                : null;
+        if (!mime) fail(`unknown extension ${ext}`);
+        else if (buf.length === 0) fail('empty file');
+        else if (buf.length > 4_000_000) fail(`${buf.length} bytes over 4MB cap`);
+        else photoDataUri = `data:${mime};base64,${buf.toString('base64')}`;
+      }
+    } catch (e) {
+      fail(e instanceof Error ? e.message : 'disk read failed');
+    }
+  } else if (/^https?:\/\//.test(rawPhoto)) {
+    try {
+      const res = await fetch(rawPhoto);
       const ct = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-      const ext = photoSrc.split('?')[0].split('.').pop()?.toLowerCase();
+      const ext = rawPhoto.split('?')[0].split('.').pop()?.toLowerCase();
       const mime =
         ['image/jpeg', 'image/png', 'image/webp'].includes(ct)
           ? ct
@@ -103,15 +122,21 @@ export async function renderECard(opts: {
               : ext === 'webp'
                 ? 'image/webp'
                 : null;
-      if (res.ok && mime) {
+      if (!res.ok) fail(`fetch ${res.status}`);
+      else if (!mime) fail(`unusable type ${ct || ext || 'unknown'}`);
+      else {
         const buf = Buffer.from(await res.arrayBuffer());
-        if (buf.length > 0 && buf.length <= 1_500_000) {
-          photoDataUri = `data:${mime};base64,${buf.toString('base64')}`;
-        }
+        if (buf.length === 0) fail('empty file');
+        else if (buf.length > 4_000_000) fail(`${buf.length} bytes over 4MB cap`);
+        else photoDataUri = `data:${mime};base64,${buf.toString('base64')}`;
       }
-    } catch {
-      photoDataUri = null;
+    } catch (e) {
+      fail(e instanceof Error ? e.message : 'fetch failed');
     }
+  } else if (rawPhoto) {
+    fail(`not a usable URL (starts with ${rawPhoto.slice(0, 24)}…)`);
+  } else {
+    fail('no photo on trainer or account profile');
   }
 
   const photoBlock = photoDataUri
