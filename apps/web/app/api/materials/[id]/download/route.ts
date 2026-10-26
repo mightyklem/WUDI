@@ -23,6 +23,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!material) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const isOwner = material.trainerId === userId;
+
+  // Held (under rights review) and unfinished uploads are invisible to
+  // everyone but the owner. Removed items stay downloadable to buyers who
+  // already hold them — they paid for a file, not for a listing.
+  if ((material.status === 'held' || material.status === 'uploading') && !isOwner) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
   let granted = isOwner;
 
   if (!granted) {

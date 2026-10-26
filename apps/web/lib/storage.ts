@@ -1,5 +1,6 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createHash } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 
@@ -203,6 +204,92 @@ export async function signPrivate(key: string, seconds = 300): Promise<string> {
     new GetObjectCommand({ Bucket: privateBucket(), Key: key }),
     { expiresIn: seconds },
   );
+}
+
+/**
+ * Presigned PUT URL so a large file (video) uploads straight from the browser
+ * to the bucket. The bytes must never pass through a serverless function: the
+ * request payload limit (~6MB on Netlify) would reject anything bigger, and
+ * buffering a gigabyte in memory would kill the function first.
+ *
+ * Requires CORS on the bucket: PUT from the app origin (see the upload-url
+ * route comment). The server still validates on /complete — a signed URL is
+ * permission to send bytes, not proof of what was sent.
+ */
+export async function presignPrivatePut(key: string, contentType: string, seconds = 900): Promise<string> {
+  if (isLocalStorage()) {
+    // No HTTP upload target on local disk; the classic multipart route handles it.
+    throw new Error('Presigned upload needs S3-compatible storage, not local disk.');
+  }
+  return getSignedUrl(
+    storage(),
+    new PutObjectCommand({ Bucket: privateBucket(), Key: key, ContentType: contentType }),
+    { expiresIn: seconds },
+  );
+}
+
+/** Size + type of a private object, without downloading it. */
+export async function headPrivate(key: string): Promise<{ size: number; mime: string } | null> {
+  if (isLocalStorage()) {
+    const target = localPathFor(path.posix.join('private', key));
+    if (!target) return null;
+    try {
+      const { stat } = await import('fs/promises');
+      const st = await stat(target);
+      // Extension-based type, same mapping as the files route.
+      const ext = target.split('.').pop()?.toLowerCase() || '';
+      const mime =
+        ext === 'mp4' ? 'video/mp4'
+        : ext === 'mp3' ? 'audio/mpeg'
+        : ext === 'm4a' ? 'audio/mp4'
+        : ext === 'wav' ? 'audio/wav'
+        : ext === 'pdf' ? 'application/pdf'
+        : ext === 'png' ? 'image/png'
+        : ext === 'webp' ? 'image/webp'
+        : ext === 'txt' ? 'text/plain'
+        : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+        : 'application/octet-stream';
+      return { size: st.size, mime };
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const res = await storage().send(new HeadObjectCommand({ Bucket: privateBucket(), Key: key }));
+    return { size: res.ContentLength || 0, mime: res.ContentType || 'application/octet-stream' };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * SHA-256 of a private object, streamed so a 1GB video never sits in memory
+ * whole. Used to fingerprint materials for duplicate detection.
+ */
+export async function hashPrivate(key: string): Promise<string | null> {
+  try {
+    if (isLocalStorage()) {
+      const target = localPathFor(path.posix.join('private', key));
+      if (!target) return null;
+      const { createReadStream } = await import('fs');
+      const hash = createHash('sha256');
+      await new Promise<void>((resolve, reject) => {
+        const s = createReadStream(target);
+        s.on('data', (c) => hash.update(c as Buffer));
+        s.on('end', () => resolve());
+        s.on('error', reject);
+      });
+      return hash.digest('hex');
+    }
+    const res = await storage().send(new GetObjectCommand({ Bucket: privateBucket(), Key: key }));
+    const body = res.Body as AsyncIterable<Uint8Array> | undefined;
+    if (!body) return null;
+    const hash = createHash('sha256');
+    for await (const chunk of body) hash.update(chunk);
+    return hash.digest('hex');
+  } catch {
+    return null;
+  }
 }
 
 /** Immutable upload — keys contain unique ids, never overwritten. */

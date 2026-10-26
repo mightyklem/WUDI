@@ -4,9 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { authFetch, getAccess } from '@/lib/client-auth';
 import { formatNgn } from '@learnovize/shared';
 
+// Mirrors MATERIAL_RIGHTS_TEXT in lib/material-settle.ts. Kept as a literal
+// here because that module pulls in Prisma and must never enter the client bundle.
+const RIGHTS_TEXT =
+  'I confirm this file is my own work or I am licensed to sell it, and it does not infringe anyone’s copyright.';
+
 export type MaterialRow = {
   id: string; title: string; description: string | null; mime: string;
-  sizeBytes: number; priceNgn: number; createdAt: string; owned?: boolean;
+  sizeBytes: number; priceNgn: number; status: string; createdAt: string; owned?: boolean;
 };
 
 function sizeLabel(bytes: number): string {
@@ -131,6 +136,27 @@ export function TrainerMaterials({ trainerId }: { trainerId: string }) {
                 {busy === m.id ? '…' : `Buy · ${formatNgn(m.priceNgn)}`}
               </button>
             )}
+            <button
+              className="btn link"
+              style={{ minHeight: 0, padding: '0 8px' }}
+              onClick={async () => {
+                const reason = prompt('Why are you reporting this material? (e.g. stolen content)') || '';
+                if (!reason) return;
+                const access = getAccess();
+                if (!access) {
+                  setNote('Sign in first.');
+                  return;
+                }
+                await authFetch('/api/reports', {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+                  body: JSON.stringify({ targetType: 'material', targetId: m.id, reason }),
+                });
+                setNote('Reported — moderators will review.');
+              }}
+            >
+              Report
+            </button>
           </div>
         </div>
       ))}
@@ -151,7 +177,9 @@ export function MyMaterials({ trainerId }: { trainerId: string }) {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('0');
   const [file, setFile] = useState<File | null>(null);
+  const [rights, setRights] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -171,6 +199,7 @@ export function MyMaterials({ trainerId }: { trainerId: string }) {
   async function upload(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setProgress(null);
     setNote(null);
     try {
       const access = getAccess();
@@ -182,30 +211,94 @@ export function MyMaterials({ trainerId }: { trainerId: string }) {
         setNote('Choose a file first.');
         return;
       }
-      const form = new FormData();
-      form.append('file', file);
-      form.append('title', title);
-      form.append('description', description);
-      form.append('priceNgn', price);
-      const r = await authFetch('/api/materials', {
-        method: 'POST',
-        headers: { authorization: `Bearer ${access}` },
-        body: form,
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setNote(j.error || 'Upload failed.');
+      if (!rights) {
+        setNote('Confirm the rights statement first.');
         return;
       }
-      setTitle('');
-      setDescription('');
-      setPrice('0');
-      setFile(null);
-      setNote('On your shelf.');
-      await load();
+      // Video always uploads direct to storage (presigned PUT, 1GB cap):
+      // pushing a video through the API route would hit the function payload
+      // limit. Everything 50MB and under goes the classic multipart way.
+      const direct = file.type === 'video/mp4' || file.size > 50 * 1024 * 1024;
+      if (!direct) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('title', title);
+        form.append('description', description);
+        form.append('priceNgn', price);
+        form.append('rights', 'yes');
+        const r = await authFetch('/api/materials', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${access}` },
+          body: form,
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setNote(j.error || 'Upload failed.');
+          return;
+        }
+        done(j.note || 'On your shelf.');
+        return;
+      }
+      const init = await authFetch('/api/materials/upload-url', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+        body: JSON.stringify({
+          title, description, priceNgn: Number(price) || 0,
+          mime: file.type, sizeBytes: file.size, rightsConfirmed: true,
+        }),
+      });
+      const ij = await init.json().catch(() => ({}));
+      if (!init.ok) {
+        setNote(ij.localOnly ? 'Direct upload needs cloud storage — keep videos under 50MB here.' : (ij.error || 'Upload failed.'));
+        return;
+      }
+      try {
+        await putFile(ij.url as string, file, (p) => setProgress(p));
+      } catch (e) {
+        setNote(e instanceof Error ? e.message : 'Upload failed.');
+        return;
+      }
+      const fin = await authFetch(`/api/materials/${ij.id}/complete`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${access}` },
+      });
+      const fj = await fin.json().catch(() => ({}));
+      if (!fin.ok) {
+        setNote(fj.error || 'Could not finish the upload.');
+        return;
+      }
+      done(fj.status === 'held'
+        ? 'Identical file already on another shelf — held for review.'
+        : 'On your shelf.');
     } finally {
       setBusy(false);
+      setProgress(null);
     }
+  }
+
+  function done(message: string) {
+    setTitle('');
+    setDescription('');
+    setPrice('0');
+    setFile(null);
+    setRights(false);
+    setNote(message);
+    load();
+  }
+
+  // PUT with progress. fetch has no upload progress, so XHR it is.
+  function putFile(url: string, f: File, onProgress: (pct: number) => void): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      xhr.setRequestHeader('Content-Type', f.type);
+      xhr.upload.onprogress = (ev) => {
+        if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
+      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
+      xhr.onerror = () => reject(new Error('Upload failed. The bucket must allow PUT from this site (CORS).'));
+      xhr.send(f);
+    });
   }
 
   async function remove(id: string) {
@@ -267,6 +360,20 @@ export function MyMaterials({ trainerId }: { trainerId: string }) {
             {busy ? 'Uploading…' : 'Put on shelf'}
           </button>
         </div>
+        {progress !== null && (
+          <div style={{ background: 'var(--line)', borderRadius: 999, height: 8, overflow: 'hidden' }}>
+            <div style={{ width: `${progress}%`, height: '100%', background: 'var(--accent)' }} />
+          </div>
+        )}
+        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 'var(--t-sm)' }}>
+          <input
+            type="checkbox"
+            checked={rights}
+            onChange={(e) => setRights(e.target.checked)}
+            style={{ marginTop: 4 }}
+          />
+          <span>{RIGHTS_TEXT}</span>
+        </label>
       </form>
       {note && <p className="muted" style={{ fontSize: 'var(--t-sm)' }}>{note}</p>}
       {rows !== null && rows.length > 0 && (
@@ -277,6 +384,8 @@ export function MyMaterials({ trainerId }: { trainerId: string }) {
                 <b style={{ fontSize: 'var(--t-sm)' }}>{m.title}</b>
                 <span className="muted" style={{ fontSize: 'var(--t-xs)' }}>
                   {' '}· {sizeLabel(m.sizeBytes)} · {m.priceNgn <= 0 ? 'Free' : formatNgn(m.priceNgn)}
+                  {m.status === 'held' && ' · under review'}
+                  {m.status === 'uploading' && ' · upload unfinished'}
                 </span>
               </div>
               <button className="btn" onClick={() => remove(m.id)}>Take down</button>

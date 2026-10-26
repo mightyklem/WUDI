@@ -5,6 +5,23 @@ import { provider, verifyPaystack } from '@/lib/payments';
  *  them away from registration payments without guessing from the amount. */
 export const MATERIAL_PREFIX = 'MAT';
 
+/** The statement a trainer confirms on every upload. Stored as a timestamp, not
+ *  a checkbox, so "you agreed" is backed by a when. */
+export const MATERIAL_RIGHTS_TEXT =
+  'I confirm this file is my own work or I am licensed to sell it, and it does not infringe anyone’s copyright.';
+
+/**
+ * Byte-identical file already shelved by a DIFFERENT trainer. Same-trainer
+ * re-uploads are their own business (new edition, fixed export); somebody
+ * else's bytes on your shelf is piracy until proven otherwise.
+ */
+export async function findDuplicateMaterial(trainerId: string, sha256: string) {
+  return prisma.material.findFirst({
+    where: { sha256, trainerId: { not: trainerId }, status: { in: ['live', 'held'] } },
+    select: { id: true, trainerId: true },
+  });
+}
+
 /**
  * Grant a paid material purchase.
  *

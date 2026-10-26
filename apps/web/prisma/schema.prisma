@@ -949,7 +949,15 @@ model Material {
   sizeBytes   Int
   // Whole naira. 0 means free — anyone logged in may download.
   priceNgn    Int            @default(0)
-  status      String         @default("live") // live|removed
+  status      String         @default("live") // uploading|live|held|removed
+  // SHA-256 of the file bytes. Two different trainers holding byte-identical
+  // files is re-upload piracy until proven otherwise, so completion checks it
+  // and holds the copy for review instead of shelving it.
+  sha256      String?
+  // When the trainer confirmed the rights statement on upload. Without this
+  // timestamp a "you agreed" claim is unfalsifiable.
+  rightsConfirmedAt DateTime?
+  reportsCount Int           @default(0)
   createdAt   DateTime       @default(now())
 
   purchases MaterialPurchase[]
