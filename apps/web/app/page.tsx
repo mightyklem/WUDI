@@ -2,15 +2,15 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import FirstVisitAuth from './FirstVisitAuth';
 import SiteNav from './components/SiteNav';
+import Inspiration from './components/Inspiration';
+import HelpSection from './components/HelpSection';
 import { lagosWhenLabel } from '@/lib/lagos';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const now = new Date();
-  const [trainerCount, trainingCount, liveNow, upcoming] = await Promise.all([
-    prisma.trainerProfile.count(),
-    prisma.training.count(),
+  const [liveNow, upcoming] = await Promise.all([
     // H2: a session in progress is the single most valuable thing we can show.
     prisma.session.findMany({
       where: {
@@ -36,22 +36,10 @@ export default async function Home() {
     <div className="wrap">
       <SiteNav />
       <div className="surface surface-hero pat-weave rise">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <span className="tile-icon tint-accent" aria-hidden>✨</span>
-          <span style={{ fontSize: 'var(--t-xs)', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--mut)', fontWeight: 700 }}>
-            Live classes · no replays
-          </span>
-        </div>
         <h1 style={{ fontSize: 'var(--t-2xl)', lineHeight: 1.12, maxWidth: 520 }}>{greet}.</h1>
-        {trainerCount === 0 ? (
-          <p className="sub" style={{ maxWidth: 460 }}>
-            Learnovize is opening its doors. Trainers are being onboarded now.
-          </p>
-        ) : (
-          <p className="sub" style={{ maxWidth: 460 }}>
-            {trainerCount} trainer{trainerCount === 1 ? '' : 's'} · {trainingCount} class{trainingCount === 1 ? '' : 'es'} live now.
-          </p>
-        )}
+        {/* Rotating inspiration, not inventory: counts belong to analytics,
+            not to a welcome. */}
+        <Inspiration />
 
         {/* Icon-led paths. Three doors, no paragraphs to read past. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginTop: 20 }}>
@@ -144,6 +132,7 @@ export default async function Home() {
           </div>
         </div>
       )}
+      <HelpSection />
       <FirstVisitAuth />
       <nav className="bottomnav"><div className="in">
         <Link href="/" className="on">🏠<br />Home</Link>
