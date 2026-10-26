@@ -6,6 +6,7 @@ import { authFetch, getAccess } from '@/lib/client-auth';
 import SiteNav from '../../components/SiteNav';
 import Avatar from '../../components/Avatar';
 import ShareButton from '../../components/ShareButton';
+import { MyMaterials } from '../../components/Materials';
 
 type Profile = {
   id: string;
@@ -285,6 +286,7 @@ export default function MyProfile() {
               />
             </label>
           </div>
+          <MyMaterials trainerId={profile.id} />
           <div className="btnrow" style={{ marginTop: 12 }}>
             <Link className="btn" href="/trainer/approval">Your trainer details</Link>
             <Link className="btn" href="/trainer/earnings">Your earnings</Link>

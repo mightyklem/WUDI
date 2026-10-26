@@ -5,6 +5,7 @@ import SiteNav from '../../components/SiteNav';
 import VerifiedBadge from '../../components/VerifiedBadge';
 import Avatar from '../../components/Avatar';
 import ShareButton from '../../components/ShareButton';
+import { TrainerMaterials } from '../../components/Materials';
 import { authFetch, getAccess } from '@/lib/client-auth';
 
 type Data = {
@@ -159,6 +160,9 @@ export default function TrainerProfile({ params }: { params: Promise<{ id: strin
           <p style={{ marginBottom: 0 }}>{trainer.bio}</p>
         </div>
       )}
+
+      {/* Files the trainer sells or gives away: ebooks, slides, recordings. */}
+      <TrainerMaterials trainerId={trainer.userId} />
 
       {reviews.recent.length > 0 && (
         <>

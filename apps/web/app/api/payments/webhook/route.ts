@@ -5,6 +5,7 @@ import { provider, providerIssue, validPaystackSignature, verifyPaystack } from 
 import { settlePaidPayment } from '@/lib/settle';
 import { reconcileReversal } from '@/lib/payout-release';
 import { VERIFICATION_PREFIX, settleVerificationFromWebhook } from '@/lib/verification-settle';
+import { MATERIAL_PREFIX, settleMaterialFromWebhook } from '@/lib/material-settle';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,12 @@ export async function POST(req: Request) {
   if (evt.data.reference.startsWith(VERIFICATION_PREFIX)) {
     const outcome = await settleVerificationFromWebhook(evt.data.reference);
     return NextResponse.json({ ok: true, verification: outcome });
+  }
+  // Material purchases are not registration payments either. Route them by
+  // reference prefix before the registration settler sees them.
+  if (evt.data.reference.startsWith(MATERIAL_PREFIX)) {
+    const outcome = await settleMaterialFromWebhook(evt.data.reference);
+    return NextResponse.json({ ok: true, material: outcome });
   }
   // Trust-but-verify: confirm with Paystack before crediting.
   const v = await verifyPaystack(evt.data.reference);

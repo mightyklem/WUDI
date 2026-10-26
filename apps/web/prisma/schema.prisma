@@ -85,6 +85,7 @@ model User {
   giveawayEntries GiveawayEntry[]
   messagesSent    Message[]            @relation("MessageSender")
   messagesGot     Message[]            @relation("MessageRecipient")
+  materialPurchases MaterialPurchase[]
   }
 
   /// A message from one person to another.
@@ -295,6 +296,7 @@ model TrainerProfile {
 
   approvals       TrainerApproval[]
   trainings       Training[]
+  materials       Material[]
   payoutAccounts  PayoutAccount[]
   application     TrainerApplication?
   reviewsReceived TrainerReview[]
@@ -929,4 +931,46 @@ model VerifyVisit {
 
   @@index([createdAt])
   @@index([number])
+}
+
+/// A file a trainer uploaded to sell (or give away) from their profile:
+/// ebook, slides, notes, audio or video. Stored in the private bucket and
+/// served only through the download route, which checks ownership — a paid
+/// file must never sit on a world-readable URL the way certificates once did.
+model Material {
+  id          String         @id @default(cuid())
+  trainerId   String
+  trainer     TrainerProfile @relation(fields: [trainerId], references: [userId], onDelete: Cascade)
+  title       String
+  description String?
+  // Private storage key (materials/<trainerId>/...), never a public URL.
+  fileKey     String
+  mime        String
+  sizeBytes   Int
+  // Whole naira. 0 means free — anyone logged in may download.
+  priceNgn    Int            @default(0)
+  status      String         @default("live") // live|removed
+  createdAt   DateTime       @default(now())
+
+  purchases MaterialPurchase[]
+
+  @@index([trainerId, status])
+}
+
+/// One buyer's right to download a material. Free materials grant on first
+/// request; paid ones grant when the Paystack charge settles (MAT- refs).
+model MaterialPurchase {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountNgn  Int      @default(0)
+  provider   String   @default("none") // none|mock|paystack
+  providerRef String? @unique
+  status     String   @default("granted") // pending|granted|failed
+  createdAt  DateTime @default(now())
+
+  @@unique([materialId, userId])
+  @@index([userId])
 }
