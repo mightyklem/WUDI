@@ -75,14 +75,9 @@ export async function POST(req: Request) {
         where: { sessionId_userId: { sessionId: session.id, userId: evt.identity } },
         data: { leftAt: new Date(), stayedMs: stayed, present },
       });
-      // Confirms attendance was recorded while it is still fixable. Not a recording of
-      // the session -- no audio or video exists.
-      await prisma.notification.create({
-        data: {
-          userId: evt.identity, type: 'attendance-recorded',
-          payload: { trainingId: session.trainingId, sessionId: session.id, present },
-        },
-      });
+      // Attendance progress and points already say this in-app. A row per
+      // session — firing on every leave, including network drops — is what
+      // buried the notifications that matter, so it no longer writes one.
       // Verified attendance is what earns points (FR-13). Absent, nothing.
       if (present) {
         await awardAttendance({ userId: evt.identity, sessionId: session.id });
@@ -102,16 +97,7 @@ export async function POST(req: Request) {
       });
       if (training) {
         // Scoped to the days this learner enrolled in, not the whole class.
-        const e = await computeEligibility(session.trainingId, evt.identity);
-        const remaining = training.sessions.filter((s) => s.endsAtUtc.getTime() > Date.now()).length;
-        if (!e.minMet && remaining > 0 && e.total > 0) {
-          await prisma.notification.create({
-            data: {
-              userId: evt.identity, type: 'attendance-at-risk',
-              payload: { trainingId: session.trainingId, pct: e.pct, minPct: training.minPct, remaining },
-            },
-          });
-        }
+        await computeEligibility(session.trainingId, evt.identity);
         // Catch-all. room_ended is the clean signal, but a room that is simply never
         // closed -- the trainer closes the tab and walks away, or the platform drops the
         // connection -- never sends one. When the last person leaves after the scheduled

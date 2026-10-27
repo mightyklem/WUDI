@@ -22,7 +22,6 @@ export type Channel = 'inapp' | 'email' | 'push';
     'session-starting',
     'certificate-issued',
     'payment-received',
-    'report-received',
     // Somebody asked a question and is waiting for an answer. That is the one kind of
     // message worth interrupting somebody for.
     'message-received',
@@ -33,7 +32,6 @@ export type Channel = 'inapp' | 'email' | 'push';
     'session-starting': 'Starting soon',
     'certificate-issued': 'Your certificate is ready',
     'payment-received': 'Payment received',
-    'report-received': 'Thanks — we received your report',
     'message-received': 'New message',
   };
 

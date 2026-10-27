@@ -99,14 +99,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           throw Object.assign(new Error('Already registered — the class has started'), { code: 'DUP' });
         }
       }
-      // Atomic seat claim: only increments when a seat is actually free.
-      const claimed = await tx.training.updateMany({
-        where: { id, seatsTaken: { lt: t.cap }, status: { in: ['live', 'full'] } },
-        data: { seatsTaken: { increment: 1 } },
-      });
-      if (claimed.count === 0) {
-        await tx.training.updateMany({ where: { id }, data: { status: 'full' } });
-        throw Object.assign(new Error('Training is full'), { code: 'FULL' });
+      // Re-registering (same seat, new day choice) must not take a second
+      // seat, send a second confirmation, or fire a second email. One person,
+      // one seat, one confirmation — updating the days is the whole change.
+      const isReregister = !!dup && dup.status === 'active';
+      if (!isReregister) {
+        // Atomic seat claim: only increments when a seat is actually free.
+        const claimed = await tx.training.updateMany({
+          where: { id, seatsTaken: { lt: t.cap }, status: { in: ['live', 'full'] } },
+          data: { seatsTaken: { increment: 1 } },
+        });
+        if (claimed.count === 0) {
+          await tx.training.updateMany({ where: { id }, data: { status: 'full' } });
+          throw Object.assign(new Error('Training is full'), { code: 'FULL' });
+        }
       }
       const quoteFields = {
         quotedPricePerDayNgn: price.pricePerDayNgn,
@@ -141,18 +147,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         .sort((a, b) => new Date(a.startsAtUtc).getTime() - new Date(b.startsAtUtc).getTime())[0]?.id
         ?? t.sessions[0]?.id
         ?? null;
-      await tx.notification.create({
-        data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title, sessionId: joinSessionId } },
-      });
-      return { registration, joinSessionId };
+      if (!isReregister) {
+        await tx.notification.create({
+          data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title, sessionId: joinSessionId } },
+        });
+      }
+      return { registration, joinSessionId, already: isReregister };
     });
     // Outside the transaction: a slow or failed email must never roll back the seat claim.
-    await sendSeatConfirmation(userId, t.title);
+    // And a re-registration sends nothing at all — they already got this email.
+    if (!reg.already) {
+      await sendSeatConfirmation(userId, t.title);
+    }
     return NextResponse.json(
       {
         registration: { id: reg.registration.id, trainingId: id },
         // Soonest upcoming session — so the UI can offer Join class right after reserve.
         sessionId: reg.joinSessionId,
+        // A second tap on Reserve is a day change, not a new seat.
+        already: reg.already || undefined,
         // The UI needs to know whether to send them straight to payment.
         requiresPayment: t.accessType === 'paid',
         price,
@@ -164,7 +177,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           ? `Day${freeDays.length === 1 ? '' : 's'} ${freeDays.map((d) => d.dayIndex).join(', ')} ${freeDays.length === 1 ? 'is' : 'are'} free — you can attend, but free days do not count towards a paid certificate.`
           : null,
       },
-      { status: 201 },
+      { status: reg.already ? 200 : 201 },
     );
   } catch (e: unknown) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {

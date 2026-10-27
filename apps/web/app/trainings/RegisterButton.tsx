@@ -33,8 +33,12 @@ export default function RegisterButton({ trainingId, full, label, hasEnded }: { 
         setJoinSessionId(j.sessionId);
       }
 
-      // Paid class: the seat is held, now send them straight to payment.
-      if (j.requiresPayment) {
+      // Paid class: the seat is held, now send them straight to payment —
+      // unless this tap only changed their days, in which case there is no
+      // new seat and nothing new to pay for.
+      if (j.already) {
+        setMsg('You are already registered — your seat is kept.');
+      } else if (j.requiresPayment) {
         const pay = await authFetch(`/api/registrations/${j.registration.id}/checkout`, {
           method: 'POST',
           headers: { authorization: `Bearer ${access}` },
@@ -53,7 +57,7 @@ export default function RegisterButton({ trainingId, full, label, hasEnded }: { 
           return;
         }
       } else {
-        setMsg('Registered! Confirmation in your inbox.');
+        setMsg(j.already ? 'You are already registered — your seat is kept.' : 'Registered! Confirmation in your inbox.');
       }
     } finally {
       setBusy(false);

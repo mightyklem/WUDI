@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBearer, verifyAccessToken } from '@/lib/auth';
-import { notify } from '@/lib/notify';
 import { flagAlert } from '@/lib/slack';
 
 export const dynamic = 'force-dynamic';
@@ -48,10 +47,8 @@ export async function POST(req: Request) {
     }
     void flagAlert({ targetType, targetId, openCount, reason });
   }
-  await notify({
-    userIds: [userId], type: 'report-received',
-    payload: { targetType, targetId },
-    email: null,
-  });
+  // No self-notification: the report form already says "Reported — moderators
+  // will review." A row (and a push) telling the reporter what they just did
+  // is the notification equivalent of an echo.
   return NextResponse.json({ report }, { status: 201 });
 }

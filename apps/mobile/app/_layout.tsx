@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AuthProvider } from '../lib/auth';
 import { theme } from '../lib/theme';
 
@@ -17,16 +17,26 @@ export default function RootLayout() {
     Manrope_700Bold,
     Manrope_800ExtraBold,
   });
-
-  const onLayout = useCallback(() => {
-    if (fontsLoaded) void SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+  // The splash carries the wordmark: hold it a beat after fonts land so the
+  // brand actually registers instead of flashing past unread.
+  const [beatElapsed, setBeatElapsed] = useState(false);
 
   useEffect(() => {
-    if (fontsLoaded) void SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    const t = setTimeout(() => setBeatElapsed(true), 900);
+    return () => clearTimeout(t);
+  }, []);
 
-  if (!fontsLoaded) return null;
+  const ready = fontsLoaded && beatElapsed;
+
+  const onLayout = useCallback(() => {
+    if (ready) void SplashScreen.hideAsync();
+  }, [ready]);
+
+  useEffect(() => {
+    if (ready) void SplashScreen.hideAsync();
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
     <AuthProvider>

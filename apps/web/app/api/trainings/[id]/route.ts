@@ -94,17 +94,20 @@ export async function PATCH(req: Request, { params }: Ctx) {
             livekitRoom: `${id}-resched-${Date.now()}-${i}`, status: 'scheduled' },
         });
       }
-    }
-    const regs = await tx.registration.findMany({
-      where: { trainingId: id, status: 'active' }, select: { userId: true },
-    });
-    if (regs.length) {
-      await tx.notification.createMany({
-        data: regs.map((r) => ({
-          userId: r.userId, type: 'training-updated',
-          payload: { trainingId: id, title: v.data.title },
-        })),
+      // A reschedule moves people's time around, so it is the one edit worth
+      // interrupting them for. Title/description/cap tweaks are visible on the
+      // class page already — notifying those trained everyone to ignore us.
+      const regs = await tx.registration.findMany({
+        where: { trainingId: id, status: 'active' }, select: { userId: true },
       });
+      if (regs.length) {
+        await tx.notification.createMany({
+          data: regs.map((r) => ({
+            userId: r.userId, type: 'training-updated',
+            payload: { trainingId: id, title: v.data.title },
+          })),
+        });
+      }
     }
   });
   return NextResponse.json({ ok: true });

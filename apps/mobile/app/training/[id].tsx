@@ -38,8 +38,8 @@ export default function Training() {
               primary disabled={left <= 0 || reserved}
               onPress={async () => {
                 try {
-                  await api.register(t.id);
-                  setMsg('Seat reserved!');
+                  const j = await api.register(t.id) as { registration: { id: string }; already?: boolean };
+                  setMsg(j.already ? "You're already in — seat kept!" : 'Seat reserved!');
                   setReserved(true);
                 } catch (e) { setMsg(e instanceof Error ? e.message : 'Failed'); }
               }}

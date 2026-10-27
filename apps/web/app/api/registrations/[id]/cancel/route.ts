@@ -29,9 +29,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       where: { id: reg.trainingId, seatsTaken: { gt: 0 } },
       data: { seatsTaken: { decrement: 1 }, status: 'live' },
     });
-    await tx.notification.create({
-      data: { userId, type: 'registration-cancelled', payload: { trainingId: reg.trainingId } },
-    });
+    // No self-notification: the person just pressed cancel and watched it
+    // happen. A row telling them what they did is noise, not information.
   });
   return NextResponse.json({ ok: true });
 }
