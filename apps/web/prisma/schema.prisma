@@ -655,12 +655,22 @@ model Registration {
   // Set when the participant has paid for the class. On a paid class this covers
   // attendance AND the certificate, so it gates certificate eligibility (FR-11).
   certPaid             Boolean  @default(false)
+  // Status the UI reads. Three states matter:
+  //   pending_payment -- taken on a paid class, no receipt yet (no room, no certificate)
+  //   active          -- seat is theirs (free class OR paid class with certPaid)
+  //   cancelled       -- cancelled before payment or by the trainer
+  // The classroom token route reads this AND certPaid, so somebody who reserved a
+  // paid seat and never paid can neither join the room nor earn a certificate.
+  // Renamed default to active so existing rows keep their meaning.
+  status               String   @default("active") // pending_payment|active|cancelled
   // Snapshot of the quote taken when they registered. A later price change by the
   // trainer must not alter what this participant already owes.
   quotedPricePerDayNgn Int?
   quotedDays           Int?
   quotedTotalNgn       Int?
-  status               String   @default("active") // active|cancelled
+  // The reference the learner pays against (Paystack). The webhook keys off this;
+  // a reference that exists but has not settled keeps the registration in pending_payment.
+  pendingPaymentRef    String?  @unique
   createdAt            DateTime @default(now())
 
   payments       Payment[]

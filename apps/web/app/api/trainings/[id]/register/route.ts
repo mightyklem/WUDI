@@ -88,10 +88,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const dup = await tx.registration.findUnique({
         where: { trainingId_userId: { trainingId: id, userId } },
       });
-      if (dup && dup.status === 'active') {
-        // They may change which days they attend, but only while nothing is
-        // locked in: no session has started and no money has been taken.
-        if (dup.certPaid) {
+      // An unpaid reservation is still a reservation: refuse day changes after the
+      // class has started (same rule as it was), but allow normal day-choice updates
+      // on it so the learner is not locked into the first choice while paying.
+      if (dup && dup.status === 'cancelled') {
+        // Treat as a fresh registration.
+      }
+      if (dup && (dup.status === 'active' || dup.status === 'pending_payment')) {
+        if (dup.status === 'active' && dup.certPaid) {
           throw Object.assign(new Error('Already registered and paid'), { code: 'DUP' });
         }
         const firstStart = earliestSessionStart ?? Infinity;
@@ -99,11 +103,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           throw Object.assign(new Error('Already registered — the class has started'), { code: 'DUP' });
         }
       }
-      // Re-registering (same seat, new day choice) must not take a second
-      // seat, send a second confirmation, or fire a second email. One person,
-      // one seat, one confirmation — updating the days is the whole change.
-      const isReregister = !!dup && dup.status === 'active';
-      if (!isReregister) {
+      // A reservation on a paid class is a SEAT HOLD, not a joinable seat.
+      // seatsTaken is incremented either way (someone is in line for it), but only
+      // a paid registration earns an active seat and a room token.
+      const isReregister = !!dup && (dup.status === 'active' || dup.status === 'pending_payment');
+      const willHold = isReregister || t.accessType === 'paid';
+      if (!dup || dup.status === 'cancelled') {
         // Atomic seat claim: only increments when a seat is actually free.
         const claimed = await tx.training.updateMany({
           where: { id, seatsTaken: { lt: t.cap }, status: { in: ['live', 'full'] } },
@@ -119,15 +124,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         quotedDays: price.days,
         quotedTotalNgn: price.totalNgn,
       };
-      const registration = dup
+      const nextStatus = t.accessType === 'paid' ? 'pending_payment' : 'active';
+      const registration = dup && dup.status !== 'cancelled'
         ? await tx.registration.update({
             where: { id: dup.id },
-            data: { status: 'active', certPaid: false, ...quoteFields },
+            data: { status: nextStatus, certPaid: false, ...quoteFields },
           })
         : await tx.registration.create({
             data: {
               trainingId: id, userId, certConsentPublic: !!certConsentPublic,
-              status: 'active', ...quoteFields,
+              status: nextStatus, ...quoteFields,
             },
           });
       // Replace the day choice rather than merging, so switching days is exact.
@@ -147,31 +153,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         .sort((a, b) => new Date(a.startsAtUtc).getTime() - new Date(b.startsAtUtc).getTime())[0]?.id
         ?? t.sessions[0]?.id
         ?? null;
-      if (!isReregister) {
-        await tx.notification.create({
-          data: { userId, type: 'registration-confirmed', payload: { trainingId: id, title: t.title, sessionId: joinSessionId } },
-        });
-      }
+      // A pending_payment registration is not a seat yet — the receipt is what
+      // confirms it. Earlier code fired the registration-confirmed notification
+      // and the welcome email right here, before payment cleared; no wonder the
+      // paid-class join button sat open while the user still had nothing paid.
       return { registration, joinSessionId, already: isReregister };
     });
     // Outside the transaction: a slow or failed email must never roll back the seat claim.
-    // And a re-registration sends nothing at all — they already got this email.
-    if (!reg.already) {
+    if (!reg.already && t.accessType === 'free') {
       await sendSeatConfirmation(userId, t.title);
     }
     return NextResponse.json(
       {
-        registration: { id: reg.registration.id, trainingId: id },
-        // Soonest upcoming session — so the UI can offer Join class right after reserve.
+        registration: { id: reg.registration.id, trainingId: id, status: reg.registration.status, certPaid: reg.registration.certPaid },
         sessionId: reg.joinSessionId,
-        // A second tap on Reserve is a day change, not a new seat.
         already: reg.already || undefined,
-        // The UI needs to know whether to send them straight to payment.
+        // Paid: caller must POST /api/registrations/[id]/checkout next. Joining
+        // the room and earning a certificate are both gated on certPaid.
         requiresPayment: t.accessType === 'paid',
         price,
-        // So the learner is told plainly what a free day means rather than finding out at
-        // certificate time: the seat is theirs, but this day does not count towards a
-        // paid certificate.
         hasFreeDay,
         freeDayNote: hasFreeDay
           ? `Day${freeDays.length === 1 ? '' : 's'} ${freeDays.map((d) => d.dayIndex).join(', ')} ${freeDays.length === 1 ? 'is' : 'are'} free — you can attend, but free days do not count towards a paid certificate.`

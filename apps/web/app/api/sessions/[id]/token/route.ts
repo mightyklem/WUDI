@@ -135,6 +135,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     );
   }
 
+  // A paid class is two steps: reserve a seat, then pay for it. Until the second
+  // step runs the learner must NOT be able to enter the room -- the earlier code
+  // minted a token on reservation alone, which is how a learner with an unpaid seat
+  // ended up on the stage with a "Pay now" badge still showing. This route is the
+  // choke point because every join path (web + mobile + future widget) goes through
+  // it; denying here is the only way the rule can stop being polite and start being
+  // enforced.
+  if (role === 'participant' && session.training.accessType === 'paid') {
+    const reg = await prisma.registration.findUnique({
+      where: { trainingId_userId: { trainingId: session.trainingId, userId } },
+      select: { status: true, certPaid: true },
+    });
+    if (!reg) {
+      return NextResponse.json(
+        { error: 'You did not register for this paid class', detail: 'Reserve a seat and complete payment to join.' },
+        { status: 403 },
+      );
+    }
+    if (reg.status !== 'active' || !reg.certPaid) {
+      return NextResponse.json(
+        { error: 'Complete payment to join this class', detail: 'Your seat is reserved but payment has not cleared yet.' },
+        { status: 402 },
+      );
+    }
+  }
+
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.suspended) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

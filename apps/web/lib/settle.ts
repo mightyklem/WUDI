@@ -77,7 +77,10 @@ export async function settlePaidPayment(opts: {
     });
     await tx.registration.update({
       where: { id: payment.registrationId },
-      data: { certPaid: true },
+      // The seat they were holding says paid only when the seat is paid for.
+      // pending_payment -> active + certPaid is the seam any pending row crosses
+      // exactly once, so a duplicate webhook is a no-op rather than a double grant.
+      data: { status: 'active', certPaid: true, pendingPaymentRef: null },
     });
     // One held payout per trainer+training; top it up as sales land.
     const existing = await tx.payout.findFirst({

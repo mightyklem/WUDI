@@ -16,9 +16,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     where: { id },
     include: { training: { include: { sessions: { orderBy: { startsAtUtc: 'asc' }, take: 1 } } } },
   });
-  if (!reg || reg.userId !== userId || reg.status !== 'active') {
+  // pending_payment seats are held. Cancelling them returns the seat like an
+  // active cancelled row would; active + paid runs through existing refund rules.
+  if (!reg || reg.userId !== userId || (reg.status !== 'active' && reg.status !== 'pending_payment')) {
     return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
   }
+  if (reg.status === 'active' && reg.certPaid) {
   const firstStart = reg.training.sessions[0]?.startsAtUtc;
   if (firstStart && firstStart.getTime() <= Date.now()) {
     return NextResponse.json({ error: 'Training has started — seat cannot be freed' }, { status: 409 });

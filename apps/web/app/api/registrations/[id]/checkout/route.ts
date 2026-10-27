@@ -81,15 +81,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const init = await initCheckout({
     email: reg.user.email, amountNgn, reference,
   });
-  await prisma.payment.create({
-    data: {
-      registrationId: id, provider: provider(), providerRef: reference,
-      accessCode: init.accessCode,
-      amountNgn,
-      providerFeeNgn: 0, commissionNgn: 0, netNgn: 0,
-      status: 'pending', idempotencyKey: reference,
-    },
-  });
+  await prisma.$transaction([
+    prisma.payment.create({
+      data: {
+        registrationId: id, provider: provider(), providerRef: reference,
+        accessCode: init.accessCode,
+        amountNgn,
+        providerFeeNgn: 0, commissionNgn: 0, netNgn: 0,
+        status: 'pending', idempotencyKey: reference,
+      },
+    }),
+    // The reference rides on the registration so a refresh, a retry, or the next
+    // webhook all know which sale this is paying for.
+    prisma.registration.update({
+      where: { id },
+      data: { pendingPaymentRef: reference },
+    }),
+  ]);
   return NextResponse.json(
     { reference: init.reference, payUrl: init.payUrl, amountNgn, pricePerDayNgn, days },
     { status: 201 },
