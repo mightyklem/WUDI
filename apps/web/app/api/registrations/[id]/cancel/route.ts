@@ -22,12 +22,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
   }
   if (reg.status === 'active' && reg.certPaid) {
+    return NextResponse.json(
+      { error: 'This registration has been paid for — cancel goes through refund, which lives in /me/registrations.' },
+      { status: 409 },
+    );
+  }
   const firstStart = reg.training.sessions[0]?.startsAtUtc;
   if (firstStart && firstStart.getTime() <= Date.now()) {
     return NextResponse.json({ error: 'Training has started — seat cannot be freed' }, { status: 409 });
   }
   await prisma.$transaction(async (tx) => {
     await tx.registration.update({ where: { id }, data: { status: 'cancelled' } });
+    // Drop the pending payment row too if there is one, so a re-register does not
+    // accidentally resume a checkout for a seat that is no longer held.
+    await tx.payment.updateMany({ where: { registrationId: id, status: 'pending' }, data: { status: 'failed' } });
     await tx.training.updateMany({
       where: { id: reg.trainingId, seatsTaken: { gt: 0 } },
       data: { seatsTaken: { decrement: 1 }, status: 'live' },
