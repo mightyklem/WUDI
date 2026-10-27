@@ -29,36 +29,46 @@ export default function RegisterButton({ trainingId, full, label, hasEnded }: { 
         return;
       }
 
-      if (typeof j.sessionId === 'string' && j.sessionId) {
-        setJoinSessionId(j.sessionId);
+      // Free class (or free day picked): straight to the seats page; there is
+      // nothing to pay for and the seat is immediately joinable.
+      if (!j.requiresPayment) {
+        const where = j.already ? 'You are already registered — your seat is kept.'
+          : 'Seat reserved! Confirmation in your inbox.';
+        setMsg(where);
+        return;
       }
 
-      // Paid class: the seat is held, now send them straight to payment —
-      // unless this tap only changed their days, in which case there is no
-      // new seat and nothing new to pay for.
-      if (j.already) {
-        setMsg('You are already registered — your seat is kept.');
-      } else if (j.requiresPayment) {
-        const pay = await authFetch(`/api/registrations/${j.registration.id}/checkout`, {
-          method: 'POST',
-          headers: { authorization: `Bearer ${access}` },
-        });
-        const pj = await pay.json();
-        if (pj.paid) {
-          setMsg('Seat reserved and payment already settled.');
-        } else if (pj.payUrl) {
-          window.location.href = pj.payUrl;
-          return;
-        } else if (!pay.ok) {
-          setMsg(`Seat reserved. ${pj.error || 'Complete payment from your seats page.'}`);
-          return;
-        } else {
-          setMsg('Seat reserved.');
-          return;
-        }
-      } else {
-        setMsg(j.already ? 'You are already registered — your seat is kept.' : 'Registered! Confirmation in your inbox.');
+      // Already registered in pending_payment: jump them straight to Paystack
+      // for the same checkout the previous attempt was holding. The server
+      // resolved the existing reference and reused the access code.
+      const settleUrl = `/api/registrations/${j.registration.id}/checkout`;
+      const pay = await authFetch(settleUrl, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${access}` },
+      });
+      const pj = await pay.json();
+      if (!pay.ok) {
+        // No URL and no already-paid flag is a configuration failure, not
+        // the user's fault. -- Render it; an opaque message was what landed
+        // here before.
+        setMsg(j.already
+          ? `Resume payment failed: ${pj.error || 'Try again from your seats page.'}`
+          : `Seat reserved. ${pj.error || 'Open your seats page to pay.'}`);
+        return;
       }
+      if (pj.paid) {
+        setMsg('Seat reserved and payment already settled.');
+        return;
+      }
+      if (pj.payUrl) {
+        window.location.href = pj.payUrl;
+        return;
+      }
+      // We have a Paystack reference but no URL — surface the reference so
+      // the user can quote it in support.
+      setMsg(`Seat reserved. Paystack reference: ${pj.reference || 'unknown'}. Refresh your seats page to pay.`);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Connection failed — try again.');
     } finally {
       setBusy(false);
     }

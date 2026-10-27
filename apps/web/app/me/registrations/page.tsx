@@ -18,12 +18,53 @@ type Session = {
   upcoming: boolean;
 };
 
+type Registration = {
+  id: string;
+  status: string;
+  certPaid: boolean;
+  quotedTotalNgn: number | null;
+  pendingPaymentRef: string | null;
+  pendingPaymentAmountNgn: number | null;
+  accessType: string;
+  training: { id: string; title: string; slug: string };
+};
+
 export default function MyRegistrations() {
+  const [regs, setRegs] = useState<Registration[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | string | null>(null);
+  const [payBusy, setPayBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'join' | 'share'>('join');
   const [consentChecked, setConsentChecked] = useState(false);
+
+  // Pay-now button on a row whose money hasn't cleared yet. Resumes the
+  // existing Paystack checkout (same reference) so an abandoned tab is
+  // recovered from, not double-charged.
+  async function payNow(regId: string) {
+    setPayBusy(regId);
+    setMsg(null);
+    try {
+      const access = getAccess();
+      if (!access) return setMsg('Your session ended. Sign in again, then pay.');
+      const j = await (await authFetch(`/api/registrations/${regId}/checkout`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${access}` },
+      })).json();
+      if (j.paid) {
+        setMsg('Payment confirmed. Your seat is fully reserved.');
+        await load();
+        return;
+      }
+      if (j.payUrl) {
+        window.location.href = j.payUrl;
+        return;
+      }
+      setMsg(`Could not start a checkout: ${j.error || 'try again'}`);
+    } finally {
+      setPayBusy(null);
+    }
+  }
 
   function load() {
     const access = getAccess();
@@ -31,46 +72,45 @@ export default function MyRegistrations() {
     setLoading(true);
     authFetch('/api/me/registrations')
       .then((r) => r.json())
-      .then((j) => {
-        const regs = j.registrations || [];
-        const fetches = regs.map((r: any) =>
+      .then(async (j) => {
+        const list: Registration[] = j.registrations || [];
+        setRegs(list);
+        const fetches = list.map((r: any) =>
           authFetch(`/api/me/attendance?trainingId=${r.training.id}`)
             .then((x) => x.json())
-            .then((p) => ({ training: r.training, progress: p }))
-            .catch(() => ({ training: r.training, progress: null }))
+            .then((p) => ({ reg: r, training: r.training, progress: p }))
+            .catch(() => ({ reg: r, training: r.training, progress: null }))
         );
-        Promise.all(fetches).then((results) => {
-          const allSessions: Session[] = [];
-          for (const { training, progress } of results) {
-            if (!training?.sessions) continue;
-            const flags = progress?.flags || [];
-            for (const s of training.sessions) {
-              const flag = flags.find((f: any) => f.sessionId === s.id);
-              const upcoming = new Date(s.startsAtUtc).getTime() > Date.now();
-              const attended = flag?.present === true;
-              allSessions.push({
-                id: s.id,
-                trainingId: training.id,
-                trainingTitle: training.title,
-                trainingSlug: training.slug,
-                startsAtUtc: s.startsAtUtc,
-                endsAtUtc: s.endsAtUtc,
-                status: training.status,
-                attended,
-                upcoming,
-              });
-            }
+        const results = await Promise.all(fetches);
+        const allSessions: Session[] = [];
+        for (const { training, progress } of results) {
+          if (!training?.sessions) continue;
+          const flags = progress?.flags || [];
+          for (const s of training.sessions) {
+            const flag = flags.find((f: any) => f.sessionId === s.id);
+            const upcoming = new Date(s.startsAtUtc).getTime() > Date.now();
+            const attended = flag?.present === true;
+            allSessions.push({
+              id: s.id,
+              trainingId: training.id,
+              trainingTitle: training.title,
+              trainingSlug: training.slug,
+              startsAtUtc: s.startsAtUtc,
+              endsAtUtc: s.endsAtUtc,
+              status: training.status,
+              attended,
+              upcoming,
+            });
           }
-          // Sort: upcoming first (by date asc), then past (most recent first)
-          allSessions.sort((a, b) => {
-            const aTime = new Date(a.startsAtUtc).getTime();
-            const bTime = new Date(b.startsAtUtc).getTime();
-            const aUp = a.upcoming, bUp = b.upcoming;
-            if (aUp !== bUp) return aUp ? -1 : 1; // upcoming first
-            return aUp ? aTime - bTime : bTime - aTime; // upcoming asc, past desc
-          });
-          setSessions(allSessions);
+        }
+        allSessions.sort((a, b) => {
+          const aTime = new Date(a.startsAtUtc).getTime();
+          const bTime = new Date(b.startsAtUtc).getTime();
+          const aUp = a.upcoming, bUp = b.upcoming;
+          if (aUp !== bUp) return aUp ? -1 : 1;
+          return aUp ? aTime - bTime : bTime - aTime;
         });
+        setSessions(allSessions);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -87,7 +127,35 @@ export default function MyRegistrations() {
       <h1>My sessions</h1>
       <p className="sub">Your reserved seats. Sorted by date.</p>
 
-      {msg && <div className="okmsg">{typeof msg === 'string' ? msg : msg.text}</div>}
+      {msg && <div className="okmsg">{msg}</div>}
+
+      {/* Unpaid reservations first. Without this, a learner who got past the
+          register step but not all the way through Paystack had no obvious
+          path back: the tab disappeared, and they were stuck. */}
+      {regs.filter((r) => r.status === 'pending_payment').length > 0 && (
+        <section style={{ marginTop: 18 }}>
+          <h2 className="sec">🟧 Waiting for payment</h2>
+          <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+            {regs.filter((r) => r.status === 'pending_payment').map((r) => (
+              <div key={r.id} className="card" style={{ padding: 16, borderLeft: '4px solid var(--accent)' }}>
+                <p style={{ margin: 0, fontWeight: 800 }}>{r.training.title}</p>
+                <p className="muted" style={{ margin: '4px 0 8px', fontSize: 'var(--t-sm)' }}>
+                  {r.pendingPaymentAmountNgn ? `₦${r.pendingPaymentAmountNgn.toLocaleString('en-NG')} outstanding` : 'Payment incomplete'}
+                  {r.pendingPaymentRef ? ` · reference ${r.pendingPaymentRef}` : ''}
+                </p>
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={() => payNow(r.id)}
+                  disabled={payBusy === r.id}
+                >
+                  {payBusy === r.id ? 'Opening Paystack…' : 'Pay now'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div style={{ marginTop: 18 }}>
         {loading && (
@@ -197,7 +265,7 @@ export default function MyRegistrations() {
                       <button className="btn" onClick={() => {
                         const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/t/${sessions[0]?.trainingSlug || ''}/register`;
                         navigator.clipboard.writeText(url);
-                        setMsg({ ok: true, text: 'Link copied!' });
+                        setMsg('Link copied!');
                       }}>
                         Copy
                       </button>
