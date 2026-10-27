@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ScrollView, Text, View, Switch, StyleSheet, Modal, TextInput, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, View, StyleSheet, Modal, TextInput, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import Constants from 'expo-constants';
 import {
@@ -27,25 +27,51 @@ type ParticipantView = {
   isLocal: boolean;
 };
 
-function Tiles({ audioOnly }: { audioOnly: boolean }) {
-  const tracks = useTracks(
-    audioOnly
-      ? [{ source: Track.Source.Microphone, withPlaceholder: true }]
-      : [
-          { source: Track.Source.Camera, withPlaceholder: true },
-          { source: Track.Source.Microphone, withPlaceholder: true },
-        ],
-  );
-  if (!tracks.length) return <Text style={s.muted}>Waiting for others…</Text>;
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** The room as faces, not log lines: live video where there is any, an
+    initialled tile where there is only audio. Tapping a tile pins it. */
+function Tiles({
+  participants,
+  pinnedId,
+  onPin,
+}: {
+  participants: ParticipantView[];
+  pinnedId: string | null;
+  onPin: (identity: string | null) => void;
+}) {
+  if (!participants.length) return <Text style={s.muted}>Waiting for others…</Text>;
   return (
     <View style={style.tileRow}>
-      {tracks.map((t, i) => (
-        <View key={i} style={[s.card, { backgroundColor: '#0B1F14' }]}>
-          <Text style={{ color: '#fff' }}>
-            {t.participant.name || t.participant.identity} · {t.source} {t.publication?.kind}
-          </Text>
-        </View>
-      ))}
+      {participants.map((p) => {
+        const pinned = pinnedId === p.identity;
+        const live = p.camPub && !p.camTrack?.muted;
+        return (
+          <TouchableOpacity
+            key={p.identity}
+            style={[style.tile, pinned && style.tilePinned]}
+            onPress={() => onPin(pinned ? null : p.identity)}
+            disabled={!p.camPub}
+            accessibilityLabel={pinned ? `Unpin ${p.name}` : `Pin ${p.name} to stage`}
+          >
+            {live ? (
+              <VideoTrack trackRef={{ publication: p.camPub } as any} style={style.tileVideo} />
+            ) : (
+              <View style={style.tileAvatar}>
+                <Text style={style.tileInitials}>{initialsOf(p.name)}</Text>
+              </View>
+            )}
+            <Text style={style.tileName} numberOfLines={1}>
+              {p.micTrack?.muted ? '🔇 ' : ''}{p.name}{pinned ? ' 📌' : ''}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -534,7 +560,7 @@ function Room({
       ) : (
         <View style={style.stage}>
           {camOn && <LocalCameraTile />}
-          <Tiles audioOnly={!camOn} />
+          <Tiles participants={participants} pinnedId={pinnedId} onPin={setPinnedId} />
         </View>
       )}
       {shareErr && <Text style={{ color: '#8F1D1D', marginTop: 6 }}>{shareErr}</Text>}
@@ -662,7 +688,13 @@ export default function Classroom() {
 }
 
 const style = StyleSheet.create({
-  tileRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  tileRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  tile: { width: '48%', aspectRatio: 0.75, backgroundColor: '#0B1F14', borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
+  tilePinned: { borderColor: '#FFB020' },
+  tileVideo: { width: '100%', height: '100%' },
+  tileAvatar: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0E7A3D' },
+  tileInitials: { color: '#fff', fontSize: 28, fontWeight: '800' },
+  tileName: { position: 'absolute', top: 6, left: 6, right: 6, color: '#fff', backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, fontSize: 12, overflow: 'hidden' },
   stage: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
   localTile: { position: 'absolute', bottom: 80, right: 16, width: 140, height: 180, backgroundColor: '#000', borderRadius: 12, overflow: 'hidden' },
   localVideo: { width: '100%', height: '100%' },
