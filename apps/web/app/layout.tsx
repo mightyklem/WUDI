@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import './globals.css';
 import './ux.css';
+import './components/AIAssistant.css';
 import ServiceWorkerRegistrar from './components/ServiceWorkerRegistrar';
-import AppearanceToggle from './components/AppearanceToggle';
+import MoreMenu from './components/MoreMenu';
 import { THEME_BOOTSTRAP } from '@/lib/theme';
 
 // Self-hosted by next/font: one variable file, no render-blocking request to Google,
@@ -57,7 +58,7 @@ export const metadata: Metadata = {
         </head>
         <body>
           {children}
-          <AppearanceToggle />
+          <MoreMenu />
           <ServiceWorkerRegistrar />
         </body>
       </html>
